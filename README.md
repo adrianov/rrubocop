@@ -2,7 +2,7 @@
 
 **Rust RuboCop drop-in replacement** — same CLI, config, and offense output, rewritten in Rust for speed. Point it at an existing Ruby project and use it like RuboCop.
 
-One binary — runs the same way regardless of rbenv, rvm, or system Ruby. Uses [tree-sitter](https://tree-sitter.github.io/tree-sitter/); **no Ruby runtime required** for linting itself. Config files with ERB (`<% … %>`) still need `ruby` / `bundle exec ruby` to expand, matching RuboCop.
+One binary — runs even without Ruby on the system, and the same way regardless of rbenv, rvm, or system Ruby. Uses [tree-sitter](https://tree-sitter.github.io/tree-sitter/); **no Ruby runtime required** for linting. Config files with ERB (`<% … %>`) still need `ruby` / `bundle exec ruby` to expand, matching RuboCop.
 
 Drop-in parity: reads your existing `.rubocop.yml`, emits RuboCop-like text/JSON, supports `-a`/`-A` autocorrect, and grows cop coverage over time.
 

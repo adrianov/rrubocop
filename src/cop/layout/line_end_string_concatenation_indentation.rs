@@ -24,32 +24,68 @@ fn concat_msg(style: &str) -> String {
     }
 }
 
-fn check_cont(
-    cop: &dyn Cop, source: &SourceFile, code_map: &CodeMap, i: usize,
-    width: usize, style: &str,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
-) {
-    if !code_map.covers(i.saturating_sub(1)) { return; }
+fn expected_indent(base: usize, width: usize, style: &str) -> usize {
+    if style == "indented" {
+        base + width
+    } else {
+        base
+    }
+}
+
+fn next_indent(source: &SourceFile, i: usize) -> Option<(usize, usize)> {
     let (line, _) = source.offset_to_line_col(i);
-    let base_indent = shared::line_indent(source, i);
-    let next_line = line + 1;
-    let Some(ls) = source.line_start(next_line) else { return; };
-    let actual = shared::line_indent(source, ls);
-    let expected = if style == "indented" { base_indent + width } else { base_indent };
-    if actual == expected || !code_map.covers(ls + actual.min(1)) { return; }
+    let ls = source.line_start(line + 1)?;
+    Some((ls, shared::line_indent(source, ls)))
+}
+
+fn check_cont(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    code_map: &CodeMap,
+    i: usize,
+    width: usize,
+    style: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    if !code_map.covers(i.saturating_sub(1)) {
+        return;
+    }
+    let Some((ls, actual)) = next_indent(source, i) else {
+        return;
+    };
+    let expected = expected_indent(shared::line_indent(source, i), width, style);
+    if actual == expected || !code_map.covers(ls + actual.min(1)) {
+        return;
+    }
     report::report_fix(
-        cop, source, ls, concat_msg(style),
-        diagnostics, corrections, ls, ls + actual, " ".repeat(expected),
+        cop,
+        source,
+        ls,
+        concat_msg(style),
+        diagnostics,
+        corrections,
+        ls,
+        ls + actual,
+        " ".repeat(expected),
     );
 }
 
 impl Cop for LineEndStringConcatenationIndentation {
-    fn name(&self) -> &'static str { "Layout/LineEndStringConcatenationIndentation" }
-    fn supports_autocorrect(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "Layout/LineEndStringConcatenationIndentation"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
 
     fn check_source(
-        &self, source: &SourceFile, tree: &Tree, code_map: &CodeMap,
-        config: &CopConfig, diagnostics: &mut Vec<Diagnostic>,
+        &self,
+        source: &SourceFile,
+        tree: &Tree,
+        code_map: &CodeMap,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = tree;
@@ -59,7 +95,16 @@ impl Cop for LineEndStringConcatenationIndentation {
         let mut i = 0;
         while i + 1 < bytes.len() {
             if is_cont(bytes, i) {
-                check_cont(self, source, code_map, i, width, style, diagnostics, &mut corrections);
+                check_cont(
+                    self,
+                    source,
+                    code_map,
+                    i,
+                    width,
+                    style,
+                    diagnostics,
+                    &mut corrections,
+                );
             }
             i += 1;
         }

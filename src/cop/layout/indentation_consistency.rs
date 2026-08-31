@@ -50,13 +50,18 @@ fn fix_indent(
     true
 }
 
-fn check_kid(
-    cop: &dyn Cop, source: &SourceFile, first: Node<'_>, k: Node<'_>, base: usize,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+fn same_line(source: &SourceFile, a: Node<'_>, b: Node<'_>) -> bool {
+    shared::node_line(source, a) == shared::node_line(source, b)
+}
+
+fn report_kid(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    k: Node<'_>,
+    base: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let ind = shared::line_indent(source, k.start_byte());
-    if ind == base || shared::node_line(source, k) == shared::node_line(source, first) { return; }
-    if !needs_fix(ind, base, k.kind()) { return; }
     let (l, c) = source.offset_to_line_col(k.start_byte());
     let mut diag = cop.diagnostic(source, l, c, "Inconsistent indentation detected.".into());
     if let Some(corr) = corrections {
@@ -65,6 +70,25 @@ fn check_kid(
         }
     }
     diagnostics.push(diag);
+}
+
+fn check_kid(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    first: Node<'_>,
+    k: Node<'_>,
+    base: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    let ind = shared::line_indent(source, k.start_byte());
+    if ind == base || same_line(source, k, first) {
+        return;
+    }
+    if !needs_fix(ind, base, k.kind()) {
+        return;
+    }
+    report_kid(cop, source, k, base, diagnostics, corrections);
 }
 
 fn check_container(

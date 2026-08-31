@@ -49,16 +49,15 @@ fn take_ident(rest: &str) -> String {
 
 fn parse_heredoc_ident(rest: &str) -> Option<Vec<u8>> {
     let rest = strip_heredoc_prefix(rest);
-    if rest.is_empty() || rest.as_bytes()[0].is_ascii_digit() { return None; }
+    if rest.is_empty() || rest.as_bytes()[0].is_ascii_digit() {
+        return None;
+    }
     let ident = take_ident(rest);
-    if ident.is_empty() { None } else { Some(ident.into_bytes()) }
-}
-
-fn strip_heredoc_prefix(rest: &str) -> &str {
-    rest.strip_prefix('~')
-        .or_else(|| rest.strip_prefix('-'))
-        .unwrap_or(rest)
-        .trim_start()
+    if ident.is_empty() {
+        None
+    } else {
+        Some(ident.into_bytes())
+    }
 }
 
 fn heredoc_opener(line: &[u8]) -> Option<Vec<u8>> {

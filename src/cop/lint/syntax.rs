@@ -78,6 +78,71 @@ fn format_ruby_ver(v: f64) -> String {
     format!("{v:.1}")
 }
 
+fn method_depth_after(node: Node<'_>, depth: usize) -> usize {
+    if matches!(node.kind(), "method" | "singleton_method") {
+        depth + 1
+    } else {
+        depth
+    }
+}
+
+fn check_error(
+    source: &SourceFile,
+    node: Node<'_>,
+    cop: &Syntax,
+    ruby_ver: f64,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if !(node.is_error() || node.is_missing()) {
+        return;
+    }
+    let (line, col) = source.offset_to_line_col(node.start_byte());
+    diagnostics.push(syntax_diag(cop, source, line, col, "unexpected token", ruby_ver));
+}
+
+fn check_endless(
+    source: &SourceFile,
+    node: Node<'_>,
+    cop: &Syntax,
+    ruby_ver: f64,
+    method_depth: usize,
+    nested_endless: &mut bool,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if ruby_ver >= 3.0 {
+        return;
+    }
+    let Some(eq_off) = endless_eq_offset(source, node) else {
+        return;
+    };
+    let (line, col) = source.offset_to_line_col(eq_off);
+    diagnostics.push(syntax_diag(cop, source, line, col, "unexpected token tEQL", ruby_ver));
+    // Nested inside an outer method (depth before entering this node >= 1).
+    if method_depth >= 1 {
+        *nested_endless = true;
+    }
+}
+
+fn check_bare_not(
+    source: &SourceFile,
+    node: Node<'_>,
+    cop: &Syntax,
+    ruby_ver: f64,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some((line, col)) = bare_not_offense(source, node) else {
+        return;
+    };
+    diagnostics.push(syntax_diag(
+        cop,
+        source,
+        line,
+        col,
+        "unexpected token tIDENTIFIER",
+        ruby_ver,
+    ));
+}
+
 fn walk(
     source: &SourceFile,
     node: Node<'_>,
@@ -87,64 +152,13 @@ fn walk(
     nested_endless: &mut bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let next_depth = if matches!(node.kind(), "method" | "singleton_method") {
-        method_depth + 1
-    } else {
-        method_depth
-    };
-
-    if node.is_error() || node.is_missing() {
-        let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(syntax_diag(
-            cop,
-            source,
-            line,
-            col,
-            "unexpected token",
-            ruby_ver,
-        ));
-    }
-
-    if ruby_ver < 3.0 {
-        if let Some(eq_off) = endless_eq_offset(source, node) {
-            let (line, col) = source.offset_to_line_col(eq_off);
-            diagnostics.push(syntax_diag(
-                cop,
-                source,
-                line,
-                col,
-                "unexpected token tEQL",
-                ruby_ver,
-            ));
-            // Nested inside an outer method (depth before entering this node >= 1).
-            if method_depth >= 1 {
-                *nested_endless = true;
-            }
-        }
-    }
-
-    if let Some((line, col)) = bare_not_offense(source, node) {
-        diagnostics.push(syntax_diag(
-            cop,
-            source,
-            line,
-            col,
-            "unexpected token tIDENTIFIER",
-            ruby_ver,
-        ));
-    }
-
+    let next_depth = method_depth_after(node, method_depth);
+    check_error(source, node, cop, ruby_ver, diagnostics);
+    check_endless(source, node, cop, ruby_ver, method_depth, nested_endless, diagnostics);
+    check_bare_not(source, node, cop, ruby_ver, diagnostics);
     let mut cur = node.walk();
     for child in node.children(&mut cur) {
-        walk(
-            source,
-            child,
-            cop,
-            ruby_ver,
-            next_depth,
-            nested_endless,
-            diagnostics,
-        );
+        walk(source, child, cop, ruby_ver, next_depth, nested_endless, diagnostics);
     }
 }
 
@@ -176,7 +190,7 @@ fn bare_not_offense(source: &SourceFile, node: Node<'_>) -> Option<(usize, usize
         return None;
     }
     let mut cur = node.walk();
-    let mut kids: Vec<Node<'_>> = node.children(&mut cur).collect();
+    let kids: Vec<Node<'_>> = node.children(&mut cur).collect();
     if kids.len() < 2 {
         return None;
     }

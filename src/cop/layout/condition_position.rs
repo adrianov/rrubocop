@@ -53,8 +53,10 @@ fn keyword_of(kind: &str) -> Option<&'static str> {
     }
 }
 
-fn should_check(source: &SourceFile, node: Node<'_>) -> bool {
-    if node.kind() == "if" && shared::child_kind(node, "?").is_some() { return false; }
+fn should_check(node: Node<'_>) -> bool {
+    if node.kind() == "if" && shared::child_kind(node, "?").is_some() {
+        return false;
+    }
     shared::end_keyword(node).is_some() || node.kind() == "elsif"
 }
 
@@ -88,7 +90,7 @@ impl Cop for ConditionPosition {
         &self, source: &SourceFile, node: Node<'_>, _config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        if !should_check(source, node) { return; }
+        if !should_check(node) { return; }
         let Some(keyword) = keyword_of(node.kind()) else { return; };
         let Some(cond) = node.child_by_field_name("condition") else { return; };
         if shared::node_line(source, node) == source.offset_to_line_col(cond.start_byte()).0 {
