@@ -13,6 +13,27 @@ pub struct ProgressFormatter {
 }
 
 impl Formatter for ProgressFormatter {
+    fn streams_marks(&self) -> bool {
+        true
+    }
+
+    fn started(&self, file_count: usize, out: &mut dyn Write) {
+        write_inspecting(file_count, out);
+        let _ = out.flush();
+    }
+
+    fn file_finished(&self, diagnostics: &[Diagnostic], out: &mut dyn Write) {
+        write_mark(self.color, diagnostics, out);
+        let _ = out.flush();
+    }
+
+    fn finished(&self, diagnostics: &[Diagnostic], files: &[PathBuf], out: &mut dyn Write) {
+        let _ = writeln!(out);
+        write_offense_block(self.color, diagnostics, out);
+        write_summary(self.color, diagnostics, files.len(), out);
+        let _ = out.flush();
+    }
+
     fn format_to(&self, diagnostics: &[Diagnostic], files: &[PathBuf], out: &mut dyn Write) {
         write_inspecting(files.len(), out);
         write_marks(self.color, diagnostics, files, out);
@@ -39,6 +60,14 @@ fn worst_severity(diagnostics: &[Diagnostic]) -> HashMap<String, Severity> {
             .or_insert(d.severity);
     }
     map
+}
+
+fn write_mark(color: Color, diagnostics: &[Diagnostic], out: &mut dyn Write) {
+    let mark = match diagnostics.iter().map(|d| d.severity).max() {
+        Some(s) => color.severity_letter(s),
+        None => color.green("."),
+    };
+    let _ = write!(out, "{mark}");
 }
 
 fn write_marks(
@@ -110,5 +139,21 @@ mod tests {
         let s = String::from_utf8(buf).unwrap();
         assert!(s.contains("\x1b[32m.\x1b[0m"), "{s}");
         assert!(s.contains("\x1b[32m0 offenses\x1b[0m"), "{s}");
+    }
+
+    #[test]
+    fn progress_streams_mark_then_summary() {
+        let fmt = ProgressFormatter {
+            color: Color::resolve(Some(false)),
+        };
+        let mut buf = Vec::new();
+        fmt.started(2, &mut buf);
+        fmt.file_finished(&[], &mut buf);
+        fmt.file_finished(&[sample()], &mut buf);
+        fmt.finished(&[sample()], &[PathBuf::from("a.rb"), PathBuf::from("b.rb")], &mut buf);
+        let s = String::from_utf8(buf).unwrap();
+        assert!(s.starts_with("Inspecting 2 files\n.C\n"), "{s}");
+        assert!(s.contains("Offenses:"), "{s}");
+        assert!(s.contains("2 files inspected, 1 offense detected"), "{s}");
     }
 }

@@ -39,7 +39,7 @@ impl Cop for LeadingEmptyLines {
             0,
             "Unnecessary leading blank lines detected.".to_string(),
         );
-        if let Some(ref mut corr) = corrections {
+        if let Some(corr) = corrections.as_mut() {
             corr.push(crate::correction::Correction {
                 start: 0,
                 end,

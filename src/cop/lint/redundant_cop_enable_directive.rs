@@ -1,0 +1,87 @@
+use std::collections::HashSet;
+
+use crate::cop::{Cop, CopConfig};
+use crate::diagnostic::{Diagnostic, Severity};
+use crate::parse::codemap::CodeMap;
+use crate::parse::source::SourceFile;
+
+/// Lint/RedundantCopEnableDirective — enable without matching disable.
+pub struct RedundantCopEnableDirective;
+
+fn directive_names(rest: &str) -> Vec<String> {
+    let cops = rest
+        .trim()
+        .trim_start_matches(':')
+        .trim()
+        .split("--")
+        .next()
+        .unwrap_or("");
+    let names: Vec<String> = cops
+        .split(',')
+        .map(|c| c.trim().to_string())
+        .filter(|c| !c.is_empty())
+        .collect();
+    if names.is_empty() {
+        vec!["all".into()]
+    } else {
+        names
+    }
+}
+
+fn check_enable(
+    cop: &RedundantCopEnableDirective,
+    source: &SourceFile,
+    disabled: &mut HashSet<String>,
+    line: &str,
+    line_no: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(rest) = line.split("# rubocop:enable").nth(1) else {
+        return;
+    };
+    if !line.trim_start().starts_with('#') {
+        return;
+    }
+    for name in directive_names(rest) {
+        if disabled.remove(&name) || disabled.contains("all") {
+            continue;
+        }
+        diagnostics.push(cop.diagnostic(
+            source,
+            line_no,
+            0,
+            format!("Unnecessary enabling of {name}."),
+        ));
+    }
+}
+
+impl Cop for RedundantCopEnableDirective {
+    fn name(&self) -> &'static str {
+        "Lint/RedundantCopEnableDirective"
+    }
+
+    fn default_severity(&self) -> Severity {
+        Severity::Warning
+    }
+
+    fn check_source(
+        &self,
+        source: &SourceFile,
+        _tree: &tree_sitter::Tree,
+        _code_map: &CodeMap,
+        _config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        _corrections: Option<&mut Vec<crate::correction::Correction>>,
+    ) {
+        let mut disabled: HashSet<String> = HashSet::new();
+        for (i, line) in source.lines().enumerate() {
+            let s = String::from_utf8_lossy(line);
+            if let Some(rest) = s.split("# rubocop:disable").nth(1) {
+                for name in directive_names(rest) {
+                    disabled.insert(name);
+                }
+            }
+            check_enable(self, source, &mut disabled, &s, i + 1, diagnostics);
+        }
+    }
+}

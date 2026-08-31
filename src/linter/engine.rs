@@ -35,10 +35,28 @@ pub fn lint_source(
     let tree = parse::parse_ruby(source)?;
     let mut diagnostics = Vec::new();
     let mut corrections = corr_bucket(mode);
+    // RuboCop: parser failures → Lint/Syntax only (no other cops on that file).
+    if run_syntax_gate(
+        source,
+        &tree,
+        config,
+        &active,
+        mode,
+        &mut diagnostics,
+        &mut corrections,
+    ) {
+        filter_directives(source, ignore_disable, &mut diagnostics);
+        return Ok(diagnostics);
+    }
+    let rest: Vec<ActiveCop<'_>> = active
+        .iter()
+        .filter(|(c, _, _)| c.name() != "Lint/Syntax")
+        .map(|(c, cfg, idx)| (*c, cfg.clone(), *idx))
+        .collect();
     run_phases(
         source,
         &tree,
-        &active,
+        &rest,
         registry,
         mode,
         &mut diagnostics,
@@ -49,6 +67,37 @@ pub fn lint_source(
         write_fixes(source, corrections)?;
     }
     Ok(diagnostics)
+}
+
+/// Run Lint/Syntax first. Returns true when syntax fatals should skip other cops.
+fn run_syntax_gate(
+    source: &SourceFile,
+    tree: &tree_sitter::Tree,
+    config: &ResolvedConfig,
+    active: &[ActiveCop<'_>],
+    mode: AutocorrectMode,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) -> bool {
+    let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
+    if let Some((cop, cfg, idx)) = active.iter().find(|(c, _, _)| c.name() == "Lint/Syntax") {
+        let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
+        let before = diagnostics.len();
+        cop.check_source(source, tree, &code_map, cfg, diagnostics, corr_buf.as_mut());
+        finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, *idx, corrections);
+        return crate::cop::lint::syntax::has_syntax_fatals(diagnostics);
+    }
+    // Cop excepted/disabled: still gate other cops when the source is invalid.
+    let mut probe = Vec::new();
+    crate::cop::lint::syntax::Syntax.check_source(
+        source,
+        tree,
+        &code_map,
+        &config.cop_config("Lint/Syntax"),
+        &mut probe,
+        None,
+    );
+    !probe.is_empty()
 }
 
 fn run_phases(

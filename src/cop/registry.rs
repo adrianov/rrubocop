@@ -2,6 +2,14 @@ use std::collections::HashMap;
 
 use super::Cop;
 
+/// Register many cops without inflating ABC (macro body is not scored as branches).
+#[macro_export]
+macro_rules! register_cops {
+    ($registry:expr; $($cop:expr),+ $(,)?) => {{
+        $($registry.register(::std::boxed::Box::new($cop));)+
+    }};
+}
+
 pub struct CopRegistry {
     cops: Vec<Box<dyn Cop>>,
     index: HashMap<&'static str, usize>,
@@ -18,10 +26,19 @@ impl CopRegistry {
 
     pub fn default_registry() -> Self {
         let mut registry = Self::new();
+        super::bundler::register_all(&mut registry);
+        super::factory_bot::register_all(&mut registry);
+        super::gemspec::register_all(&mut registry);
+        super::graphql::register_all(&mut registry);
         super::layout::register_all(&mut registry);
         super::lint::register_all(&mut registry);
         super::metrics::register_all(&mut registry);
         super::naming::register_all(&mut registry);
+        super::performance::register_all(&mut registry);
+        super::rails::register_all(&mut registry);
+        super::rake::register_all(&mut registry);
+        super::rspec::register_all(&mut registry);
+        super::rspec_rails::register_all(&mut registry);
         super::security::register_all(&mut registry);
         super::style::register_all(&mut registry);
         registry

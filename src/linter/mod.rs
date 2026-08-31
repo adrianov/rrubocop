@@ -30,8 +30,22 @@ pub fn run_linter(
     registry: &CopRegistry,
     discovered: &DiscoveredFiles,
 ) -> Result<LintResult> {
+    run_linter_with(args, config, registry, discovered, |_| {}, |_| {})
+}
+
+/// Like [`run_linter`], with `on_start(file_count)` before work and `on_file`
+/// once per finished path (completion order; not sorted).
+pub fn run_linter_with(
+    args: &Args,
+    config: &ResolvedConfig,
+    registry: &CopRegistry,
+    discovered: &DiscoveredFiles,
+    on_start: impl FnOnce(usize),
+    on_file: impl Fn(&[Diagnostic]) + Sync,
+) -> Result<LintResult> {
     let prep = prepare_run(args, config, registry, discovered);
-    let diagnostics = lint_all_files(&prep, config, registry)?;
+    on_start(prep.files.len());
+    let diagnostics = lint_all_files(&prep, config, registry, on_file)?;
     Ok(LintResult {
         diagnostics,
         files: prep.files,
@@ -84,6 +98,7 @@ fn lint_all_files(
     prep: &RunPrep,
     config: &ResolvedConfig,
     registry: &CopRegistry,
+    on_file: impl Fn(&[Diagnostic]) + Sync,
 ) -> Result<Vec<Diagnostic>> {
     let diagnostics = Mutex::new(Vec::new());
     let stop = AtomicBool::new(false);
@@ -95,7 +110,16 @@ fn lint_all_files(
         config_fingerprint: &prep.config_fp,
     };
     prep.files.par_iter().try_for_each(|path| -> Result<()> {
-        lint_path_job(path, prep, config, registry, settings, &diagnostics, &stop)
+        lint_path_job(
+            path,
+            prep,
+            config,
+            registry,
+            settings,
+            &diagnostics,
+            &stop,
+            &on_file,
+        )
     })?;
     let mut diags = diagnostics.into_inner().unwrap();
     diags.sort_by(|a, b| a.sort_key().cmp(&b.sort_key()));
@@ -110,6 +134,7 @@ fn lint_path_job(
     settings: CacheSettings<'_>,
     diagnostics: &Mutex<Vec<Diagnostic>>,
     stop: &AtomicBool,
+    on_file: &impl Fn(&[Diagnostic]),
 ) -> Result<()> {
     if stop.load(Ordering::Relaxed) {
         return Ok(());
@@ -129,6 +154,7 @@ fn lint_path_job(
     if !file_diags.is_empty() && prep.fail_fast {
         stop.store(true, Ordering::Relaxed);
     }
+    on_file(&file_diags);
     diagnostics.lock().unwrap().append(&mut file_diags);
     Ok(())
 }

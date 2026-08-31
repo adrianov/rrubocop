@@ -22,9 +22,9 @@ use config::{CopFilterSet, ResolvedConfig, load_config};
 use cop::registry::CopRegistry;
 use diagnostic::Diagnostic;
 use formatter::color::Color;
-use formatter::create_formatter;
+use formatter::{create_formatter, Formatter, ProgressSink};
 use fs::discover_files;
-use linter::{run_linter, should_fail};
+use linter::{run_linter, run_linter_with, should_fail};
 use parse::source::SourceFile;
 
 pub fn run() -> Result<ExitCode> {
@@ -96,8 +96,33 @@ fn lint_paths(
         }
         return Ok(ExitCode::SUCCESS);
     }
+    let fmt = create_formatter(&args.format, Color::resolve(args.color_force()));
+    if fmt.streams_marks() {
+        return lint_paths_streaming(args, config, registry, &discovered, fmt.as_ref());
+    }
     let result = run_linter(args, config, registry, &discovered)?;
-    Ok(print_results(args, &result.diagnostics, &result.files))
+    fmt.print(&result.diagnostics, &result.files);
+    Ok(exit_from_diags(&result.diagnostics, &args.fail_level))
+}
+
+fn lint_paths_streaming(
+    args: &Args,
+    config: &ResolvedConfig,
+    registry: &CopRegistry,
+    discovered: &fs::DiscoveredFiles,
+    fmt: &dyn Formatter,
+) -> Result<ExitCode> {
+    let sink = ProgressSink::new(fmt);
+    let result = run_linter_with(
+        args,
+        config,
+        registry,
+        discovered,
+        |n| sink.started(n),
+        |diags| sink.file_finished(diags),
+    )?;
+    sink.finished(&result.diagnostics, &result.files);
+    Ok(exit_from_diags(&result.diagnostics, &args.fail_level))
 }
 
 fn lint_stdin(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> Result<ExitCode> {

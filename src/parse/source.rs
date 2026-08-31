@@ -39,6 +39,11 @@ impl SourceFile {
         self.content.split(|&b| b == b'\n')
     }
 
+    /// Number of lines (including a trailing empty line after a final `\n`).
+    pub fn line_count(&self) -> usize {
+        self.line_starts.len()
+    }
+
     pub fn offset_to_line_col(&self, byte_offset: usize) -> (usize, usize) {
         let line_idx = match self.line_starts.binary_search(&byte_offset) {
             Ok(idx) => idx,
@@ -55,6 +60,12 @@ impl SourceFile {
         } else {
             Some(self.line_starts[line - 1])
         }
+    }
+
+    /// Byte offset of (1-based line, 0-based display column). Best-effort for ASCII.
+    pub fn line_col_to_offset(&self, line: usize, column: usize) -> Option<usize> {
+        let start = self.line_start(line)?;
+        Some(start + column)
     }
 
     pub fn location_at(&self, byte_offset: usize) -> Location {
