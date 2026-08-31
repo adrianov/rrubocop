@@ -2,6 +2,7 @@
 
 use tree_sitter::Node;
 
+use crate::cop::shared::call_method_name;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
@@ -30,14 +31,18 @@ impl Cop for MethodCallWithoutArgsParentheses {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let Some(args) = empty_args(node) else {
+        let Some(args) = empty_args(source, node) else {
             return;
         };
         report(self, source, args, diagnostics, &mut corrections);
     }
 }
 
-fn empty_args(node: Node<'_>) -> Option<Node<'_>> {
+fn empty_args<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
+    // RuboCop uses `on_send` only — `super()` / `yield()` are separate node types.
+    if matches!(call_method_name(source, node), Some(b"super" | b"yield")) {
+        return None;
+    }
     let args = node.child_by_field_name("arguments")?;
     let mut cur = args.walk();
     if args.named_children(&mut cur).next().is_some() {
@@ -71,4 +76,13 @@ fn report(
         diag.corrected = true;
     }
     diagnostics.push(diag);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(
+        MethodCallWithoutArgsParentheses,
+        "cops/style/method_call_without_args_parentheses"
+    );
 }

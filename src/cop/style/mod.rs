@@ -130,6 +130,7 @@ mod symbol_proc;
 mod ternary_parentheses;
 mod trailing_body_on_class;
 mod trailing_body_on_module;
+mod trailing_comma_args;
 mod trailing_comma_in_arguments;
 mod trailing_comma_in_array_literal;
 mod trailing_comma_in_hash_literal;
