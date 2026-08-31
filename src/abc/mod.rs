@@ -25,7 +25,8 @@ pub struct AbcOffense {
     pub vector: String,
 }
 
-/// Method and module ABC ceilings for one scan.
+/// Method and module ABC ceilings for one scan (kept for future Metrics cops).
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Limits {
     pub method: f64,
@@ -54,6 +55,7 @@ pub(crate) fn offense_at(unit: Node<'_>, name: &str, a: u32, b: u32, c: u32) -> 
 
 /// Parse an `"<A, B, C>"` metric vector into its three numbers; the
 /// inverse of [`fmt_vector`].
+#[allow(dead_code)]
 pub(crate) fn parse_vector(vector: &str) -> (u32, u32, u32) {
     let nums = vector.trim_matches(|c| c == '<' || c == '>');
     let mut it = nums.split(", ");
@@ -65,6 +67,7 @@ pub(crate) fn parse_vector(vector: &str) -> (u32, u32, u32) {
 }
 
 /// Fitzpatrick module score: sum method vectors, then one magnitude.
+#[allow(dead_code)]
 pub(crate) fn module_score(scores: &[AbcOffense]) -> (u32, u32, u32, f64) {
     let (mut a, mut b, mut c) = (0u32, 0u32, 0u32);
     for o in scores {

@@ -1,9 +1,4 @@
-# Publish abcop to crates.io and GitHub Releases when a version tag is pushed
-# (e.g. v0.16.2). Requires repository secret CARGO_REGISTRY_TOKEN.
-#
-# The .deb is built on Ubuntu 22.04 (glibc 2.35) so it installs on Ubuntu
-# 22.04/24.04 LTS and Debian bookworm/trixie (and other Debian-like amd64).
-# macOS .tar.gz archives ship the binary and man page for Apple Silicon and Intel.
+# Publish rrubocop to crates.io and GitHub Releases when a version tag is pushed.
 name: publish
 
 on:
@@ -26,15 +21,13 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish --locked
 
-  # Build on Jammy so the binary's glibc requirement stays at 2.35 (not Noble's
-  # newer symbols), which keeps Ubuntu 22.04+ and current Debian installable.
   deb:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Install build deps
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq pkg-config libssl-dev
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pkg-config
       - name: Install cargo-deb
         run: cargo install cargo-deb --locked
       - name: Build .deb
@@ -44,107 +37,53 @@ jobs:
           set -euo pipefail
           deb=(target/debian/*.deb)
           sudo dpkg -i "${deb[0]}"
-          abcop --help >/dev/null
-          man -w abcop
-          dpkg -L abcop | grep -E '/usr/bin/abcop|/usr/share/man/man1/abcop\.1'
+          rrubocop --help >/dev/null
+          man -w rrubocop
+          dpkg -L rrubocop | grep -E '/usr/bin/rrubocop|/usr/share/man/man1/rrubocop\.1'
       - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: abcop-deb
+          name: rrubocop-deb
           path: target/debian/*.deb
 
-  # Both Apple targets on macos-14 (arm64 host can link x86_64-apple-darwin).
   tarball:
     runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - aarch64-apple-darwin
-          - x86_64-apple-darwin
+        target: [aarch64-apple-darwin, x86_64-apple-darwin]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-      - name: Build release binary
-        run: cargo build --release --locked --target ${{ matrix.target }}
-      - name: Pack .tar.gz
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} --locked
+      - name: Package
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          stage="abcop-${version}-${{ matrix.target }}"
-          mkdir -p "$stage"
-          cp "target/${{ matrix.target }}/release/abcop" "$stage/abcop"
-          cp man/abcop.1 "$stage/abcop.1"
-          tar -czf "${stage}.tar.gz" "$stage"
-          mkdir -p dist
-          mv "${stage}.tar.gz" dist/
-      - name: Upload .tar.gz artifact
+          ver=$(cargo pkgid | sed 's/.*#//')
+          name="rrubocop-${ver}-${{ matrix.target }}"
+          mkdir -p "$name"
+          cp "target/${{ matrix.target }}/release/rrubocop" "$name/"
+          cp man/rrubocop.1 "$name/"
+          tar -czf "${name}.tar.gz" "$name"
+      - name: Upload tarball
         uses: actions/upload-artifact@v4
         with:
-          name: abcop-tarball-${{ matrix.target }}
-          path: dist/*.tar.gz
+          name: rrubocop-${{ matrix.target }}
+          path: rrubocop-*.tar.gz
 
-  github-release:
+  release:
     needs: [deb, tarball]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: dist
-          pattern: abcop-*
-          merge-multiple: true
+          path: artifacts
       - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          shopt -s nullglob
-          assets=(dist/*)
-          test "${#assets[@]}" -gt 0
-
-          deb_name=""
-          for f in "${assets[@]}"; do
-            case "$f" in
-              *.deb) deb_name=$(basename "$f") ;;
-            esac
-          done
-
-          notes="## Install
-
-          ### macOS (binary + man)
-
-          Apple Silicon:
-          \`\`\`sh
-          curl -LO https://github.com/adrianov/abcop/releases/download/${GITHUB_REF_NAME}/abcop-${version}-aarch64-apple-darwin.tar.gz
-          tar -xzf abcop-${version}-aarch64-apple-darwin.tar.gz
-          sudo cp abcop-${version}-aarch64-apple-darwin/abcop /usr/local/bin/
-          sudo mkdir -p /usr/local/share/man/man1
-          sudo cp abcop-${version}-aarch64-apple-darwin/abcop.1 /usr/local/share/man/man1/
-          \`\`\`
-
-          Or via Homebrew: \`brew install adrianov/abcop/abcop\`.
-
-          ### Ubuntu / Debian (amd64)
-
-          Works on **Ubuntu 22.04+** and **Debian bookworm+**.
-
-          \`\`\`sh
-          curl -LO https://github.com/adrianov/abcop/releases/download/${GITHUB_REF_NAME}/${deb_name}
-          sudo dpkg -i ${deb_name}
-          \`\`\`
-
-          Also available via crates.io: \`cargo install abcop\`."
-
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
-            gh release edit "$GITHUB_REF_NAME" --notes "$notes"
-          else
-            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
-              --title "abcop $version" \
-              --notes "$notes"
-          fi
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true

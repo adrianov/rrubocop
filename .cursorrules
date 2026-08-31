@@ -1,0 +1,15 @@
+# rrubocop
+
+Rust RuboCop drop-in for Ruby (tree-sitter). No Ruby runtime required for linting.
+
+## Layout
+- `src/cli.rs` — RuboCop-compatible CLI
+- `src/config/` — `.rubocop.yml` resolution
+- `src/cop/` — cops by department (`layout`, `lint`, `metrics`, `naming`, `security`, `style`)
+- `src/parse/` — SourceFile, CodeMap, directives, tree-sitter parse
+- `src/linter.rs` — parallel lint + autocorrect
+- `src/formatter/` — text/json/progress/…
+- `src/abc/`, `src/model/` — Metrics/AbcSize (tree-sitter)
+- `vendor/tree-sitter-ruby/` — grammar
+- `scripts/cross_test_nitrocop.py` — offense compare vs local nitrocop
+- Reference clones (outside repo): `/home/crexus/nitrocop`, `/home/crexus/rubocop`

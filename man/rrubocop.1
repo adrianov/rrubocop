@@ -1,0 +1,48 @@
+.TH RRUBOCOP 1 "August 2026" "rrubocop 0.0.1" "User Commands"
+.SH NAME
+rrubocop \- fast RuboCop-compatible Ruby linter
+.SH SYNOPSIS
+.B rrubocop
+[\fIOPTIONS\fR] [\fIPATH\fR]...
+.SH DESCRIPTION
+rrubocop is a Rust RuboCop drop-in for Ruby. It parses with tree-sitter and
+does not require a Ruby runtime for linting. It reads
+.B .rubocop.yml
+and emits RuboCop-compatible diagnostics.
+.SH OPTIONS
+.TP
+\fB\-c\fR, \fB\-\-config\fR \fIFILE\fR
+Path to configuration file.
+.TP
+\fB\-f\fR, \fB\-\-format\fR \fIFORMAT\fR
+Output format: progress, text, json, github, quiet, files, emacs, simple.
+.TP
+\fB\-a\fR, \fB\-\-autocorrect\fR
+Apply safe autocorrections.
+.TP
+\fB\-A\fR, \fB\-\-autocorrect\-all\fR
+Apply all autocorrections.
+.TP
+\fB\-\-only\fR \fICOPS\fR
+Run only these cops (comma-separated).
+.TP
+\fB\-\-except\fR \fICOPS\fR
+Exclude these cops.
+.TP
+\fB\-L\fR, \fB\-\-list\-target\-files\fR
+List files that would be linted.
+.TP
+\fB\-\-list\-cops\fR
+List registered cop names.
+.TP
+\fB\-\-fail\-level\fR \fISEVERITY\fR
+Minimum severity for exit code 1 (default: convention).
+.SH EXIT STATUS
+.BR 0
+clean,
+.BR 1
+offenses,
+.BR 2
+error.
+.SH SEE ALSO
+rubocop(1)
