@@ -30,14 +30,62 @@ fn align_kw(kind: &str) -> Option<&'static str> {
     }
 }
 
-/// RuboCop aligns `rescue`/`ensure` with `def` / `begin` / `do` / `class` / `module`.
-fn alignment_col(source: &SourceFile, node: Node<'_>) -> Option<usize> {
+fn ancestor_align_node(node: Node<'_>) -> Option<Node<'_>> {
     let mut p = node.parent();
     while let Some(n) = p {
-        if let Some(kw) = align_kw(n.kind()) {
-            return Some(kw_col(source, n, kw));
+        if align_kw(n.kind()).is_some() {
+            return Some(n);
         }
         p = n.parent();
+    }
+    None
+}
+
+/// When Layout/BeginEndAlignment uses `start_of_line`, align to the first
+/// non-whitespace on the ancestor's starting line (RuboCop parity).
+fn alignment_col(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Option<usize> {
+    let ancestor = ancestor_align_node(node)?;
+    if begin_end_start_of_line(config) {
+        return Some(shared::line_indent(source, ancestor.start_byte()));
+    }
+    if matches!(ancestor.kind(), "do_block" | "block") {
+        return block_align_col(source, ancestor);
+    }
+    Some(kw_col(source, ancestor, align_kw(ancestor.kind())?))
+}
+
+fn begin_end_start_of_line(config: &CopConfig) -> bool {
+    config.get_bool("BeginEndAlignmentEnabled", true)
+        && config.get_str("BeginEndAlignmentStyle", "begin") == "start_of_line"
+}
+
+fn block_align_col(source: &SourceFile, ancestor: Node<'_>) -> Option<usize> {
+    let send = block_send_node(ancestor)?;
+    let last_line_start = source
+        .line_start(shared::node_line(source, send) + line_span(source, send) - 1)
+        .unwrap_or(send.start_byte());
+    Some(shared::line_indent(
+        source,
+        last_line_start.max(send.start_byte()),
+    ))
+}
+
+fn line_span(source: &SourceFile, node: Node<'_>) -> usize {
+    let start = shared::node_line(source, node);
+    let end = source.offset_to_line_col(node.end_byte().saturating_sub(1)).0;
+    (end.saturating_sub(start)).saturating_add(1)
+}
+
+fn block_send_node(block: Node<'_>) -> Option<Node<'_>> {
+    // `(call/command) do ... end` — send is previous named sibling or parent call.
+    if let Some(prev) = block.prev_named_sibling() {
+        if matches!(prev.kind(), "call" | "command" | "element_reference") {
+            return Some(prev);
+        }
+    }
+    let parent = block.parent()?;
+    if matches!(parent.kind(), "call" | "command") {
+        return Some(parent);
     }
     None
 }
@@ -57,14 +105,14 @@ impl Cop for RescueEnsureAlignment {
         &self,
         source: &SourceFile,
         node: Node<'_>,
-        _config: &CopConfig,
+        config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         if node.parent().is_some_and(|p| p.kind() == node.kind()) {
             return;
         }
-        let Some(base_col) = alignment_col(source, node) else {
+        let Some(base_col) = alignment_col(source, node, config) else {
             return;
         };
         if shared::node_col(source, node) == base_col {

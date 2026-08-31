@@ -25,6 +25,12 @@ fn skip_kid(kind: &str) -> bool {
             | "parameters"
             | "block_parameters"
             | "comment"
+            | "rescue"
+            | "ensure"
+            | "else"
+            | "elsif"
+            | "when"
+            | "in"
     )
 }
 

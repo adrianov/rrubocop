@@ -175,5 +175,9 @@ pub(crate) fn build_resolved(parts: ResolvedParts) -> ResolvedConfig {
         rack_version: parts.lock.rack_version,
         base_dir: Some(parts.base_dir),
         migrated_schema_version: parts.base.migrated_schema_version,
+        display_cop_names: parts.base.display_cop_names.unwrap_or(true),
+        display_style_guide: parts.base.display_style_guide.unwrap_or(false),
+        extra_details: parts.base.extra_details.unwrap_or(false),
+        style_guide_base_url: parts.base.style_guide_base_url,
     }
 }

@@ -11,6 +11,7 @@ pub mod fs;
 pub mod linter;
 pub mod model;
 pub mod parse;
+pub mod testutil;
 
 use std::io::Read;
 use std::process::ExitCode;
@@ -46,10 +47,14 @@ pub fn run() -> Result<ExitCode> {
 
 fn resolved_config(args: &Args) -> Result<ResolvedConfig> {
     if args.force_default_config {
-        return Ok(ResolvedConfig::empty());
+        let mut cfg = ResolvedConfig::empty();
+        cfg.apply_display_cli(args.display_cop_names_override());
+        return Ok(cfg);
     }
     let target = args.paths.first().map(|p| p.as_path());
-    load_config(args.config.as_deref(), target, None)
+    let mut config = load_config(args.config.as_deref(), target, None)?;
+    config.apply_display_cli(args.display_cop_names_override());
+    Ok(config)
 }
 
 fn list_and_exit(args: &Args, registry: &CopRegistry) -> Option<ExitCode> {
@@ -88,8 +93,8 @@ fn lint_paths(
     config: &ResolvedConfig,
     registry: &CopRegistry,
 ) -> Result<ExitCode> {
-    let discovered = discover_files(&args.paths, config)?;
     if args.list_target_files {
+        let discovered = discover_files(&args.paths, config)?;
         for f in &discovered.files {
             println!("{}", f.display());
         }
@@ -97,9 +102,9 @@ fn lint_paths(
     }
     let fmt = create_formatter(&args.format, Color::resolve(args.color_force()));
     if fmt.streams_marks() {
-        return lint_paths_streaming(args, config, registry, &discovered, fmt.as_ref());
+        return lint_paths_streaming(args, config, registry, fmt.as_ref());
     }
-    let result = run_linter(args, config, registry, &discovered)?;
+    let result = run_linter(args, config, registry, &args.paths)?;
     fmt.print(&result.diagnostics, &result.files);
     Ok(exit_from_diags(&result.diagnostics, &args.fail_level))
 }
@@ -108,7 +113,6 @@ fn lint_paths_streaming(
     args: &Args,
     config: &ResolvedConfig,
     registry: &CopRegistry,
-    discovered: &fs::DiscoveredFiles,
     fmt: &dyn Formatter,
 ) -> Result<ExitCode> {
     let sink = ProgressSink::new(fmt);
@@ -116,7 +120,7 @@ fn lint_paths_streaming(
         args,
         config,
         registry,
-        discovered,
+        &args.paths,
         |n| sink.started(n),
         |diags| sink.file_finished(diags),
     )?;

@@ -6,7 +6,7 @@ use std::path::Path;
 use crate::cop::EnabledState;
 
 use super::merge::merge_layer_into;
-use super::types::{ConfigLayer, InheritMode, NewCopsPolicy};
+use super::types::{ConfigLayer, NewCopsPolicy};
 use super::ResolvedConfig;
 
 impl ResolvedConfig {
@@ -49,27 +49,40 @@ impl ResolvedConfig {
     }
 
     fn layer_snapshot(&self) -> ConfigLayer {
-        ConfigLayer {
-            cop_configs: self.cop_configs.clone(),
-            department_configs: self.department_configs.clone(),
-            global_excludes: self.global_excludes.clone(),
-            new_cops: Some(match self.new_cops {
-                NewCopsPolicy::Enable => "enable".to_string(),
-                NewCopsPolicy::Disable => "disable".to_string(),
-            }),
-            disabled_by_default: Some(self.disabled_by_default),
-            inherit_mode: InheritMode::default(),
-            require_enabled_cops: HashSet::new(),
-            require_enabled_depts: HashSet::new(),
-            require_known_cops: self.require_known_cops.clone(),
-            require_departments: self.require_departments.clone(),
-            user_mentioned_cops: self.project_mentioned_cops.clone(),
-            user_mentioned_depts: self.project_mentioned_depts.clone(),
-            target_ruby_version: self.target_ruby_version,
-            target_rails_version: self.target_rails_version,
-            active_support_extensions_enabled: Some(self.active_support_extensions_enabled),
-            migrated_schema_version: self.migrated_schema_version.clone(),
-        }
+        let mut layer = ConfigLayer::empty();
+        self.copy_maps_into(&mut layer);
+        self.copy_versions_into(&mut layer);
+        self.copy_display_into(&mut layer);
+        layer
+    }
+
+    fn copy_maps_into(&self, layer: &mut ConfigLayer) {
+        layer.cop_configs = self.cop_configs.clone();
+        layer.department_configs = self.department_configs.clone();
+        layer.global_excludes = self.global_excludes.clone();
+        layer.require_known_cops = self.require_known_cops.clone();
+        layer.require_departments = self.require_departments.clone();
+        layer.user_mentioned_cops = self.project_mentioned_cops.clone();
+        layer.user_mentioned_depts = self.project_mentioned_depts.clone();
+    }
+
+    fn copy_versions_into(&self, layer: &mut ConfigLayer) {
+        layer.new_cops = Some(match self.new_cops {
+            NewCopsPolicy::Enable => "enable".to_string(),
+            NewCopsPolicy::Disable => "disable".to_string(),
+        });
+        layer.disabled_by_default = Some(self.disabled_by_default);
+        layer.target_ruby_version = self.target_ruby_version;
+        layer.target_rails_version = self.target_rails_version;
+        layer.active_support_extensions_enabled = Some(self.active_support_extensions_enabled);
+        layer.migrated_schema_version = self.migrated_schema_version.clone();
+    }
+
+    fn copy_display_into(&self, layer: &mut ConfigLayer) {
+        layer.display_cop_names = Some(self.display_cop_names);
+        layer.display_style_guide = Some(self.display_style_guide);
+        layer.extra_details = Some(self.extra_details);
+        layer.style_guide_base_url = self.style_guide_base_url.clone();
     }
 
     fn apply_merged_layer(&self, effective: &mut Self, merged: &ConfigLayer) {
@@ -91,6 +104,18 @@ impl ResolvedConfig {
             .active_support_extensions_enabled
             .unwrap_or(self.active_support_extensions_enabled);
         effective.migrated_schema_version = merged.migrated_schema_version.clone();
+        self.apply_display_from(effective, merged);
+    }
+
+    fn apply_display_from(&self, effective: &mut Self, merged: &ConfigLayer) {
+        effective.display_cop_names = merged.display_cop_names.unwrap_or(self.display_cop_names);
+        effective.display_style_guide = merged
+            .display_style_guide
+            .unwrap_or(self.display_style_guide);
+        effective.extra_details = merged.extra_details.unwrap_or(self.extra_details);
+        if merged.style_guide_base_url.is_some() {
+            effective.style_guide_base_url = merged.style_guide_base_url.clone();
+        }
     }
 
     fn apply_project_mentions(&self, effective: &mut Self, layer: &ConfigLayer) {

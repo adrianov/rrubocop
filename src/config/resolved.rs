@@ -80,6 +80,14 @@ pub struct ResolvedConfig {
     /// have ALL offenses suppressed (rubocop-rails' MigrationFileSkippable).
     /// Default sentinel from rubocop-rails: `'19700101000000'`.
     pub(crate) migrated_schema_version: Option<String>,
+    /// AllCops.DisplayCopNames (default true).
+    pub display_cop_names: bool,
+    /// AllCops.DisplayStyleGuide (default false).
+    pub display_style_guide: bool,
+    /// AllCops.ExtraDetails (default false).
+    pub extra_details: bool,
+    /// AllCops.StyleGuideBaseURL.
+    pub style_guide_base_url: Option<String>,
 }
 
 impl ResolvedConfig {
@@ -106,6 +114,17 @@ impl ResolvedConfig {
             rack_version: None,
             base_dir: None,
             migrated_schema_version: None,
+            display_cop_names: true,
+            display_style_guide: false,
+            extra_details: false,
+            style_guide_base_url: None,
+        }
+    }
+
+    /// Apply CLI `-D` / `--no-display-cop-names` overrides.
+    pub fn apply_display_cli(&mut self, display: Option<bool>) {
+        if let Some(v) = display {
+            self.display_cop_names = v;
         }
     }
 

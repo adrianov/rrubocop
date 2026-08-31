@@ -86,9 +86,13 @@ pub struct Args {
     #[arg(short = 'L', long)]
     pub list_target_files: bool,
 
-    /// Display cop names in offense output (always on; accepted for RuboCop compat)
-    #[arg(short = 'D', long)]
+    /// Display cop names in offense messages (`-D` / AllCops.DisplayCopNames)
+    #[arg(short = 'D', long, overrides_with = "no_display_cop_names")]
     pub display_cop_names: bool,
+
+    /// Hide cop names in offense messages
+    #[arg(long = "no-display-cop-names", overrides_with = "display_cop_names")]
+    pub no_display_cop_names: bool,
 
     /// Use parallel processing (always on; accepted for RuboCop compat)
     #[arg(short = 'P', long)]
@@ -136,6 +140,17 @@ impl Args {
         if self.color {
             Some(true)
         } else if self.no_color {
+            Some(false)
+        } else {
+            None
+        }
+    }
+
+    /// CLI override for AllCops.DisplayCopNames (`-D` / `--no-display-cop-names`).
+    pub fn display_cop_names_override(&self) -> Option<bool> {
+        if self.display_cop_names {
+            Some(true)
+        } else if self.no_display_cop_names {
             Some(false)
         } else {
             None

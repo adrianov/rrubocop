@@ -125,6 +125,9 @@ pub trait Cop: Send + Sync {
             cop_name: self.name().to_string(),
             message,
             corrected: false,
+            correctable: self.supports_autocorrect(),
+            source_line: String::new(),
+            highlight_length: 1,
         }
     }
 

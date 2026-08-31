@@ -45,6 +45,10 @@ pub(crate) struct ConfigLayer {
     pub(crate) target_rails_version: Option<f64>,
     pub(crate) active_support_extensions_enabled: Option<bool>,
     pub(crate) migrated_schema_version: Option<String>,
+    pub(crate) display_cop_names: Option<bool>,
+    pub(crate) display_style_guide: Option<bool>,
+    pub(crate) extra_details: Option<bool>,
+    pub(crate) style_guide_base_url: Option<String>,
 }
 
 impl ConfigLayer {
@@ -66,6 +70,10 @@ impl ConfigLayer {
             target_rails_version: None,
             active_support_extensions_enabled: None,
             migrated_schema_version: None,
+            display_cop_names: None,
+            display_style_guide: None,
+            extra_details: None,
+            style_guide_base_url: None,
         }
     }
 }

@@ -70,7 +70,7 @@ impl Cop for UnreachableCode {
         // unreachable code after return/raise in the statement list.
         let stmts: Vec<_> = node
             .named_children(&mut cur)
-            .filter(|n| !matches!(n.kind(), "rescue" | "else" | "ensure"))
+            .filter(|n| !matches!(n.kind(), "rescue" | "else" | "ensure" | "comment"))
             .collect();
         check_stmts(source, &stmts, self, diagnostics);
     }

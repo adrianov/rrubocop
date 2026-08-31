@@ -6,7 +6,7 @@ use super::resolved_inject::{
     inject_active_support, inject_end_alignment, inject_first_hash_indent, inject_globals,
     inject_hash_alignment, inject_indentation_width, inject_line_length, inject_missing_else,
     inject_quoted_symbols, inject_rack_version, inject_redundant_line_break,
-    inject_space_after_comma,
+    inject_rescue_ensure_alignment, inject_space_after_comma,
 };
 use super::ResolvedConfig;
 
@@ -25,6 +25,7 @@ impl ResolvedConfig {
         inject_hash_alignment(self, name, &mut config);
         inject_first_hash_indent(self, name, &mut config);
         inject_end_alignment(self, name, &mut config);
+        inject_rescue_ensure_alignment(self, name, &mut config);
         inject_indentation_width(self, name, &mut config);
         inject_space_after_comma(self, name, &mut config);
         inject_missing_else(self, name, &mut config);

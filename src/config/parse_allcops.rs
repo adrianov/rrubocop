@@ -14,6 +14,10 @@ pub(crate) struct AllCopsFields {
     pub(crate) target_rails_version: Option<f64>,
     pub(crate) active_support_extensions_enabled: Option<bool>,
     pub(crate) migrated_schema_version: Option<String>,
+    pub(crate) display_cop_names: Option<bool>,
+    pub(crate) display_style_guide: Option<bool>,
+    pub(crate) extra_details: Option<bool>,
+    pub(crate) style_guide_base_url: Option<String>,
 }
 
 /// Parse the `AllCops` top-level key into typed fields.
@@ -28,8 +32,24 @@ pub(crate) fn parse_allcops(value: &Value) -> AllCopsFields {
         apply_target_versions(&mut fields, ac_map);
         apply_as_extensions(&mut fields, ac_map);
         apply_migrated_schema(&mut fields, ac_map);
+        apply_display_options(&mut fields, ac_map);
     }
     fields
+}
+
+fn apply_display_options(fields: &mut AllCopsFields, ac_map: &Mapping) {
+    if let Some(v) = map_get(ac_map, "DisplayCopNames") {
+        fields.display_cop_names = v.as_bool();
+    }
+    if let Some(v) = map_get(ac_map, "DisplayStyleGuide") {
+        fields.display_style_guide = v.as_bool();
+    }
+    if let Some(v) = map_get(ac_map, "ExtraDetails") {
+        fields.extra_details = v.as_bool();
+    }
+    if let Some(v) = map_get(ac_map, "StyleGuideBaseURL") {
+        fields.style_guide_base_url = v.as_str().map(String::from);
+    }
 }
 
 fn map_get<'a>(ac_map: &'a Mapping, key: &str) -> Option<&'a Value> {

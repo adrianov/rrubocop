@@ -17,6 +17,9 @@ fn sample_diag() -> crate::diagnostic::Diagnostic {
         cop_name: "Layout/TrailingWhitespace".into(),
         message: "Trailing whitespace detected.".into(),
         corrected: false,
+        correctable: true,
+        source_line: String::new(),
+        highlight_length: 1,
     }
 }
 

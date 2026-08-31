@@ -27,6 +27,12 @@ impl ResolvedConfig {
         }]);
         self.hash_versions(h);
         h.update([u8::from(self.active_support_extensions_enabled)]);
+        h.update([u8::from(self.display_cop_names)]);
+        h.update([u8::from(self.display_style_guide)]);
+        h.update([u8::from(self.extra_details)]);
+        if let Some(ref url) = self.style_guide_base_url {
+            h.update(url.as_bytes());
+        }
         self.hash_dirs(h);
     }
 

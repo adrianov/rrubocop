@@ -49,6 +49,10 @@ fn apply_allcops_fields(layer: &mut ConfigLayer, value: &Value) {
     layer.target_rails_version = fields.target_rails_version;
     layer.active_support_extensions_enabled = fields.active_support_extensions_enabled;
     layer.migrated_schema_version = fields.migrated_schema_version;
+    layer.display_cop_names = fields.display_cop_names;
+    layer.display_style_guide = fields.display_style_guide;
+    layer.extra_details = fields.extra_details;
+    layer.style_guide_base_url = fields.style_guide_base_url;
 }
 
 /// Parse a department-level config (e.g. `RSpec:` or `Rails:`).

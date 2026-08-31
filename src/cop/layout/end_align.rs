@@ -77,6 +77,10 @@ pub fn check_end(
     let Some(end_kw) = shared::end_keyword(node) else {
         return;
     };
+    // Same-line `end` (e.g. `def foo; end`) is not checked by RuboCop.
+    if shared::node_line(source, end_kw) == shared::node_line(source, node) {
+        return;
+    }
     let base_col = align_col(source, node, style);
     if shared::node_col(source, end_kw) == base_col {
         return;

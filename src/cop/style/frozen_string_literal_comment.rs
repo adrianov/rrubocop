@@ -67,7 +67,7 @@ impl Cop for FrozenStringLiteralComment {
             source,
             1,
             0,
-            "Missing frozen string literal comment.".to_string(),
+            "Missing magic comment # frozen_string_literal: true.".to_string(),
         );
         if let Some(corr) = corrections {
             let start = insert_offset(source.as_bytes());

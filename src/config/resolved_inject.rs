@@ -206,6 +206,29 @@ pub(crate) fn inject_end_alignment(cfg: &ResolvedConfig, name: &str, config: &mu
     );
 }
 
+pub(crate) fn inject_rescue_ensure_alignment(
+    cfg: &ResolvedConfig,
+    name: &str,
+    config: &mut CopConfig,
+) {
+    if name != "Layout/RescueEnsureAlignment" {
+        return;
+    }
+    inject_sibling_str(
+        &mut config.options,
+        &cfg.cop_configs,
+        "Layout/BeginEndAlignment",
+        "EnforcedStyleAlignWith",
+        "BeginEndAlignmentStyle",
+        "begin",
+    );
+    inject_bool(
+        &mut config.options,
+        "BeginEndAlignmentEnabled",
+        sibling_enabled(&cfg.cop_configs, "Layout/BeginEndAlignment"),
+    );
+}
+
 pub(crate) fn inject_indentation_width(cfg: &ResolvedConfig, name: &str, config: &mut CopConfig) {
     if name != "Layout/IndentationWidth" {
         return;

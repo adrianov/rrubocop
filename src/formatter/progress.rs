@@ -110,8 +110,11 @@ mod tests {
             location: Location { line: 1, column: 0 },
             severity: Severity::Convention,
             cop_name: "Metrics/AbcSize".into(),
-            message: "too high for `m`".into(),
+            message: "Metrics/AbcSize: too high for `m`".into(),
             corrected: false,
+            correctable: false,
+            source_line: String::new(),
+            highlight_length: 1,
         }
     }
 

@@ -1,0 +1,32 @@
+---
+description: Add RuboCop/nitrocop-style cop fixtures when fixing FPs or parity gaps
+alwaysApply: true
+---
+
+# Cop parity regression tests
+
+When fixing a **false positive**, **false negative**, or other **RuboCop/nitrocop discrepancy** in a cop:
+
+1. **Add or update fixtures** under `tests/fixtures/cops/<dept>/<snake_cop>/`:
+   - `offense.rb` — annotated bad code (`^` lines after the source line)
+   - `no_offense.rb` — code that must stay clean (include the FP case you fixed)
+2. **Wire tests** in the cop module with:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(CopStruct, "cops/dept/snake_cop");
+}
+```
+
+3. **Prefer copying** matching fixtures from `/home/crexus/nitrocop/tests/fixtures/cops/...` or RuboCop `spec/rubocop/cop/..._spec.rb` examples; keep nitrocop `^` annotation format (also accepts `# nitrocop-expect:` / `# rrubocop-expect:`).
+4. **Run** `cargo test -q --lib <module>::tests` (or the cop’s fixture tests) before finishing.
+5. Do **not** “fix” parity by only changing production code without a fixture that would have failed before the fix.
+
+Annotation example:
+
+```ruby
+raise Foo.new("msg")
+^^^^^ Style/RaiseArgs: Provide an exception class and message as arguments to `raise`.
+```

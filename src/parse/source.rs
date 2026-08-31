@@ -62,6 +62,17 @@ impl SourceFile {
         }
     }
 
+    /// Line content without trailing `\n` / `\r` (1-based line).
+    pub fn line_text(&self, line: usize) -> Option<&str> {
+        let start = self.line_start(line)?;
+        let end = self
+            .line_starts
+            .get(line)
+            .copied()
+            .unwrap_or(self.content.len());
+        std::str::from_utf8(trim_line_ending(&self.content[start..end])).ok()
+    }
+
     /// Byte offset of (1-based line, 0-based display column). Best-effort for ASCII.
     pub fn line_col_to_offset(&self, line: usize, column: usize) -> Option<usize> {
         let start = self.line_start(line)?;
@@ -72,6 +83,16 @@ impl SourceFile {
         let (line, column) = self.offset_to_line_col(byte_offset);
         Location { line, column }
     }
+}
+
+fn trim_line_ending(mut slice: &[u8]) -> &[u8] {
+    if slice.last() == Some(&b'\n') {
+        slice = &slice[..slice.len() - 1];
+    }
+    if slice.last() == Some(&b'\r') {
+        slice = &slice[..slice.len() - 1];
+    }
+    slice
 }
 
 fn compute_line_starts(content: &[u8]) -> Vec<usize> {

@@ -40,25 +40,33 @@ fn merge_global_excludes(
 }
 
 fn merge_layer_scalars(base: &mut ConfigLayer, overlay: &ConfigLayer) {
-    // NewCops / DisabledByDefault / version fields: last writer wins
-    if overlay.new_cops.is_some() {
-        base.new_cops.clone_from(&overlay.new_cops);
+    overlay_clone(&mut base.new_cops, &overlay.new_cops);
+    overlay_copy(&mut base.disabled_by_default, overlay.disabled_by_default);
+    overlay_copy(&mut base.target_ruby_version, overlay.target_ruby_version);
+    overlay_copy(&mut base.target_rails_version, overlay.target_rails_version);
+    overlay_copy(
+        &mut base.active_support_extensions_enabled,
+        overlay.active_support_extensions_enabled,
+    );
+    overlay_clone(
+        &mut base.migrated_schema_version,
+        &overlay.migrated_schema_version,
+    );
+    overlay_copy(&mut base.display_cop_names, overlay.display_cop_names);
+    overlay_copy(&mut base.display_style_guide, overlay.display_style_guide);
+    overlay_copy(&mut base.extra_details, overlay.extra_details);
+    overlay_clone(&mut base.style_guide_base_url, &overlay.style_guide_base_url);
+}
+
+fn overlay_clone<T: Clone>(base: &mut Option<T>, overlay: &Option<T>) {
+    if overlay.is_some() {
+        base.clone_from(overlay);
     }
-    if overlay.disabled_by_default.is_some() {
-        base.disabled_by_default = overlay.disabled_by_default;
-    }
-    if overlay.target_ruby_version.is_some() {
-        base.target_ruby_version = overlay.target_ruby_version;
-    }
-    if overlay.target_rails_version.is_some() {
-        base.target_rails_version = overlay.target_rails_version;
-    }
-    if overlay.active_support_extensions_enabled.is_some() {
-        base.active_support_extensions_enabled = overlay.active_support_extensions_enabled;
-    }
-    if overlay.migrated_schema_version.is_some() {
-        base.migrated_schema_version
-            .clone_from(&overlay.migrated_schema_version);
+}
+
+fn overlay_copy<T: Copy>(base: &mut Option<T>, overlay: Option<T>) {
+    if overlay.is_some() {
+        *base = overlay;
     }
 }
 

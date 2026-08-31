@@ -1,8 +1,10 @@
-//! Parallel file linting and fail-fast batching.
+//! Parallel file linting with discovery/lint pipeline and fail-fast.
 
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::mpsc::{self, Receiver};
+use std::sync::Mutex;
+use std::thread;
 
 use anyhow::Result;
 use rayon::prelude::*;
@@ -12,6 +14,7 @@ use crate::cli::AutocorrectMode;
 use crate::config::{CopFilterSet, ResolvedConfig};
 use crate::cop::registry::CopRegistry;
 use crate::diagnostic::Diagnostic;
+use crate::fs::discover_emitting;
 use crate::parse::source::SourceFile;
 
 use super::engine::lint_source;
@@ -20,6 +23,7 @@ use super::RunPrep;
 pub(super) struct LintBatch {
     pub diagnostics: Vec<Diagnostic>,
     pub inspected: Vec<PathBuf>,
+    pub discovered_count: usize,
 }
 
 fn cache_settings(prep: &RunPrep) -> CacheSettings<'_> {
@@ -47,10 +51,13 @@ fn counted_offenses(diags: &[Diagnostic], uncorrected_only: bool) -> u32 {
     n as u32
 }
 
-pub(super) fn lint_all_files(
+/// Lint while discovery is still walking: paths are queued as found.
+pub(super) fn lint_pipeline(
     prep: &RunPrep,
+    paths: &[PathBuf],
     config: &ResolvedConfig,
     registry: &CopRegistry,
+    on_discovered: impl FnOnce(usize),
     on_file: impl Fn(&[Diagnostic]) + Sync,
 ) -> Result<LintBatch> {
     let diagnostics = Mutex::new(Vec::new());
@@ -58,38 +65,81 @@ pub(super) fn lint_all_files(
     let stop = AtomicBool::new(false);
     let fail_count = AtomicU32::new(0);
     let settings = cache_settings(prep);
-    if prep.fail_fast_limit == 0 {
-        lint_unlimited(
-            prep,
-            config,
-            registry,
-            settings,
-            &diagnostics,
-            &inspected,
-            &stop,
-            &fail_count,
-            &on_file,
-        )?;
-    } else {
-        lint_fail_fast_batches(
-            prep,
-            config,
-            registry,
-            settings,
-            &diagnostics,
-            &inspected,
-            &stop,
-            &fail_count,
-            &on_file,
-        )?;
-    }
+    let discovered_count = run_discover_lint(
+        prep,
+        paths,
+        config,
+        registry,
+        settings,
+        &diagnostics,
+        &inspected,
+        &stop,
+        &fail_count,
+        on_discovered,
+        &on_file,
+    )?;
     Ok(LintBatch {
         diagnostics: take_sorted(diagnostics),
         inspected: inspected.into_inner().unwrap(),
+        discovered_count,
     })
 }
 
-fn lint_unlimited(
+#[allow(clippy::too_many_arguments)]
+fn run_discover_lint(
+    prep: &RunPrep,
+    paths: &[PathBuf],
+    config: &ResolvedConfig,
+    registry: &CopRegistry,
+    settings: CacheSettings<'_>,
+    diagnostics: &Mutex<Vec<Diagnostic>>,
+    inspected: &Mutex<Vec<PathBuf>>,
+    stop: &AtomicBool,
+    fail_count: &AtomicU32,
+    on_discovered: impl FnOnce(usize),
+    on_file: &(impl Fn(&[Diagnostic]) + Sync),
+) -> Result<usize> {
+    let (tx, rx) = mpsc::channel::<PathBuf>();
+    let rx = Mutex::new(rx);
+    thread::scope(|scope| {
+        let discover = scope.spawn(|| discover_paths(paths, prep, stop, tx));
+        let lint = scope.spawn(|| {
+            run_workers(
+                &rx,
+                prep,
+                config,
+                registry,
+                settings,
+                diagnostics,
+                inspected,
+                stop,
+                fail_count,
+                on_file,
+            )
+        });
+        let count = discover.join().unwrap()?;
+        on_discovered(count);
+        lint.join().unwrap()?;
+        Ok(count)
+    })
+}
+
+fn discover_paths(
+    paths: &[PathBuf],
+    prep: &RunPrep,
+    stop: &AtomicBool,
+    tx: mpsc::Sender<PathBuf>,
+) -> Result<usize> {
+    let result = discover_emitting(paths, &prep.filters, prep.force_exclusion, stop, |p| {
+        let _ = tx.send(p);
+    });
+    drop(tx);
+    result
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_workers(
+    rx: &Mutex<Receiver<PathBuf>>,
     prep: &RunPrep,
     config: &ResolvedConfig,
     registry: &CopRegistry,
@@ -100,9 +150,10 @@ fn lint_unlimited(
     fail_count: &AtomicU32,
     on_file: &(impl Fn(&[Diagnostic]) + Sync),
 ) -> Result<()> {
-    prep.files.par_iter().try_for_each(|path| {
-        lint_path_job(
-            path,
+    let workers = rayon::current_num_threads().max(1);
+    (0..workers).into_par_iter().try_for_each(|_| {
+        worker_loop(
+            rx,
             prep,
             config,
             registry,
@@ -116,7 +167,8 @@ fn lint_unlimited(
     })
 }
 
-fn lint_fail_fast_batches(
+fn worker_loop(
+    rx: &Mutex<Receiver<PathBuf>>,
     prep: &RunPrep,
     config: &ResolvedConfig,
     registry: &CopRegistry,
@@ -125,34 +177,30 @@ fn lint_fail_fast_batches(
     inspected: &Mutex<Vec<PathBuf>>,
     stop: &AtomicBool,
     fail_count: &AtomicU32,
-    on_file: &(impl Fn(&[Diagnostic]) + Sync),
+    on_file: &impl Fn(&[Diagnostic]),
 ) -> Result<()> {
-    let threads = rayon::current_num_threads().max(1);
-    let mut start = 0;
-    while start < prep.files.len() {
-        let used = fail_count.load(Ordering::Relaxed);
-        if used >= prep.fail_fast_limit {
-            break;
+    loop {
+        if stop.load(Ordering::Relaxed) {
+            while rx.lock().unwrap().try_recv().is_ok() {}
+            return Ok(());
         }
-        let slots = (prep.fail_fast_limit - used) as usize;
-        let end = (start + slots.min(threads)).min(prep.files.len());
-        prep.files[start..end].par_iter().try_for_each(|path| {
-            lint_path_job(
-                path,
-                prep,
-                config,
-                registry,
-                settings,
-                diagnostics,
-                inspected,
-                stop,
-                fail_count,
-                on_file,
-            )
-        })?;
-        start = end;
+        let path = { rx.lock().unwrap().recv() };
+        let Ok(path) = path else {
+            return Ok(());
+        };
+        lint_path_job(
+            &path,
+            prep,
+            config,
+            registry,
+            settings,
+            diagnostics,
+            inspected,
+            stop,
+            fail_count,
+            on_file,
+        )?;
     }
-    Ok(())
 }
 
 fn bump_fail_fast(prep: &RunPrep, add: u32, fail_count: &AtomicU32, stop: &AtomicBool) {

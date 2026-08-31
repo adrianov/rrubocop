@@ -35,7 +35,7 @@ impl Cop for SafeNavigationChain {
         &self,
         source: &SourceFile,
         node: Node<'_>,
-        _config: &CopConfig,
+        config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
@@ -52,7 +52,9 @@ impl Cop for SafeNavigationChain {
         if !immediate_safe_nav(source, recv) {
             return;
         }
-        if call_method_name(source, node).is_some_and(|m| NIL_METHODS.contains(&m)) {
+        if call_method_name(source, node).is_some_and(|m| {
+            NIL_METHODS.contains(&m) || allowed_method(config, m)
+        }) {
             return;
         }
         let (line, col) = source.offset_to_line_col(op.start_byte());
@@ -76,6 +78,22 @@ fn immediate_safe_nav(source: &SourceFile, recv: Node<'_>) -> bool {
                 .next()
                 .is_some_and(|n| immediate_safe_nav(source, n))
         }
+        _ => false,
+    }
+}
+
+fn allowed_method(config: &CopConfig, method: &[u8]) -> bool {
+    let Some(allowed) = config.options.get("AllowedMethods") else {
+        return matches!(
+            method,
+            b"present?" | b"blank?" | b"presence" | b"try" | b"try!" | b"in?"
+        );
+    };
+    match allowed {
+        serde_yml::Value::Sequence(items) => items
+            .iter()
+            .any(|v| v.as_str().is_some_and(|s| s.as_bytes() == method)),
+        serde_yml::Value::String(s) => s.as_bytes() == method,
         _ => false,
     }
 }

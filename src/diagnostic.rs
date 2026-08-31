@@ -54,9 +54,23 @@ pub struct Diagnostic {
     pub location: Location,
     pub severity: Severity,
     pub cop_name: String,
+    /// Annotated message (may include `Cop/Name: ` prefix per DisplayCopNames).
     pub message: String,
     #[serde(default)]
     pub corrected: bool,
+    /// Cop supports autocorrect for this offense (RuboCop `[Correctable]`).
+    #[serde(default)]
+    pub correctable: bool,
+    /// Source line text for clang-style output (no trailing newline).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source_line: String,
+    /// Highlight width in display columns (default 1 → single `^`).
+    #[serde(default = "default_highlight_len")]
+    pub highlight_length: usize,
+}
+
+fn default_highlight_len() -> usize {
+    1
 }
 
 impl Diagnostic {
@@ -64,23 +78,29 @@ impl Diagnostic {
         (&self.path, self.location.line, self.location.column)
     }
 
-    /// Clang/progress offense line (RuboCop colors when `color` is enabled).
+    /// Clang/progress offense block (header + source + caret), RuboCop-compatible.
     pub fn render(&self, color: crate::formatter::color::Color) -> String {
         let path = smart_path(&self.path);
-        let mut s = String::new();
+        let mut status = String::new();
         if self.corrected {
-            s.push_str(&color.green("[Corrected] "));
+            status.push_str(&color.green("[Corrected] "));
+        } else if self.correctable {
+            status.push_str(&color.yellow("[Correctable] "));
         }
-        s.push_str(&format!(
-            "{}:{}:{}: {}: {}: {}",
+        let header = format!(
+            "{}:{}:{}: {}: {}{}",
             color.cyan(&path),
             self.location.line,
             self.location.column + 1,
             color.severity_letter(self.severity),
-            self.cop_name,
-            annotate_message(&self.message, color),
-        ));
-        s
+            status,
+            annotate_backticks(&self.message, color),
+        );
+        if self.source_line.is_empty() {
+            return header;
+        }
+        let caret = clang_caret(&self.source_line, self.location.column, self.highlight_length);
+        format!("{header}\n{}\n{caret}", self.source_line)
     }
 }
 
@@ -100,7 +120,7 @@ pub fn smart_path(path: &str) -> String {
 }
 
 /// RuboCop SimpleTextFormatter#annotate_message: strip `` `...` ``; yellow insides when colored.
-fn annotate_message(msg: &str, color: crate::formatter::color::Color) -> String {
+fn annotate_backticks(msg: &str, color: crate::formatter::color::Color) -> String {
     let mut out = String::with_capacity(msg.len());
     let mut rest = msg;
     while let Some(start) = rest.find('`') {
@@ -121,9 +141,53 @@ fn annotate_message(msg: &str, color: crate::formatter::color::Color) -> String 
     out
 }
 
+/// Spaces/tabs preserving caret underline for `column`..`column+len` (0-based).
+fn clang_caret(source_line: &str, column: usize, highlight_length: usize) -> String {
+    let mut prefix = String::new();
+    for (i, ch) in source_line.chars().enumerate() {
+        if i >= column {
+            break;
+        }
+        prefix.push(if ch == '\t' { '\t' } else { ' ' });
+    }
+    while prefix.chars().count() < column {
+        prefix.push(' ');
+    }
+    let len = highlight_length.max(1);
+    format!("{prefix}{}", "^".repeat(len))
+}
+
+/// Annotate a raw cop message like RuboCop::Cop::MessageAnnotator.
+pub fn annotate_offense_message(
+    raw: &str,
+    cop_name: &str,
+    display_cop_names: bool,
+    extra_details: bool,
+    details: Option<&str>,
+    display_style_guide: bool,
+    style_guide_url: Option<&str>,
+) -> String {
+    let mut message = if display_cop_names {
+        format!("{cop_name}: {raw}")
+    } else {
+        raw.to_string()
+    };
+    if extra_details {
+        if let Some(d) = details.filter(|s| !s.is_empty()) {
+            message.push(' ');
+            message.push_str(d);
+        }
+    }
+    if display_style_guide {
+        if let Some(url) = style_guide_url.filter(|s| !s.is_empty()) {
+            message = format!("{message} ({url})");
+        }
+    }
+    message
+}
+
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Uncolored (tests, non-TTY sinks).
         write!(
             f,
             "{}",
@@ -147,7 +211,6 @@ mod tests {
         let cwd = std::env::current_dir().unwrap();
         let abs = cwd.join("lib/a.rb");
         assert_eq!(smart_path(&abs.to_string_lossy()), "lib/a.rb");
-        // Sibling prefix must not match (Path::strip_prefix, not string prefix).
         let sibling = format!("{}2/x.rb", cwd.display());
         assert_eq!(smart_path(&sibling), sibling);
     }
@@ -159,9 +222,12 @@ mod tests {
             location: Location { line: 10, column: 2 },
             severity: Severity::Convention,
             cop_name: "Metrics/AbcSize".into(),
-            message: "Assignment Branch Condition size for `foo` is too high. [<1, 2, 3> 3.74/17]"
+            message: "Metrics/AbcSize: Assignment Branch Condition size for `foo` is too high."
                 .into(),
             corrected: false,
+            correctable: false,
+            source_line: String::new(),
+            highlight_length: 1,
         };
         let s = d.to_string();
         assert!(s.starts_with("lib/a.rb:10:3: C: Metrics/AbcSize: "));
@@ -170,20 +236,30 @@ mod tests {
     }
 
     #[test]
-    fn render_colors_path_severity_and_backticks() {
+    fn render_correctable_and_caret() {
         use crate::formatter::color::Color;
         let d = Diagnostic {
             path: "lib/a.rb".into(),
-            location: Location { line: 10, column: 2 },
+            location: Location { line: 1, column: 0 },
             severity: Severity::Convention,
-            cop_name: "Metrics/AbcSize".into(),
-            message: "size for `foo` is too high".into(),
+            cop_name: "Style/FrozenStringLiteralComment".into(),
+            message: "Style/FrozenStringLiteralComment: Missing magic comment # frozen_string_literal: true.".into(),
             corrected: false,
+            correctable: true,
+            source_line: "class Foo".into(),
+            highlight_length: 1,
         };
-        let s = d.render(Color::resolve(Some(true)));
-        assert!(s.contains("\x1b[36mlib/a.rb\x1b[0m"));
-        assert!(s.contains("\x1b[33mC\x1b[0m"));
-        assert!(s.contains("\x1b[33mfoo\x1b[0m"));
-        assert!(!s.contains("`foo`"));
+        let s = d.render(Color::resolve(Some(false)));
+        assert!(s.contains("[Correctable] "));
+        assert!(s.contains("\nclass Foo\n"));
+        assert!(s.ends_with("\n^") || s.contains("\n^\n") || s.lines().last() == Some("^"));
+    }
+
+    #[test]
+    fn annotate_respects_display_cop_names() {
+        let with = annotate_offense_message("msg", "Style/Foo", true, false, None, false, None);
+        assert_eq!(with, "Style/Foo: msg");
+        let without = annotate_offense_message("msg", "Style/Foo", false, false, None, false, None);
+        assert_eq!(without, "msg");
     }
 }
