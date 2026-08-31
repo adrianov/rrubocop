@@ -19,9 +19,9 @@ impl Cop for BeginEndAlignment {
         &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let _ = config;
+        let style = config.get_str("EnforcedStyleAlignWith", "keyword");
         end_align::check_end(
-            self, source, node, "begin",
+            self, source, node, "begin", style,
             diagnostics, &mut corrections,
         );
     }

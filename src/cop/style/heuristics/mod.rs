@@ -1,53 +1,25 @@
 //! Heuristic matchers for breadth-first Style cops.
 
 mod calls;
-pub use calls::matches_alias;
 pub use calls::matches_class_and_module_children;
-pub use calls::matches_class_methods;
-pub use calls::matches_date_time;
-pub use calls::matches_global_vars;
-pub use calls::matches_module_function;
-pub use calls::matches_nested_file_dirname;
-pub use calls::matches_open_struct_use;
-pub use calls::matches_preferred_hash_methods;
-pub use calls::matches_proc;
-pub use calls::matches_raise_args;
-pub use calls::matches_strip;
 
 mod collections;
 pub use collections::matches_empty_heredoc;
 pub use collections::matches_hash_syntax;
-pub use collections::matches_numeric_literal_prefix;
-pub use collections::matches_sample;
 pub use collections::matches_symbol_array;
 pub use collections::matches_word_array;
 
 mod control;
 pub use control::matches_if_with_semicolon;
-pub use control::matches_in_pattern_then;
-pub use control::matches_lambda_call;
-pub use control::matches_multiline_if_then;
-pub use control::matches_non_nil_check;
 pub use control::matches_one_line_conditional;
 pub use control::matches_stabby_lambda_parentheses;
 pub use control::matches_ternary_parentheses;
-pub use control::matches_when_then;
 
 mod percent;
 pub use percent::matches_bare_percent_literals;
 pub use percent::matches_command_literal;
 pub use percent::matches_percent_q_literals;
 pub use percent::matches_string_literals;
-pub use percent::matches_variable_interpolation;
-
-mod redundant_calls;
-pub use redundant_calls::matches_redundant_array_constructor;
-pub use redundant_calls::matches_redundant_current_directory_in_path;
-pub use redundant_calls::matches_redundant_each;
-pub use redundant_calls::matches_redundant_exception;
-pub use redundant_calls::matches_redundant_filter_chain;
-pub use redundant_calls::matches_redundant_regexp_constructor;
-pub use redundant_calls::matches_redundant_sort_by;
 
 mod redundant_misc;
 pub use redundant_misc::matches_redundant_capital_w;
@@ -57,41 +29,22 @@ pub use redundant_misc::matches_redundant_interpolation;
 pub use redundant_misc::matches_redundant_percent_q;
 
 mod stubs;
-pub use stubs::matches_array_intersect;
 pub use stubs::matches_block_delimiters;
 pub use stubs::matches_class_methods_definitions;
-pub use stubs::matches_comparable_clamp;
-pub use stubs::matches_concat_array_literals;
 pub use stubs::matches_conditional_assignment;
-pub use stubs::matches_each_for_simple_loop;
-pub use stubs::matches_each_with_object;
-pub use stubs::matches_endless_method;
-pub use stubs::matches_exact_regexp_match;
 pub use stubs::matches_explicit_block_argument;
-pub use stubs::matches_format_string;
 pub use stubs::matches_identical_conditional_branches;
 pub use stubs::matches_if_inside_else;
 pub use stubs::matches_if_with_boolean_literal_branches;
 pub use stubs::matches_invertible_unless_condition;
 pub use stubs::matches_line_end_concatenation;
-pub use stubs::matches_magic_comment_format;
 pub use stubs::matches_method_call_with_args_parentheses;
-pub use stubs::matches_min_max_comparison;
-pub use stubs::matches_missing_respond_to_missing;
 pub use stubs::matches_multiline_memoization;
 pub use stubs::matches_nested_parenthesized_calls;
 pub use stubs::matches_optional_arguments;
-pub use stubs::matches_parallel_assignment;
 pub use stubs::matches_redundant_line_continuation;
 pub use stubs::matches_redundant_parentheses;
-pub use stubs::matches_redundant_regexp_argument;
 pub use stubs::matches_redundant_string_escape;
 pub use stubs::matches_return_nil_in_predicate_method_definition;
-pub use stubs::matches_semicolon;
-pub use stubs::matches_single_line_do_end_block;
-pub use stubs::matches_single_line_methods;
 pub use stubs::matches_symbol_proc;
-pub use stubs::matches_trailing_body_on_class;
-pub use stubs::matches_trailing_body_on_module;
-pub use stubs::matches_trivial_accessors;
 pub use stubs::matches_while_until_modifier;

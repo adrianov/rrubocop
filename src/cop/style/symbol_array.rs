@@ -1,4 +1,4 @@
-//! Style/SymbolArray — (breadth-first tree-sitter port).
+//! Style/SymbolArray — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

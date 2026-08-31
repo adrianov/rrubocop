@@ -9,7 +9,7 @@ Rust RuboCop drop-in for Ruby (tree-sitter). No Ruby for linting; ERB configs ne
 - `src/cache/` — abcop-style redb result cache (`RRUBOCOP_CACHE_DIR` / XDG)
 - `src/cop/` — cops by department (`bundler`, `factory_bot`, `gemspec`(+ordered_dependencies_group), `graphql`(+helpers/{args,kwargs,description,names_field,klass,names}; 26 cops), `layout` (90 Layout cops), `lint` (65 + UselessAssignment), `metrics`, `naming`, `performance`, `rails`, `rake`, `rspec`, `rspec_rails`, `security`, `style` (143 Style cops + `heuristics/` subunits), `shared`, `walker`, `registry`)
 - `src/parse/` — SourceFile, CodeMap, directives, tree-sitter parse
-- `src/linter/` — parallel lint + cache (`mod.rs`) and per-file phases (`engine/` + `syntax_gate`)
+- `src/linter/` — parallel lint + cache (`mod.rs`, `parallel.rs`) and per-file phases (`engine/` + `syntax_gate`)
 - `src/formatter/` — text/json/progress (live marks)/…
 - `src/abc/`, `src/model/` — Metrics/AbcSize (tree-sitter)
 - `vendor/tree-sitter-ruby/` — grammar

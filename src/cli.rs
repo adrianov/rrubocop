@@ -73,9 +73,10 @@ pub struct Args {
     #[arg(long, value_name = "SEVERITY", default_value = "convention")]
     pub fail_level: String,
 
-    /// Stop after first file with offenses
-    #[arg(short = 'F', long)]
-    pub fail_fast: bool,
+    /// Stop after N offenses (default: 50). Bare `-F` means 1. `-F 0` disables.
+    /// With `-a`/`-A`, N counts only non-autocorrectable offenses.
+    #[arg(short = 'F', long, value_name = "N", default_value_t = 50)]
+    pub fail_fast: u32,
 
     /// Apply AllCops.Exclude to explicitly-passed files
     #[arg(long)]
@@ -115,6 +116,11 @@ pub struct Args {
 }
 
 impl Args {
+    /// Parse argv, treating bare `-F` / `--fail-fast` as `-F 1`.
+    pub fn parse_cli() -> Self {
+        Self::parse_from(normalize_fail_fast(std::env::args_os()))
+    }
+
     pub fn autocorrect_mode(&self) -> AutocorrectMode {
         if self.autocorrect_all {
             AutocorrectMode::All
@@ -134,5 +140,83 @@ impl Args {
         } else {
             None
         }
+    }
+}
+
+fn is_fail_fast_n(s: &str) -> bool {
+    !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit())
+}
+
+fn push_fail_fast_arg(out: &mut Vec<std::ffi::OsString>, next: Option<std::ffi::OsString>) {
+    match next {
+        Some(n) if is_fail_fast_n(&n.to_string_lossy()) => out.push(n),
+        Some(n) => {
+            out.push(std::ffi::OsString::from("1"));
+            out.push(n);
+        }
+        None => out.push(std::ffi::OsString::from("1")),
+    }
+}
+
+/// Insert `1` after bare `-F` / `--fail-fast` so the next path is not eaten.
+fn normalize_fail_fast<I>(raw: I) -> Vec<std::ffi::OsString>
+where
+    I: IntoIterator<Item = std::ffi::OsString>,
+{
+    let mut out = Vec::new();
+    let mut iter = raw.into_iter();
+    if let Some(bin) = iter.next() {
+        out.push(bin);
+    }
+    while let Some(arg) = iter.next() {
+        let bare = {
+            let s = arg.to_string_lossy();
+            s == "-F" || s == "--fail-fast"
+        };
+        out.push(arg);
+        if bare {
+            push_fail_fast_arg(&mut out, iter.next());
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_fail_fast;
+    use std::ffi::OsString;
+
+    fn os(args: &[&str]) -> Vec<OsString> {
+        args.iter().map(OsString::from).collect()
+    }
+
+    fn s(args: Vec<OsString>) -> Vec<String> {
+        args.into_iter()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn bare_f_inserts_one_before_path() {
+        assert_eq!(
+            s(normalize_fail_fast(os(&["rr", "-F", "app"]))),
+            vec!["rr", "-F", "1", "app"]
+        );
+    }
+
+    #[test]
+    fn f_with_number_unchanged() {
+        assert_eq!(
+            s(normalize_fail_fast(os(&["rr", "-F", "3", "."]))),
+            vec!["rr", "-F", "3", "."]
+        );
+    }
+
+    #[test]
+    fn bare_f_at_end() {
+        assert_eq!(
+            s(normalize_fail_fast(os(&["rr", "-F"]))),
+            vec!["rr", "-F", "1"]
+        );
     }
 }

@@ -1,4 +1,4 @@
-//! Style/OneLineConditional — (breadth-first tree-sitter port).
+//! Style/OneLineConditional — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

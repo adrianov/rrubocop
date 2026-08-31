@@ -24,6 +24,7 @@ fn is_bare_percent(b: &[u8]) -> bool {
     b.starts_with(b"%(") || b.starts_with(b"%[") || b.starts_with(b"%{") || b.starts_with(b"%<")
         || (b.len() >= 2 && b[0] == b'%' && !b[1].is_ascii_alphabetic())
 }
+
 pub fn matches_command_literal(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
     let style = config.get_str("EnforcedStyle", "backticks");
     let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
@@ -63,11 +64,3 @@ pub fn matches_string_literals(source: &SourceFile, node: Node<'_>, config: &Cop
         _ => false,
     }
 }
-
-pub fn matches_variable_interpolation(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "interpolation" { return false; }
-    // #$x #@x #@@x without braces
-    let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
-    b.starts_with(b"#") && !b.starts_with(b"#{")
-}
-

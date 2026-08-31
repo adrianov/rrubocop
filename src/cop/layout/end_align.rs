@@ -56,23 +56,39 @@ fn report_misaligned_end(
     diagnostics.push(diag);
 }
 
-/// Align `end` with the opening keyword named by `base_name`.
+fn align_col(source: &SourceFile, node: Node<'_>, style: &str) -> usize {
+    match style {
+        // Common style: align with line start of the statement (not `do`/`if` kw).
+        "variable" | "start_of_line" => shared::line_indent(source, node.start_byte()),
+        _ => shared::node_col(source, node),
+    }
+}
+
+/// Align `end` using `EnforcedStyleAlignWith` (`keyword` / `variable` / `start_of_line`).
 pub fn check_end(
     cop: &dyn Cop,
     source: &SourceFile,
     node: Node<'_>,
     base_name: &str,
+    style: &str,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let Some(end_kw) = shared::end_keyword(node) else {
         return;
     };
-    let base_col = shared::node_col(source, node);
+    let base_col = align_col(source, node, style);
     if shared::node_col(source, end_kw) == base_col {
         return;
     }
     report_misaligned_end(
-        cop, source, node, end_kw, base_name, base_col, diagnostics, corrections,
+        cop,
+        source,
+        node,
+        end_kw,
+        base_name,
+        base_col,
+        diagnostics,
+        corrections,
     );
 }

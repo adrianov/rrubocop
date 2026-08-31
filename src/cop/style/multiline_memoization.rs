@@ -1,4 +1,4 @@
-//! Style/MultilineMemoization — (breadth-first tree-sitter port).
+//! Style/MultilineMemoization — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

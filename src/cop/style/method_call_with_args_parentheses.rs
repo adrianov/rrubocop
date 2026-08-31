@@ -1,4 +1,4 @@
-//! Style/MethodCallWithArgsParentheses — (breadth-first tree-sitter port).
+//! Style/MethodCallWithArgsParentheses — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

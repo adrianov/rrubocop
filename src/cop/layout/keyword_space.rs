@@ -38,33 +38,32 @@ fn do_end(n: Node<'_>) -> Option<Node<'_>> {
     n.children(&mut cur).find(|c| c.kind() == "do")
 }
 
-fn named_kw_end(bytes: &[u8], n: Node<'_>, start: usize, k: &str) -> Option<usize> {
+fn keyword_token_span(bytes: &[u8], n: Node<'_>) -> Option<(usize, usize)> {
     let mut cur = n.walk();
-    let c = n.children(&mut cur).next()?;
-    if KEYWORDS
-        .iter()
-        .any(|&kw| &bytes[c.start_byte()..c.end_byte()] == kw)
-    {
-        Some(c.end_byte())
-    } else if KEYWORDS.iter().any(|&kw| k.as_bytes() == kw) {
-        Some(start + k.len())
-    } else {
-        None
-    }
+    n.children(&mut cur).find_map(|c| {
+        let t = &bytes[c.start_byte()..c.end_byte()];
+        KEYWORDS
+            .iter()
+            .any(|&kw| t == kw)
+            .then_some((c.start_byte(), c.end_byte()))
+    })
+}
+
+fn named_kind_span(n: Node<'_>) -> Option<(usize, usize)> {
+    let k = n.kind();
+    // Named keyword kinds with no separate token child (`return`, `break`, …).
+    is_kw_kind(k).then(|| (n.start_byte(), n.start_byte() + k.len()))
 }
 
 pub fn kw_span(bytes: &[u8], n: Node<'_>) -> Option<(usize, usize)> {
-    let k = n.kind();
-    let start = n.start_byte();
-    if k == "do_block" {
-        let d = do_end(n)?;
-        return Some((d.start_byte(), d.end_byte()));
+    if n.kind() == "do_block" {
+        return do_end(n).map(|d| (d.start_byte(), d.end_byte()));
     }
     if !n.is_named() {
-        return Some((start, n.end_byte()));
+        return Some((n.start_byte(), n.end_byte()));
     }
-    let end = named_kw_end(bytes, n, start, k)?;
-    Some((start, end))
+    // Prefer the keyword token child — the named node may start earlier (indent).
+    keyword_token_span(bytes, n).or_else(|| named_kind_span(n))
 }
 
 fn need_space_after(next: u8) -> bool {

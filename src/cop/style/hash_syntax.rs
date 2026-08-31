@@ -1,4 +1,4 @@
-//! Style/HashSyntax — (breadth-first tree-sitter port).
+//! Style/HashSyntax — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

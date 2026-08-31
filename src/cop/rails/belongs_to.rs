@@ -1,4 +1,4 @@
-//! Rails/BelongsTo — (breadth-first tree-sitter port).
+//! Rails/BelongsTo — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

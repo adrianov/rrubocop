@@ -1,4 +1,4 @@
-//! Rails/ApplicationController — (breadth-first tree-sitter port).
+//! Rails/ApplicationController — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

@@ -29,6 +29,15 @@ impl Cop for TrailingCommaInArguments {
         if node.start_position().row == node.end_position().row {
             return;
         }
+        let close_off = node.end_byte().saturating_sub(1);
+        if source.as_bytes().get(close_off) != Some(&b')') {
+            return;
+        }
+        let (_, close_col) = source.offset_to_line_col(close_off);
+        // Hanging `)` only (RuboCop TrailingCommaInArguments).
+        if crate::cop::shared::line_indent(source, close_off) != close_col {
+            return;
+        }
         let Some((has_comma, start)) = last_item(source, node) else {
             return;
         };

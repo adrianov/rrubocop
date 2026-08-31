@@ -1,4 +1,4 @@
-//! Rails/ApplicationMailer — (breadth-first tree-sitter port).
+//! Rails/ApplicationMailer — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

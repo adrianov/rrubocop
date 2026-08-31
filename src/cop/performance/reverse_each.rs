@@ -1,4 +1,4 @@
-//! Performance/ReverseEach — (breadth-first tree-sitter port).
+//! Performance/ReverseEach — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

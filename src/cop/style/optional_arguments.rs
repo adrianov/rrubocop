@@ -1,4 +1,4 @@
-//! Style/OptionalArguments — (breadth-first tree-sitter port).
+//! Style/OptionalArguments — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

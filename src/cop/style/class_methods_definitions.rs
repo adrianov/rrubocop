@@ -1,4 +1,4 @@
-//! Style/ClassMethodsDefinitions — (breadth-first tree-sitter port).
+//! Style/ClassMethodsDefinitions — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

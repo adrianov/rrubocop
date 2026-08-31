@@ -1,4 +1,4 @@
-//! Style/ExplicitBlockArgument — (breadth-first tree-sitter port).
+//! Style/ExplicitBlockArgument — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

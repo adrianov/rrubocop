@@ -1,4 +1,4 @@
-//! Style/IfInsideElse — (breadth-first tree-sitter port).
+//! Style/IfInsideElse — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

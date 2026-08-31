@@ -1,4 +1,4 @@
-//! RSpecRails/HttpStatus — (breadth-first tree-sitter port).
+//! RSpecRails/HttpStatus — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

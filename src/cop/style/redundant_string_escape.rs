@@ -1,4 +1,4 @@
-//! Style/RedundantStringEscape — (breadth-first tree-sitter port).
+//! Style/RedundantStringEscape — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

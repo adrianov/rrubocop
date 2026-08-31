@@ -1,4 +1,4 @@
-//! Style/IfWithBooleanLiteralBranches — (breadth-first tree-sitter port).
+//! Style/IfWithBooleanLiteralBranches — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

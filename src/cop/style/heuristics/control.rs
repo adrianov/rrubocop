@@ -12,46 +12,6 @@ pub fn matches_if_with_semicolon(source: &SourceFile, node: Node<'_>, _config: &
     b.starts_with(b";")
 }
 
-pub fn matches_in_pattern_then(_source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "in" { return false; }
-    if node.start_position().row == node.end_position().row { return false; }
-    let mut cur = node.walk();
-    node.children(&mut cur).any(|ch| ch.kind() == "then")
-}
-
-pub fn matches_lambda_call(_source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
-    let style = config.get_str("EnforcedStyle", "call");
-    match style {
-        "call" => {
-            // f.(args) — call with empty method name
-            if node.kind() != "call" { return false; }
-            node.child_by_field_name("method").is_none() && node.child_by_field_name("arguments").is_some()
-        }
-        "brackets" => node.kind() == "element_reference",
-        "semantic" => false,
-        _ => false,
-    }
-}
-
-pub fn matches_multiline_if_then(_source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if !matches!(node.kind(), "if" | "unless") { return false; }
-    if node.start_position().row == node.end_position().row { return false; }
-    let mut cur = node.walk();
-    let Some(then_n) = node.children(&mut cur).find(|ch| ch.kind() == "then") else { return false; };
-    let mut c2 = then_n.walk();
-    then_n.children(&mut c2).any(|ch| !ch.is_named() && ch.kind() == "then")
-}
-
-pub fn matches_non_nil_check(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    // !x.nil?
-    if node.kind() != "unary" { return false; }
-    let mut cur = node.walk();
-    if !node.children(&mut cur).any(|ch| !ch.is_named() && ch.kind() == "!") { return false; }
-    let mut c2 = node.walk();
-    let Some(operand) = node.named_children(&mut c2).next() else { return false; };
-    operand.kind() == "call" && crate::cop::shared::call_method_name(source, operand) == Some(b"nil?")
-}
-
 pub fn matches_one_line_conditional(_source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
     if !matches!(node.kind(), "if" | "unless") { return false; }
     if node.start_position().row != node.end_position().row { return false; }
@@ -86,11 +46,3 @@ pub fn matches_ternary_parentheses(_source: &SourceFile, node: Node<'_>, config:
         _ => false,
     }
 }
-
-pub fn matches_when_then(_source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "when" { return false; }
-    if node.start_position().row == node.end_position().row { return false; }
-    let mut cur = node.walk();
-    node.children(&mut cur).any(|ch| ch.kind() == "then")
-}
-

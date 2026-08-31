@@ -1,4 +1,4 @@
-//! Performance/UnfreezeString — (breadth-first tree-sitter port).
+//! Performance/UnfreezeString — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

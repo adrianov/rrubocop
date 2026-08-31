@@ -1,4 +1,4 @@
-//! Rails/ActiveRecordAliases — (breadth-first tree-sitter port).
+//! Rails/ActiveRecordAliases — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

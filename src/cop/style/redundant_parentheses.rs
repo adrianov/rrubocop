@@ -1,4 +1,4 @@
-//! Style/RedundantParentheses — (breadth-first tree-sitter port).
+//! Style/RedundantParentheses — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

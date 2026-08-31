@@ -1,4 +1,4 @@
-//! Style/CommentAnnotation — (breadth-first tree-sitter port).
+//! Style/CommentAnnotation — breadth-first tree-sitter port.
 
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;

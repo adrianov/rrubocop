@@ -16,7 +16,6 @@ use std::io::Read;
 use std::process::ExitCode;
 
 use anyhow::Result;
-use clap::Parser;
 use cli::Args;
 use config::{CopFilterSet, ResolvedConfig, load_config};
 use cop::registry::CopRegistry;
@@ -32,7 +31,7 @@ pub fn run() -> Result<ExitCode> {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL);
     }
 
-    let args = Args::parse();
+    let args = Args::parse_cli();
     let registry = CopRegistry::default_registry();
     if let Some(code) = list_and_exit(&args, &registry) {
         return Ok(code);

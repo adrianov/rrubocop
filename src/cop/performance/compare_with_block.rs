@@ -1,15 +1,13 @@
-//! Performance/CompareWithBlock — (breadth-first tree-sitter port).
+//! Performance/CompareWithBlock — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 
-use crate::cop::shared::{call_method_name};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic};
 use crate::parse::source::SourceFile;
 
 pub struct CompareWithBlock;
 
-const MSG: &str = "Use `... ...] }}` instead of `... ..., ...| ...[...] <=> ...[...] }}`.";
 
 impl Cop for CompareWithBlock {
     fn name(&self) -> &'static str {
@@ -28,14 +26,7 @@ impl Cop for CompareWithBlock {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let Some(method) = call_method_name(source, node) else {
-            return;
-        };
-        const METHODS: &[&[u8]] = &[b"sort", b"sort_by", b"max", b"min", b"max_by", b"min_by"];
-        if !METHODS.contains(&method) {
-            return;
-        }
-        let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(source, line, col, MSG.to_string()));
+        // Breadth-first stub: not implemented — avoid method-name false positives.
+        let _ = (source, node, diagnostics);
     }
 }

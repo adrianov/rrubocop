@@ -1,4 +1,4 @@
-//! Style/WhileUntilModifier — (breadth-first tree-sitter port).
+//! Style/WhileUntilModifier — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

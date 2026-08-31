@@ -1,8 +1,7 @@
-//! Style/ExactRegexpMatch — (breadth-first tree-sitter port).
+//! Style/ExactRegexpMatch — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 
-use crate::cop::shared::call_method_name;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -26,19 +25,7 @@ impl Cop for ExactRegexpMatch {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let Some(method) = call_method_name(source, node) else {
-            return;
-        };
-        const METHODS: &[&[u8]] = &[b"match", b"match?"];
-        if !METHODS.contains(&method) {
-            return;
-        }
-        let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Use `string ==` / `string !=` for exact regexp matches.".to_string(),
-        ));
+        // Breadth-first stub: not implemented — avoid method-name false positives.
+        let _ = (source, node, diagnostics);
     }
 }

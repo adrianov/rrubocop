@@ -1,4 +1,4 @@
-//! RSpec/BeEql — (breadth-first tree-sitter port).
+//! RSpec/BeEql — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

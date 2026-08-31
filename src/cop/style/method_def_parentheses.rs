@@ -44,7 +44,10 @@ impl Cop for MethodDefParentheses {
 }
 
 fn has_open_paren(source: &SourceFile, node: Node<'_>) -> bool {
-    let mut cur = node.walk();
-    node.children(&mut cur)
-        .any(|c| node_bytes(source, c) == b"(")
+    let params = node.child_by_field_name("parameters");
+    let target = params.unwrap_or(node);
+    let mut cur = target.walk();
+    target
+        .children(&mut cur)
+        .any(|c| !c.is_named() && node_bytes(source, c) == b"(")
 }

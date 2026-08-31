@@ -1,4 +1,4 @@
-//! Style/RedundantInterpolation — (breadth-first tree-sitter port).
+//! Style/RedundantInterpolation — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

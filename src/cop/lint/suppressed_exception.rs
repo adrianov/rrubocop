@@ -7,22 +7,40 @@ use crate::parse::source::SourceFile;
 /// Lint/SuppressedException — empty rescue body.
 pub struct SuppressedException;
 
-fn only_nil(stmts: &[Node<'_>]) -> bool {
-    stmts.is_empty() || (stmts.len() == 1 && stmts[0].kind() == "nil")
+enum RescueBody {
+    Empty,
+    OnlyNil,
+    Other,
 }
 
-fn body_empty_or_nil(node: Node<'_>) -> bool {
+fn stmts_of(body: Node<'_>) -> Vec<Node<'_>> {
+    let mut cur = body.walk();
+    body.named_children(&mut cur).collect()
+}
+
+fn classify_stmts(stmts: &[Node<'_>]) -> RescueBody {
+    if stmts.is_empty() {
+        RescueBody::Empty
+    } else if stmts.len() == 1 && stmts[0].kind() == "nil" {
+        RescueBody::OnlyNil
+    } else {
+        RescueBody::Other
+    }
+}
+
+fn classify_body(node: Node<'_>) -> RescueBody {
     if let Some(body) = node.child_by_field_name("body") {
-        let mut cur = body.walk();
-        let stmts: Vec<_> = body.named_children(&mut cur).collect();
-        return only_nil(&stmts);
+        return classify_stmts(&stmts_of(body));
     }
     let mut cur = node.walk();
     let named: Vec<_> = node
         .named_children(&mut cur)
         .filter(|n| !matches!(n.kind(), "exceptions" | "exception_variable"))
         .collect();
-    only_nil(&named)
+    if named.len() == 1 && named[0].kind() == "then" {
+        return classify_stmts(&stmts_of(named[0]));
+    }
+    classify_stmts(&named)
 }
 
 impl Cop for SuppressedException {
@@ -42,12 +60,15 @@ impl Cop for SuppressedException {
         &self,
         source: &SourceFile,
         node: Node<'_>,
-        _config: &CopConfig,
+        config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        if !body_empty_or_nil(node) {
-            return;
+        let allow_nil = config.get_bool("AllowNil", true);
+        match classify_body(node) {
+            RescueBody::Other => return,
+            RescueBody::OnlyNil if allow_nil => return,
+            RescueBody::Empty | RescueBody::OnlyNil => {}
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
         diagnostics.push(self.diagnostic(

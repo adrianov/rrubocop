@@ -1,4 +1,4 @@
-//! Rails/Output — (breadth-first tree-sitter port).
+//! Rails/Output — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

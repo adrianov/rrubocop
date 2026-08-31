@@ -1,4 +1,4 @@
-//! Style/LineEndConcatenation — (breadth-first tree-sitter port).
+//! Style/LineEndConcatenation — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

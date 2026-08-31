@@ -1,4 +1,4 @@
-//! Style/IdenticalConditionalBranches — (breadth-first tree-sitter port).
+//! Style/IdenticalConditionalBranches — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

@@ -31,7 +31,7 @@ Reference implementations: [nitrocop](https://github.com/6/nitrocop) (architectu
 
 ## Built-in cops
 
-Departments grow breadth-first from RuboCop sets (nitrocop / gem sources). Notable coverage:
+Departments grow breadth-first from common RuboCop plugin sets (nitrocop / gem sources). Notable coverage:
 
 | Department | Notes |
 |---|---|
@@ -46,7 +46,7 @@ Departments grow breadth-first from RuboCop sets (nitrocop / gem sources). Notab
 | `Bundler/*`, `Gemspec/*`, `Rake/*` | gem / DSL departments |
 | `GraphQL/*` | 26 rubocop-graphql cops |
 
-Use `rrubocop --list-cops` for the full registered set, and `rrubocop --list-autocorrectable-cops` for cops with `-a`/`-A` support (~170+ so far; Layout nearly complete; Style/Lint/Rails/RSpec growing).
+Use `rrubocop --list-cops` for the full registered set, and `rrubocop --list-autocorrectable-cops` for cops with `-a`/`-A` support (~170+ with autocorrect so far; Layout nearly complete; Style/Lint/Rails/RSpec growing).
 
 ## Usage
 
@@ -59,7 +59,8 @@ rrubocop -A .                    # all autocorrect
 rrubocop --only Metrics/AbcSize lib
 rrubocop --list-cops
 rrubocop -L                      # list target files
-rrubocop --no-cache .            # skip on-disk result cache
+rrubocop -F 10                   # stop after 10 offenses (default 50; `-F` = 1; `-F 0` off)
+                                 # with `-a`/`-A`, N is non-autocorrectable offenses only
 ```
 
 Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.

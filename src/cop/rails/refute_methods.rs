@@ -1,4 +1,4 @@
-//! Rails/RefuteMethods — (breadth-first tree-sitter port).
+//! Rails/RefuteMethods — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

@@ -55,18 +55,11 @@ impl<'a> BatchedWalker<'a> {
         diagnostics: &mut Vec<Diagnostic>,
         corrections: &mut Option<&mut Vec<Correction>>,
     ) {
-        let kind = node.kind();
-        for &i in &self.call_all {
-            self.cops[i].check_node(
-                source,
-                node,
-                self.configs[i],
-                diagnostics,
-                corrections.as_deref_mut(),
-            );
-        }
-        if let Some(idxs) = self.kinds.get(kind) {
-            for &i in idxs {
+        // Dispatch only on named nodes. Anonymous keyword/punct tokens share kinds
+        // like `rescue`/`ensure`/`else` with real clauses and would false-positive.
+        if node.is_named() {
+            let kind = node.kind();
+            for &i in &self.call_all {
                 self.cops[i].check_node(
                     source,
                     node,
@@ -74,6 +67,17 @@ impl<'a> BatchedWalker<'a> {
                     diagnostics,
                     corrections.as_deref_mut(),
                 );
+            }
+            if let Some(idxs) = self.kinds.get(kind) {
+                for &i in idxs {
+                    self.cops[i].check_node(
+                        source,
+                        node,
+                        self.configs[i],
+                        diagnostics,
+                        corrections.as_deref_mut(),
+                    );
+                }
             }
         }
         let mut cursor = node.walk();

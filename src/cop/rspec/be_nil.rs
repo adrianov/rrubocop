@@ -1,4 +1,4 @@
-//! RSpec/BeNil — (breadth-first tree-sitter port).
+//! RSpec/BeNil — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

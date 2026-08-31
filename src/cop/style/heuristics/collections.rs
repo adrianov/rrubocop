@@ -36,26 +36,6 @@ fn pair_key_is_symbol(node: Node<'_>) -> bool {
         .next()
         .is_some_and(|k| matches!(k.kind(), "simple_symbol" | "hash_key_symbol"))
 }
-pub fn matches_numeric_literal_prefix(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
-    if node.kind() != "integer" { return false; }
-    let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
-    let style = config.get_str("EnforcedOctalStyle", "zero_with_o");
-    if b.starts_with(b"0") && b.len() > 1 && b[1].is_ascii_digit() {
-        return style == "zero_with_o"; // 0123 should be 0o123
-    }
-    false
-}
-
-pub fn matches_sample(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    // a[rand(a.size)] element_reference
-    if node.kind() != "element_reference" { return false; }
-    let mut cur = node.walk();
-    let named: Vec<_> = node.named_children(&mut cur).collect();
-    if named.len() < 2 { return false; }
-    let idx = named[1];
-    if idx.kind() != "call" { return false; }
-    crate::cop::shared::call_method_name(source, idx) == Some(b"rand")
-}
 
 pub fn matches_symbol_array(_source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
     let style = config.get_str("EnforcedStyle", "percent_i");
@@ -86,4 +66,3 @@ pub fn matches_word_array(_source: &SourceFile, node: Node<'_>, config: &CopConf
         _ => false,
     }
 }
-

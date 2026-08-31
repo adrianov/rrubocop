@@ -1,4 +1,4 @@
-//! Style/InvertibleUnlessCondition — (breadth-first tree-sitter port).
+//! Style/InvertibleUnlessCondition — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

@@ -20,9 +20,9 @@ impl Cop for FirstHashElementIndentation {
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let width = config.get_usize("IndentationWidth", 2);
-        let _ = config.get_str("EnforcedStyle", "special_inside_parentheses");
+        let style = config.get_str("EnforcedStyle", "special_inside_parentheses");
         first_indent::check_first(
-            self, source, node, width,
+            self, source, node, width, style,
             format!("Use {width} spaces for indentation of the first element."),
             diagnostics, &mut corrections,
         );

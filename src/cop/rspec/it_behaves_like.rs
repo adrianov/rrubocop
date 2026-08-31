@@ -1,4 +1,4 @@
-//! RSpec/ItBehavesLike — (breadth-first tree-sitter port).
+//! RSpec/ItBehavesLike — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

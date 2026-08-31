@@ -1,4 +1,4 @@
-//! RSpec/NotToNot — (breadth-first tree-sitter port).
+//! RSpec/NotToNot — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

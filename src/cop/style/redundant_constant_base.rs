@@ -33,8 +33,27 @@ impl Cop for RedundantConstantBase {
         if node.child_by_field_name("scope").is_some() || !starts_with_colon2(source, node) {
             return;
         }
+        // RuboCop only flags leading `::` when the constant is already at top-level
+        // scope; nested `::Foo` inside classes/modules is kept. Approximate: parent
+        // must be the program root (no class/module enclosure in between).
+        if !is_top_level(node) {
+            return;
+        }
         report(self, source, node, diagnostics, &mut corrections);
     }
+}
+
+fn is_top_level(node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(n) = p {
+        match n.kind() {
+            "program" => return true,
+            "class" | "module" | "singleton_class" | "method" | "singleton_method" | "block"
+            | "do_block" | "lambda" => return false,
+            _ => p = n.parent(),
+        }
+    }
+    false
 }
 
 fn starts_with_colon2(source: &SourceFile, node: Node<'_>) -> bool {

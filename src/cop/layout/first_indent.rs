@@ -35,12 +35,21 @@ fn report_indent(
     diagnostics.push(diag);
 }
 
+fn expected_col(source: &SourceFile, node: Node<'_>, width: usize, style: &str) -> usize {
+    match style {
+        // Common style: indent from the line of the opening, not from `(`.
+        "consistent" => shared::line_indent(source, node.start_byte()) + width,
+        _ => shared::node_col(source, node) + width,
+    }
+}
+
 /// Check that the first named child of a multiline construct is indented by `width`.
 pub fn check_first(
     cop: &dyn Cop,
     source: &SourceFile,
     node: Node<'_>,
     width: usize,
+    style: &str,
     message: String,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
@@ -55,7 +64,7 @@ pub fn check_first(
     if shared::node_line(source, first) == start_line {
         return;
     }
-    let expected = shared::node_col(source, node) + width;
+    let expected = expected_col(source, node, width, style);
     let actual = shared::line_indent(source, first.start_byte());
     if actual != expected {
         report_indent(

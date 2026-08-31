@@ -1,4 +1,4 @@
-//! Style/CommandLiteral — (breadth-first tree-sitter port).
+//! Style/CommandLiteral — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

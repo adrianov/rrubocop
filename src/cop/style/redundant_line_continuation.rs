@@ -1,4 +1,4 @@
-//! Style/RedundantLineContinuation — (breadth-first tree-sitter port).
+//! Style/RedundantLineContinuation — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 

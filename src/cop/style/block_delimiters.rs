@@ -1,4 +1,4 @@
-//! Style/BlockDelimiters — (breadth-first tree-sitter port).
+//! Style/BlockDelimiters — breadth-first tree-sitter port.
 
 use tree_sitter::Node;
 
