@@ -41,9 +41,10 @@ impl EntryStore {
             ts: now_ms(),
             diagnostics,
         };
-        let bytes = serde_json::to_vec(&payload);
-        let tx = self.write_tx();
-        let Ok(bytes) = bytes else {
+        let Ok(bytes) = serde_json::to_vec(&payload) else {
+            return;
+        };
+        let Some(tx) = self.write_tx() else {
             return;
         };
         let Ok(mut table) = tx.open_table(ENTRIES) else {
@@ -86,7 +87,9 @@ impl EntryStore {
     }
 
     fn remove_keys(&self, keys: &[String]) {
-        let tx = self.write_tx();
+        let Some(tx) = self.write_tx() else {
+            return;
+        };
         let Ok(mut table) = tx.open_table(ENTRIES) else {
             return;
         };
@@ -94,17 +97,14 @@ impl EntryStore {
             let _ = table.remove(key.as_str());
         }
         drop(table);
-        drop(tx.commit());
+        let _ = tx.commit();
     }
 
-    pub(super) fn write_tx(&self) -> redb::WriteTransaction {
-        let mut tx = self
-            .db
-            .begin_write()
-            .expect("fresh write transaction on cache db");
-        tx.set_durability(Durability::None)
-            .expect("relaxed durability accepted");
-        tx
+    /// Best-effort write txn; `None` on lock/IO failure (skip cache write).
+    pub(super) fn write_tx(&self) -> Option<redb::WriteTransaction> {
+        let mut tx = self.db.begin_write().ok()?;
+        tx.set_durability(Durability::None).ok()?;
+        Some(tx)
     }
 
     #[cfg(test)]
@@ -123,7 +123,7 @@ impl EntryStore {
 
     #[cfg(test)]
     pub(super) fn raw_insert(&self, key: &str, payload: &[u8]) {
-        let tx = self.write_tx();
+        let tx = self.write_tx().expect("test write txn");
         let mut table = tx.open_table(ENTRIES).unwrap();
         table.insert(key, payload).unwrap();
         drop(table);
