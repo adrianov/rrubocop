@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::diagnostic::Diagnostic;
+use crate::diagnostic::{smart_path, Diagnostic};
 use crate::formatter::Formatter;
 
 pub struct GithubFormatter;
@@ -12,7 +12,7 @@ impl Formatter for GithubFormatter {
             let _ = writeln!(
                 out,
                 "::error file={},line={},col={}::[{}] {}",
-                d.path,
+                smart_path(&d.path),
                 d.location.line,
                 d.location.column + 1,
                 d.cop_name,

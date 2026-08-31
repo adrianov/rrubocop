@@ -14,22 +14,29 @@ pub struct DiscoveredFiles {
 pub fn discover_files(paths: &[PathBuf], _config: &ResolvedConfig) -> Result<DiscoveredFiles> {
     let mut files = Vec::new();
     let mut explicit = HashSet::new();
-
     for path in paths {
-        if path.is_file() {
-            let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
-            explicit.insert(canonical);
-            files.push(path.clone());
-        } else if path.is_dir() {
-            files.extend(walk_directory(path)?);
-        } else {
-            anyhow::bail!("path does not exist: {}", path.display());
-        }
+        collect_path(path, &mut files, &mut explicit)?;
     }
-
     files.sort();
     files.dedup();
     Ok(DiscoveredFiles { files, explicit })
+}
+
+fn collect_path(
+    path: &Path,
+    files: &mut Vec<PathBuf>,
+    explicit: &mut HashSet<PathBuf>,
+) -> Result<()> {
+    if path.is_file() {
+        explicit.insert(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()));
+        files.push(normalize_scan_path(path.to_path_buf()));
+        return Ok(());
+    }
+    if path.is_dir() {
+        files.extend(walk_directory(path)?);
+        return Ok(());
+    }
+    anyhow::bail!("path does not exist: {}", path.display());
 }
 
 fn walk_directory(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -47,10 +54,21 @@ fn walk_directory(dir: &Path) -> Result<Vec<PathBuf>> {
         };
         let path = entry.path();
         if path.is_file() && is_ruby_file(path) {
-            files.push(path.to_path_buf());
+            files.push(normalize_scan_path(path.to_path_buf()));
         }
     }
     Ok(files)
+}
+
+/// Drop a leading `./` so offense paths match RuboCop's smart_path style.
+fn normalize_scan_path(path: PathBuf) -> PathBuf {
+    let Some(s) = path.to_str() else {
+        return path;
+    };
+    match s.strip_prefix("./") {
+        Some(rest) => PathBuf::from(rest),
+        None => path,
+    }
 }
 
 const RUBY_EXTENSIONS: &[&str] = &[

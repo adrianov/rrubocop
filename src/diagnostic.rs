@@ -65,6 +65,43 @@ impl Diagnostic {
     }
 }
 
+/// RuboCop PathUtil.smart_path: prefer cwd-relative, drop a leading `./`.
+pub fn smart_path(path: &str) -> String {
+    let path = path.strip_prefix("./").unwrap_or(path);
+    let p = std::path::Path::new(path);
+    if let Ok(cwd) = std::env::current_dir() {
+        if let Ok(rel) = p.strip_prefix(&cwd) {
+            let s = rel.to_string_lossy();
+            if !s.is_empty() {
+                return s.into_owned();
+            }
+        }
+    }
+    path.to_string()
+}
+
+/// RuboCop SimpleTextFormatter#annotate_message without color: drop `` `...` `` markers.
+fn annotate_message(msg: &str) -> String {
+    let mut out = String::with_capacity(msg.len());
+    let mut rest = msg;
+    while let Some(start) = rest.find('`') {
+        out.push_str(&rest[..start]);
+        rest = &rest[start + 1..];
+        match rest.find('`') {
+            Some(end) => {
+                out.push_str(&rest[..end]);
+                rest = &rest[end + 1..];
+            }
+            None => {
+                out.push('`');
+                break;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.corrected {
@@ -73,12 +110,50 @@ impl fmt::Display for Diagnostic {
         write!(
             f,
             "{}:{}:{}: {}: {}: {}",
-            self.path,
+            smart_path(&self.path),
             self.location.line,
             self.location.column + 1,
             self.severity,
             self.cop_name,
-            self.message,
+            annotate_message(&self.message),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn smart_path_strips_dot_slash() {
+        assert_eq!(smart_path("./lib/a.rb"), "lib/a.rb");
+        assert_eq!(smart_path("lib/a.rb"), "lib/a.rb");
+    }
+
+    #[test]
+    fn smart_path_relativizes_under_cwd() {
+        let cwd = std::env::current_dir().unwrap();
+        let abs = cwd.join("lib/a.rb");
+        assert_eq!(smart_path(&abs.to_string_lossy()), "lib/a.rb");
+        // Sibling prefix must not match (Path::strip_prefix, not string prefix).
+        let sibling = format!("{}2/x.rb", cwd.display());
+        assert_eq!(smart_path(&sibling), sibling);
+    }
+
+    #[test]
+    fn display_strips_message_backticks() {
+        let d = Diagnostic {
+            path: "./lib/a.rb".into(),
+            location: Location { line: 10, column: 2 },
+            severity: Severity::Convention,
+            cop_name: "Metrics/AbcSize".into(),
+            message: "Assignment Branch Condition size for `foo` is too high. [<1, 2, 3> 3.74/17]"
+                .into(),
+            corrected: false,
+        };
+        let s = d.to_string();
+        assert!(s.starts_with("lib/a.rb:10:3: C: Metrics/AbcSize: "));
+        assert!(s.contains("for foo is too high"));
+        assert!(!s.contains("`foo`"));
     }
 }

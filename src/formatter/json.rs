@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-use crate::diagnostic::Diagnostic;
+use crate::diagnostic::{smart_path, Diagnostic};
 use crate::formatter::Formatter;
 
 pub struct JsonFormatter;
@@ -44,7 +44,7 @@ impl Formatter for JsonFormatter {
             offenses: diagnostics
                 .iter()
                 .map(|d| Offense {
-                    path: d.path.clone(),
+                    path: smart_path(&d.path),
                     line: d.location.line,
                     column: d.location.column,
                     severity: format!("{}", d.severity),
