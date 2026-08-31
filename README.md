@@ -4,6 +4,8 @@ Fast **RuboCop-compatible** Ruby linter written in Rust. Uses [tree-sitter](http
 
 Drop-in goals: read your existing `.rubocop.yml`, emit RuboCop-like text/JSON, support `-a`/`-A` autocorrect, and grow cop coverage over time.
 
+**Baseline** (shown in `--help` / `--version`): rubocop `1.84.2` with rubocop-rails `2.34.3`, rubocop-performance `1.26.1`, rubocop-rspec `3.9.0`, rubocop-rspec_rails `2.32.0`, rubocop-factory_bot `2.28.0` — pinned in `src/resources/baseline.json`.
+
 ## Install
 
 ```sh
@@ -18,7 +20,7 @@ rrubocop [OPTIONS] [PATH]...
 
 - **Config** — RuboCop-compatible resolution: walk-up discovery, `inherit_from` / `inherit_gem` / `require`/`plugins`, `inherit_mode` (merge/override), nested `.rubocop.yml` overrides, `DisabledByDefault`, `NewCops` / `Enabled: pending`, plus per-cop `Enabled` / `Exclude` / `Include` / options; ERB in YAML is expanded via Ruby when present
 - **Autocorrect** — `-a` (safe) / `-A` (all)
-- **Output** — `progress`, `text`, `json`, `github`, `quiet`, `files`, …
+- **Output** — `progress`, `text`, `json`, `github`, `quiet`, `files`, … (TTY color like RuboCop; `--color` / `--no-color`)
 - **Directives** — `# rubocop:disable` / `enable`
 - **Parser** — tree-sitter-ruby (no Prism / no CRuby)
 - **Cache** — content-addressed `cache.redb` under `$RRUBOCOP_CACHE_DIR` or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop` (same style as abcop); `--no-cache` disables

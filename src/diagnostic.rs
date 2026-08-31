@@ -63,6 +63,25 @@ impl Diagnostic {
     pub fn sort_key(&self) -> (&str, usize, usize) {
         (&self.path, self.location.line, self.location.column)
     }
+
+    /// Clang/progress offense line (RuboCop colors when `color` is enabled).
+    pub fn render(&self, color: crate::formatter::color::Color) -> String {
+        let path = smart_path(&self.path);
+        let mut s = String::new();
+        if self.corrected {
+            s.push_str(&color.green("[Corrected] "));
+        }
+        s.push_str(&format!(
+            "{}:{}:{}: {}: {}: {}",
+            color.cyan(&path),
+            self.location.line,
+            self.location.column + 1,
+            color.severity_letter(self.severity),
+            self.cop_name,
+            annotate_message(&self.message, color),
+        ));
+        s
+    }
 }
 
 /// RuboCop PathUtil.smart_path: prefer cwd-relative, drop a leading `./`.
@@ -80,8 +99,8 @@ pub fn smart_path(path: &str) -> String {
     path.to_string()
 }
 
-/// RuboCop SimpleTextFormatter#annotate_message without color: drop `` `...` `` markers.
-fn annotate_message(msg: &str) -> String {
+/// RuboCop SimpleTextFormatter#annotate_message: strip `` `...` ``; yellow insides when colored.
+fn annotate_message(msg: &str, color: crate::formatter::color::Color) -> String {
     let mut out = String::with_capacity(msg.len());
     let mut rest = msg;
     while let Some(start) = rest.find('`') {
@@ -89,7 +108,7 @@ fn annotate_message(msg: &str) -> String {
         rest = &rest[start + 1..];
         match rest.find('`') {
             Some(end) => {
-                out.push_str(&rest[..end]);
+                out.push_str(&color.yellow(&rest[..end]));
                 rest = &rest[end + 1..];
             }
             None => {
@@ -104,18 +123,11 @@ fn annotate_message(msg: &str) -> String {
 
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.corrected {
-            write!(f, "[Corrected] ")?;
-        }
+        // Uncolored (tests, non-TTY sinks).
         write!(
             f,
-            "{}:{}:{}: {}: {}: {}",
-            smart_path(&self.path),
-            self.location.line,
-            self.location.column + 1,
-            self.severity,
-            self.cop_name,
-            annotate_message(&self.message),
+            "{}",
+            self.render(crate::formatter::color::Color::resolve(Some(false)))
         )
     }
 }
@@ -154,6 +166,24 @@ mod tests {
         let s = d.to_string();
         assert!(s.starts_with("lib/a.rb:10:3: C: Metrics/AbcSize: "));
         assert!(s.contains("for foo is too high"));
+        assert!(!s.contains("`foo`"));
+    }
+
+    #[test]
+    fn render_colors_path_severity_and_backticks() {
+        use crate::formatter::color::Color;
+        let d = Diagnostic {
+            path: "lib/a.rb".into(),
+            location: Location { line: 10, column: 2 },
+            severity: Severity::Convention,
+            cop_name: "Metrics/AbcSize".into(),
+            message: "size for `foo` is too high".into(),
+            corrected: false,
+        };
+        let s = d.render(Color::resolve(Some(true)));
+        assert!(s.contains("\x1b[36mlib/a.rb\x1b[0m"));
+        assert!(s.contains("\x1b[33mC\x1b[0m"));
+        assert!(s.contains("\x1b[33mfoo\x1b[0m"));
         assert!(!s.contains("`foo`"));
     }
 }

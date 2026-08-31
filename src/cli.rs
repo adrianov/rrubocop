@@ -12,8 +12,8 @@ pub enum AutocorrectMode {
 #[derive(Parser, Debug)]
 #[command(
     name = "rrubocop",
-    version,
-    about = "Fast RuboCop-compatible Ruby linter (tree-sitter)"
+    version = crate::baseline::VERSION,
+    about = crate::baseline::ABOUT
 )]
 pub struct Args {
     /// Files or directories to lint
@@ -41,8 +41,12 @@ pub struct Args {
     #[arg(long, value_delimiter = ',')]
     pub except: Vec<String>,
 
-    /// Disable color output
-    #[arg(long)]
+    /// Force color output on (RuboCop `--color`)
+    #[arg(long, overrides_with = "no_color")]
+    pub color: bool,
+
+    /// Force color output off (RuboCop `--no-color`)
+    #[arg(long, overrides_with = "color")]
     pub no_color: bool,
 
     /// Enable debug output
@@ -118,6 +122,17 @@ impl Args {
             AutocorrectMode::Safe
         } else {
             AutocorrectMode::Off
+        }
+    }
+
+    /// `Some(true/false)` when `--color` / `--no-color`; else auto (TTY).
+    pub fn color_force(&self) -> Option<bool> {
+        if self.color {
+            Some(true)
+        } else if self.no_color {
+            Some(false)
+        } else {
+            None
         }
     }
 }

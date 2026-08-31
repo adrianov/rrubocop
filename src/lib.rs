@@ -1,4 +1,5 @@
 pub mod abc;
+pub mod baseline;
 pub mod cache;
 pub mod cli;
 pub mod config;
@@ -16,11 +17,11 @@ use std::process::ExitCode;
 
 use anyhow::Result;
 use clap::Parser;
-
 use cli::Args;
 use config::{CopFilterSet, ResolvedConfig, load_config};
 use cop::registry::CopRegistry;
 use diagnostic::Diagnostic;
+use formatter::color::Color;
 use formatter::create_formatter;
 use fs::discover_files;
 use linter::{run_linter, should_fail};
@@ -78,6 +79,11 @@ fn exit_from_diags(diags: &[Diagnostic], fail_level: &str) -> ExitCode {
     }
 }
 
+fn print_results(args: &Args, diags: &[Diagnostic], files: &[std::path::PathBuf]) -> ExitCode {
+    create_formatter(&args.format, Color::resolve(args.color_force())).print(diags, files);
+    exit_from_diags(diags, &args.fail_level)
+}
+
 fn lint_paths(
     args: &Args,
     config: &ResolvedConfig,
@@ -91,18 +97,20 @@ fn lint_paths(
         return Ok(ExitCode::SUCCESS);
     }
     let result = run_linter(args, config, registry, &discovered)?;
-    create_formatter(&args.format).print(&result.diagnostics, &result.files);
-    Ok(exit_from_diags(&result.diagnostics, &args.fail_level))
+    Ok(print_results(args, &result.diagnostics, &result.files))
 }
 
 fn lint_stdin(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> Result<ExitCode> {
-    let stdin_path = args.stdin.as_ref().unwrap();
+    let path = args.stdin.as_ref().unwrap();
     let mut buf = Vec::new();
     std::io::stdin().read_to_end(&mut buf)?;
-    let source = SourceFile::from_bytes(stdin_path.clone(), buf);
-    let diags = lint_stdin_source(args, config, registry, &source)?;
-    create_formatter(&args.format).print(&diags, std::slice::from_ref(stdin_path));
-    Ok(exit_from_diags(&diags, &args.fail_level))
+    let diags = lint_stdin_source(
+        args,
+        config,
+        registry,
+        &SourceFile::from_bytes(path.clone(), buf),
+    )?;
+    Ok(print_results(args, &diags, std::slice::from_ref(path)))
 }
 
 fn lint_stdin_source(

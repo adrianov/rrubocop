@@ -1,3 +1,4 @@
+pub mod color;
 pub mod files;
 pub mod github;
 pub mod json;
@@ -10,6 +11,8 @@ use std::path::PathBuf;
 
 use crate::diagnostic::Diagnostic;
 
+use self::color::Color;
+
 pub trait Formatter {
     fn format_to(&self, diagnostics: &[Diagnostic], files: &[PathBuf], out: &mut dyn Write);
 
@@ -20,13 +23,13 @@ pub trait Formatter {
     }
 }
 
-pub fn create_formatter(format: &str) -> Box<dyn Formatter> {
+pub fn create_formatter(format: &str, color: Color) -> Box<dyn Formatter> {
     match format {
         "json" => Box::new(json::JsonFormatter),
         "github" => Box::new(github::GithubFormatter),
-        "quiet" => Box::new(quiet::QuietFormatter),
+        "quiet" => Box::new(quiet::QuietFormatter { color }),
         "files" => Box::new(files::FilesFormatter),
-        "emacs" | "simple" | "text" => Box::new(text::TextFormatter),
-        _ => Box::new(progress::ProgressFormatter),
+        "emacs" | "simple" | "text" => Box::new(text::TextFormatter { color }),
+        _ => Box::new(progress::ProgressFormatter { color }),
     }
 }
