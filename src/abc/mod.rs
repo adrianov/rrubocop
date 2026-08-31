@@ -201,4 +201,40 @@ mod tests {
         assert!(names.contains(&"str"), "got {names:?}");
         assert!(!names.iter().any(|n| n.contains('(')), "got {names:?}");
     }
+
+    #[test]
+    fn file_magic_not_a_branch() {
+        // tree-sitter often emits __FILE__/__LINE__/__ENCODING__ as identifier;
+        // RuboCop's parser gem does not count them as sends.
+        let s = scores("def f\n  p = File.expand_path(__FILE__)\n  q = __LINE__ + __ENCODING__.size\nend\n");
+        // A: p,q; B: expand_path, +, size — magic constants are not branches
+        assert_eq!(s[0].vector, "<2, 3, 0>", "got {}", s[0].vector);
+    }
+
+    #[test]
+    fn find_project_root_matches_rubocop() {
+        let o = scores(
+            r#"
+module CompletionNotifier
+  def self.find_project_root
+    return @script_dir if @script_dir && File.exist?(File.join(@script_dir, 'sounds'))
+
+    lib_dir = File.dirname(File.expand_path(__FILE__))
+    project_root = File.dirname(lib_dir)
+    return project_root if File.exist?(File.join(project_root, 'sounds'))
+
+    script_dir = File.dirname(File.expand_path($PROGRAM_NAME))
+    return script_dir if File.exist?(File.join(script_dir, 'sounds'))
+
+    Dir.pwd if File.exist?(File.join(Dir.pwd, 'sounds'))
+  end
+end
+"#,
+        )
+        .into_iter()
+        .find(|o| o.name == "find_project_root")
+        .unwrap();
+        assert_eq!(o.vector, "<3, 15, 5>");
+        assert!((o.score - 16.09).abs() < 1e-9);
+    }
 }

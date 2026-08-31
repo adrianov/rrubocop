@@ -121,6 +121,12 @@ impl Builder<'_> {
 
     fn walk_identifier(&mut self, n: Node, scope: ScopeId, under_defined: bool) {
         let name = self.text(n).to_string();
+        // Parser gem uses dedicated `__FILE__`/`__LINE__`/`__ENCODING__` nodes
+        // (not sends). tree-sitter-ruby often emits them as `identifier`; they
+        // must not become ABC vcall branches.
+        if matches!(name.as_str(), "__FILE__" | "__LINE__" | "__ENCODING__") {
+            return;
+        }
         let r = Read {
             byte: n.start_byte(),
             under_defined,
