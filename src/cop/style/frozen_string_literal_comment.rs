@@ -1,31 +1,44 @@
 //! Style/FrozenStringLiteralComment.
 
 use crate::cop::{Cop, CopConfig};
+use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct FrozenStringLiteralComment;
 
+fn is_frozen_magic(line: &str) -> bool {
+    let t = line.trim();
+    t.starts_with('#')
+        && t.contains("frozen_string_literal:")
+        && (t.contains("true") || t.contains("false"))
+}
+
+fn is_leading_trivia(line: &str) -> bool {
+    let t = line.trim();
+    t.is_empty() || t.starts_with('#')
+}
+
 fn has_frozen_comment(source: &SourceFile) -> bool {
-    for line in source.lines().take(3) {
+    for line in source.lines() {
         let Ok(s) = std::str::from_utf8(line) else {
             continue;
         };
-        let t = s.trim();
-        if t.starts_with("#")
-            && t.contains("frozen_string_literal:")
-            && (t.contains("true") || t.contains("false"))
-        {
+        if is_frozen_magic(s) {
             return true;
         }
-        if t.starts_with("#!") {
-            continue;
-        }
-        if !t.is_empty() && !t.starts_with('#') {
+        if !is_leading_trivia(s) {
             break;
         }
     }
     false
+}
+
+fn insert_offset(bytes: &[u8]) -> usize {
+    if !bytes.starts_with(b"#!") {
+        return 0;
+    }
+    bytes.iter().position(|&b| b == b'\n').map_or(0, |nl| nl + 1)
 }
 
 impl Cop for FrozenStringLiteralComment {
@@ -42,13 +55,9 @@ impl Cop for FrozenStringLiteralComment {
         source: &SourceFile,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
-        mut corrections: Option<&mut Vec<crate::correction::Correction>>,
+        corrections: Option<&mut Vec<Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyle", "always");
-        if style == "never" {
-            return;
-        }
-        if source.as_bytes().is_empty() {
+        if config.get_str("EnforcedStyle", "always") == "never" || source.as_bytes().is_empty() {
             return;
         }
         if has_frozen_comment(source) {
@@ -60,18 +69,12 @@ impl Cop for FrozenStringLiteralComment {
             0,
             "Missing frozen string literal comment.".to_string(),
         );
-        if let Some(ref mut corr) = corrections {
-            let insert = b"# frozen_string_literal: true\n";
-            let mut start = 0usize;
-            if source.as_bytes().starts_with(b"#!") {
-                if let Some(nl) = source.as_bytes().iter().position(|&b| b == b'\n') {
-                    start = nl + 1;
-                }
-            }
-            corr.push(crate::correction::Correction {
+        if let Some(corr) = corrections {
+            let start = insert_offset(source.as_bytes());
+            corr.push(Correction {
                 start,
                 end: start,
-                replacement: String::from_utf8_lossy(insert).into_owned(),
+                replacement: "# frozen_string_literal: true\n".into(),
                 cop_name: self.name(),
                 cop_index: 0,
             });

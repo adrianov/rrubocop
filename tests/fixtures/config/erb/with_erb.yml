@@ -1,0 +1,5 @@
+<% enabled = false %>
+Metrics/AbcSize:
+  Enabled: <%= enabled %>
+Style/Foo:
+  Enabled: true

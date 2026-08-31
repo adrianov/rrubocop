@@ -1,0 +1,179 @@
+//! Path / version / ResolvedConfig assembly helpers for [`super::load`].
+
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+
+use anyhow::Result;
+
+use crate::cop::EnabledState;
+
+use super::discover::find_config;
+use super::load_lockfile::LockfileMeta;
+use super::load_recursive::{load_config_recursive, load_config_recursive_inner};
+use super::resolved::ResolvedConfig;
+use super::ruby_ver::resolve_ruby_version_from_gemspec;
+use super::standard::convert_standard_yml;
+use super::types::{ConfigLayer, NewCopsPolicy};
+
+pub(crate) use super::load_lockfile::{empty_resolved_no_config, resolve_lockfile_meta};
+
+pub(crate) fn resolve_start_dir(target_dir: Option<&Path>) -> Option<PathBuf> {
+    let raw = target_dir.map(|p| {
+        if p.is_file() {
+            match p.parent() {
+                Some(parent) if !parent.as_os_str().is_empty() => parent.to_path_buf(),
+                _ => PathBuf::from("."),
+            }
+        } else {
+            p.to_path_buf()
+        }
+    });
+    let dir = raw.or_else(|| std::env::current_dir().ok())?;
+    Some(std::fs::canonicalize(&dir).unwrap_or(dir))
+}
+
+pub(crate) fn resolve_config_path(path: Option<&Path>, start_dir: Option<&PathBuf>) -> Option<PathBuf> {
+    match path {
+        Some(p) if p.exists() => Some(p.to_path_buf()),
+        Some(_) => None,
+        None => start_dir.and_then(|dir| find_config(dir)),
+    }
+}
+
+pub(crate) fn resolve_path_base_dir(config_path: &Path, config_dir: &Path) -> PathBuf {
+    let is_rubocop_dotfile = config_path
+        .file_name()
+        .and_then(|f| f.to_str())
+        .is_some_and(|name| name.starts_with(".rubocop"));
+    if is_rubocop_dotfile {
+        config_dir
+            .canonicalize()
+            .unwrap_or_else(|_| config_dir.to_path_buf())
+    } else {
+        std::env::current_dir().unwrap_or_else(|_| config_dir.to_path_buf())
+    }
+}
+
+pub(crate) fn load_project_layer(
+    config_path: &Path,
+    config_dir: &Path,
+    gem_cache: Option<&HashMap<String, PathBuf>>,
+) -> Result<ConfigLayer> {
+    let mut visited = HashSet::new();
+    let is_standard = config_path
+        .file_name()
+        .is_some_and(|f| f == ".standard.yml");
+    if is_standard {
+        let synthetic_yaml = convert_standard_yml(config_path)?;
+        load_config_recursive_inner(
+            config_path,
+            config_dir,
+            &mut visited,
+            gem_cache,
+            Some(&synthetic_yaml),
+        )
+    } else {
+        load_config_recursive(config_path, config_dir, &mut visited, gem_cache)
+    }
+}
+
+pub(crate) fn project_enabled_depts(project_layer: &ConfigLayer) -> HashSet<String> {
+    project_layer
+        .department_configs
+        .iter()
+        .filter(|(name, cfg)| {
+            cfg.enabled == EnabledState::True
+                && !project_layer.require_enabled_depts.contains(name.as_str())
+        })
+        .map(|(name, _)| name.clone())
+        .collect()
+}
+
+pub(crate) fn apply_disabled_by_default(
+    base: &mut ConfigLayer,
+    project_mentioned_cops: &HashSet<String>,
+    project_mentioned_depts: &HashSet<String>,
+) {
+    if !base.disabled_by_default.unwrap_or(false) {
+        return;
+    }
+    for (cop_name, cop_cfg) in base.cop_configs.iter_mut() {
+        if cop_cfg.enabled == EnabledState::True && !project_mentioned_cops.contains(cop_name) {
+            cop_cfg.enabled = EnabledState::Unset;
+        }
+    }
+    for (dept_name, dept_cfg) in base.department_configs.iter_mut() {
+        if dept_cfg.enabled == EnabledState::True && !project_mentioned_depts.contains(dept_name) {
+            dept_cfg.enabled = EnabledState::Unset;
+        }
+    }
+}
+
+fn parse_ruby_version_file(content: &str) -> Option<f64> {
+    let trimmed = content.trim();
+    let parts: Vec<&str> = trimmed.split('.').collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    let major: u64 = parts[0].parse().ok()?;
+    let minor: u64 = parts[1].parse().ok()?;
+    Some(major as f64 + minor as f64 / 10.0)
+}
+
+pub(crate) fn resolve_target_ruby_version(base: &ConfigLayer, config_dir: &Path) -> Option<f64> {
+    base.target_ruby_version
+        .or_else(|| resolve_ruby_version_from_gemspec(config_dir))
+        .or_else(|| {
+            let path = config_dir.join(".ruby-version");
+            std::fs::read_to_string(path)
+                .ok()
+                .and_then(|c| parse_ruby_version_file(&c))
+        })
+}
+
+pub(crate) struct ResolvedParts {
+    pub base: ConfigLayer,
+    pub config_dir: PathBuf,
+    pub base_dir: PathBuf,
+    pub rubocop_known_cops: HashSet<String>,
+    pub project_mentioned_cops: HashSet<String>,
+    pub project_mentioned_depts: HashSet<String>,
+    pub project_enabled_depts: HashSet<String>,
+    pub dir_overrides: Vec<(PathBuf, ConfigLayer)>,
+    pub lock: LockfileMeta,
+    pub target_ruby_version: Option<f64>,
+}
+
+pub(crate) fn build_resolved(parts: ResolvedParts) -> ResolvedConfig {
+    let disabled_by_default = parts.base.disabled_by_default.unwrap_or(false);
+    let new_cops = match parts.base.new_cops.as_deref() {
+        Some("enable") => NewCopsPolicy::Enable,
+        _ => NewCopsPolicy::Disable,
+    };
+    ResolvedConfig {
+        cop_configs: parts.base.cop_configs,
+        department_configs: parts.base.department_configs,
+        global_excludes: parts.base.global_excludes,
+        config_dir: Some(parts.config_dir),
+        new_cops,
+        disabled_by_default,
+        require_known_cops: parts.base.require_known_cops,
+        require_departments: parts.base.require_departments,
+        target_ruby_version: parts.target_ruby_version.or(Some(2.7)),
+        target_rails_version: parts.lock.target_rails_version,
+        active_support_extensions_enabled: parts
+            .base
+            .active_support_extensions_enabled
+            .unwrap_or(false),
+        rubocop_known_cops: parts.rubocop_known_cops,
+        project_mentioned_cops: parts.project_mentioned_cops,
+        project_mentioned_depts: parts.project_mentioned_depts,
+        project_enabled_depts: parts.project_enabled_depts,
+        dir_overrides: parts.dir_overrides,
+        railties_in_lockfile: parts.lock.railties_in_lockfile,
+        railties_version: parts.lock.railties_version,
+        rack_version: parts.lock.rack_version,
+        base_dir: Some(parts.base_dir),
+        migrated_schema_version: parts.base.migrated_schema_version,
+    }
+}

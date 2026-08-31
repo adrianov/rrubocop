@@ -16,11 +16,12 @@ rrubocop [OPTIONS] [PATH]...
 
 ## Features
 
-- **Config** — discovers `.rubocop.yml`, `inherit_from`, `AllCops` / per-cop `Enabled` / `Exclude` / `Include` / options; `inherit_gem` best-effort without requiring Ruby
+- **Config** — RuboCop-compatible resolution: walk-up discovery, `inherit_from` / `inherit_gem` / `require`/`plugins`, `inherit_mode` (merge/override), nested `.rubocop.yml` overrides, `DisabledByDefault`, `NewCops` / `Enabled: pending`, plus per-cop `Enabled` / `Exclude` / `Include` / options
 - **Autocorrect** — `-a` (safe) / `-A` (all)
 - **Output** — `progress`, `text`, `json`, `github`, `quiet`, `files`, …
 - **Directives** — `# rubocop:disable` / `enable`
 - **Parser** — tree-sitter-ruby (no Prism / no CRuby)
+- **Cache** — content-addressed `cache.redb` under `$RRUBOCOP_CACHE_DIR` or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop` (same style as abcop); `--no-cache` disables
 
 Reference implementations: [nitrocop](https://github.com/6/nitrocop) (architecture & fixtures), upstream [RuboCop](https://github.com/rubocop/rubocop).
 
@@ -58,9 +59,14 @@ rrubocop -A .                    # all autocorrect
 rrubocop --only Metrics/AbcSize lib
 rrubocop --list-cops
 rrubocop -L                      # list target files
+rrubocop --no-cache .            # skip on-disk result cache
 ```
 
 Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
+
+## Caching
+
+Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop`). Keys cover contents, version, rule revision, `--only`/`--except`, config fingerprint, and path. Auto-pruned to 20 000 entries; `--no-cache` disables. Autocorrect runs bypass the cache. Nothing is written inside the project.
 
 ## Cross-test vs nitrocop
 

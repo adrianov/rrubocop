@@ -142,6 +142,9 @@ pub(super) fn declared_name(child: Node, src: &[u8]) -> Option<String> {
 
 /// Body of a block-ish node regardless of brace/do form.
 pub(super) fn body_of(n: Node) -> Option<Node> {
+    if let Some(body) = n.child_by_field_name("body") {
+        return Some(body);
+    }
     let mut cursor = n.walk();
     n.children(&mut cursor)
         .find(|c| c.kind() == "body_statement" || c.kind() == "block_body")

@@ -1,16 +1,38 @@
-//! Style/EmptyLiteral — Array.new / Hash.new / String.new without args.
+//! Style/EmptyLiteral — Array.new / Hash.new / String.new without args or block.
 
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
+use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct EmptyLiteral;
 
-fn const_name(node: Node<'_>, src: &[u8]) -> Option<String> {
-    let text = std::str::from_utf8(&src[node.start_byte()..node.end_byte()]).ok()?;
-    Some(text.to_string())
+fn const_name<'a>(node: Node<'a>, src: &'a [u8]) -> Option<&'a str> {
+    std::str::from_utf8(&src[node.start_byte()..node.end_byte()]).ok()
+}
+
+fn has_block(node: Node<'_>) -> bool {
+    let mut c = node.walk();
+    node.children(&mut c)
+        .any(|n| matches!(n.kind(), "block" | "do_block"))
+}
+
+fn replacement_for(recv: &str) -> Option<&'static str> {
+    match recv {
+        "Array" => Some("[]"),
+        "Hash" => Some("{}"),
+        "String" => Some("''"),
+        _ => None,
+    }
+}
+
+fn method_ident<'a>(node: Node<'a>) -> Option<Node<'a>> {
+    node.child_by_field_name("method").or_else(|| {
+        let mut c = node.walk();
+        node.children(&mut c).find(|n| n.kind() == "identifier")
+    })
 }
 
 impl Cop for EmptyLiteral {
@@ -32,35 +54,39 @@ impl Cop for EmptyLiteral {
         node: Node<'_>,
         _config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
-        mut corrections: Option<&mut Vec<crate::correction::Correction>>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let method = node.child_by_field_name("method").or_else(|| {
-            // fallback: last identifier child
-            let mut c = node.walk();
-            node.children(&mut c).find(|n| n.kind() == "identifier")
-        });
-        let Some(method) = method else {
-            return;
-        };
         let src = source.as_bytes();
-        if const_name(method, src).as_deref() != Some("new") {
-            return;
-        }
-        let receiver = node.child_by_field_name("receiver");
-        let Some(receiver) = receiver else {
+        let Some(method) = method_ident(node) else {
             return;
         };
-        // No arguments
-        if node.child_by_field_name("arguments").is_some() {
+        if const_name(method, src) != Some("new") {
             return;
         }
-        let recv = const_name(receiver, src).unwrap_or_default();
-        let replacement = match recv.as_str() {
-            "Array" => "[]",
-            "Hash" => "{}",
-            "String" => "''",
-            _ => return,
+        let Some(receiver) = node.child_by_field_name("receiver") else {
+            return;
         };
+        if node.child_by_field_name("arguments").is_some() || has_block(node) {
+            return;
+        }
+        let recv = const_name(receiver, src).unwrap_or("");
+        let Some(replacement) = replacement_for(recv) else {
+            return;
+        };
+        Self::report(self, source, node, recv, replacement, diagnostics, &mut corrections);
+    }
+}
+
+impl EmptyLiteral {
+    fn report(
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        recv: &str,
+        replacement: &str,
+        diagnostics: &mut Vec<Diagnostic>,
+        corrections: &mut Option<&mut Vec<Correction>>,
+    ) {
         let (line, col) = source.offset_to_line_col(node.start_byte());
         let mut diag = self.diagnostic(
             source,
@@ -68,8 +94,8 @@ impl Cop for EmptyLiteral {
             col,
             format!("Use `{replacement}` instead of `{recv}.new`."),
         );
-        if let Some(ref mut corr) = corrections {
-            corr.push(crate::correction::Correction {
+        if let Some(corr) = corrections.as_deref_mut() {
+            corr.push(Correction {
                 start: node.start_byte(),
                 end: node.end_byte(),
                 replacement: replacement.to_string(),
@@ -81,3 +107,4 @@ impl Cop for EmptyLiteral {
         diagnostics.push(diag);
     }
 }
+
