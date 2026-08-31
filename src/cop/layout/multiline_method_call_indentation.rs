@@ -27,7 +27,9 @@ fn check_call(
     if n.kind() != "call" { return; }
     let Some(recv) = n.child_by_field_name("receiver") else { return; };
     let Some(method) = n.child_by_field_name("method") else { return; };
-    if shared::node_line(source, recv) == shared::node_line(source, method) { return; }
+    // Only leading-dot / continued calls (method on a line after receiver ends).
+    let (recv_end_line, _) = source.offset_to_line_col(recv.end_byte().saturating_sub(1));
+    if recv_end_line == shared::node_line(source, method) { return; }
     let expected = expected_col(source, recv, style, width);
     let actual = shared::line_indent(source, method.start_byte());
     if actual == expected { return; }

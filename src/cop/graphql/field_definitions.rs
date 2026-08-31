@@ -57,23 +57,21 @@ fn check_grouped(
     body: &[Node<'_>],
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let fields = field_indices(source, body);
-    let Some(&(first_idx, _)) = fields.first() else {
-        return;
-    };
-    for (pos, &(idx, n)) in fields.iter().enumerate() {
-        if idx != first_idx + pos {
-            push_group_msg(cop, source, n, diagnostics);
+    let mut seen_field = false;
+    let mut seen_other_after = false;
+    for &n in body {
+        if n.kind() == "comment" {
+            continue;
+        }
+        if is_field_call(source, n) {
+            if seen_other_after {
+                push_group_msg(cop, source, n, diagnostics);
+            }
+            seen_field = true;
+        } else if seen_field {
+            seen_other_after = true;
         }
     }
-}
-
-fn field_indices<'a>(source: &SourceFile, body: &[Node<'a>]) -> Vec<(usize, Node<'a>)> {
-    body.iter()
-        .enumerate()
-        .filter(|(_, n)| is_field_call(source, **n))
-        .map(|(i, n)| (i, *n))
-        .collect()
 }
 
 fn push_group_msg(

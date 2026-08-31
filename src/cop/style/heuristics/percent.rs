@@ -50,17 +50,78 @@ pub fn matches_percent_q_literals(source: &SourceFile, node: Node<'_>, config: &
     }
 }
 
-pub fn matches_string_literals(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
-    if node.kind() != "string" { return false; }
-    let style = config.get_str("EnforcedStyle", "single_quotes");
-    let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
-    // skip %q/%Q/heredoc-ish
-    if b.starts_with(b"%") { return false; }
+/// RuboCop `Util#double_quotes_required?` — `'` or a non-`\\`/`"` escape needs `"…"`.
+fn odd_escape_needs_double(src: &[u8], i: usize) -> (usize, bool) {
+    let mut n = 0;
+    while i + n < src.len() && src[i + n] == b'\\' {
+        n += 1;
+    }
+    if n % 2 == 0 {
+        return (n.max(1), false);
+    }
+    let next = src.get(i + n).copied().unwrap_or(0);
+    (n, next != b'\\' && next != b'"')
+}
+
+fn double_quotes_required(src: &[u8]) -> bool {
+    let mut i = 0;
+    while i < src.len() {
+        match src[i] {
+            b'\'' => return true,
+            b'\\' => {
+                let (n, need) = odd_escape_needs_double(src, i);
+                if need {
+                    return true;
+                }
+                i += n;
+            }
+            _ => i += 1,
+        }
+    }
+    false
+}
+
+fn double_quotes_preferred(src: &[u8]) -> bool {
+    let mut i = 0;
+    while i < src.len() {
+        match src[i] {
+            b'"' => return true,
+            b'\\' if i + 1 < src.len() => {
+                if !matches!(src[i + 1], b'\'' | b'\\') {
+                    return true;
+                }
+                i += 2;
+            }
+            b'#' if src.get(i + 1).is_some_and(|b| matches!(b, b'@' | b'$' | b'{')) => {
+                return true;
+            }
+            _ => i += 1,
+        }
+    }
+    false
+}
+
+fn has_interpolation(node: Node<'_>) -> bool {
     let mut cur = node.walk();
-    if node.named_children(&mut cur).any(|ch| ch.kind() == "interpolation") { return false; }
+    node.named_children(&mut cur)
+        .any(|ch| ch.kind() == "interpolation")
+}
+
+fn quote_mismatch(style: &str, b: &[u8]) -> bool {
     match style {
-        "single_quotes" => b.starts_with(b"\""),
-        "double_quotes" => b.starts_with(b"'"),
+        "single_quotes" => b.starts_with(b"\"") && !double_quotes_required(b),
+        "double_quotes" => b.starts_with(b"'") && !double_quotes_preferred(b),
         _ => false,
     }
+}
+
+pub fn matches_string_literals(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
+    if node.kind() != "string" {
+        return false;
+    }
+    let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
+    !b.starts_with(b"%")
+        && !b.starts_with(b"?")
+        && !has_interpolation(node)
+        && quote_mismatch(config.get_str("EnforcedStyle", "single_quotes"), b)
 }

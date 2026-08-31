@@ -66,7 +66,12 @@ impl Cop for UnreachableCode {
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
         let mut cur = node.walk();
-        let stmts: Vec<_> = node.named_children(&mut cur).collect();
+        // Skip rescue/else/ensure siblings (same as Lint/Void) — they are not
+        // unreachable code after return/raise in the statement list.
+        let stmts: Vec<_> = node
+            .named_children(&mut cur)
+            .filter(|n| !matches!(n.kind(), "rescue" | "else" | "ensure"))
+            .collect();
         check_stmts(source, &stmts, self, diagnostics);
     }
 }

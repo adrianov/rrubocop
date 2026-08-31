@@ -1,6 +1,6 @@
 //! Parallel file linting and fail-fast batching.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
@@ -16,6 +16,11 @@ use crate::parse::source::SourceFile;
 
 use super::engine::lint_source;
 use super::RunPrep;
+
+pub(super) struct LintBatch {
+    pub diagnostics: Vec<Diagnostic>,
+    pub inspected: Vec<PathBuf>,
+}
 
 fn cache_settings(prep: &RunPrep) -> CacheSettings<'_> {
     CacheSettings {
@@ -47,8 +52,9 @@ pub(super) fn lint_all_files(
     config: &ResolvedConfig,
     registry: &CopRegistry,
     on_file: impl Fn(&[Diagnostic]) + Sync,
-) -> Result<Vec<Diagnostic>> {
+) -> Result<LintBatch> {
     let diagnostics = Mutex::new(Vec::new());
+    let inspected = Mutex::new(Vec::new());
     let stop = AtomicBool::new(false);
     let fail_count = AtomicU32::new(0);
     let settings = cache_settings(prep);
@@ -59,6 +65,7 @@ pub(super) fn lint_all_files(
             registry,
             settings,
             &diagnostics,
+            &inspected,
             &stop,
             &fail_count,
             &on_file,
@@ -70,12 +77,16 @@ pub(super) fn lint_all_files(
             registry,
             settings,
             &diagnostics,
+            &inspected,
             &stop,
             &fail_count,
             &on_file,
         )?;
     }
-    Ok(take_sorted(diagnostics))
+    Ok(LintBatch {
+        diagnostics: take_sorted(diagnostics),
+        inspected: inspected.into_inner().unwrap(),
+    })
 }
 
 fn lint_unlimited(
@@ -84,6 +95,7 @@ fn lint_unlimited(
     registry: &CopRegistry,
     settings: CacheSettings<'_>,
     diagnostics: &Mutex<Vec<Diagnostic>>,
+    inspected: &Mutex<Vec<PathBuf>>,
     stop: &AtomicBool,
     fail_count: &AtomicU32,
     on_file: &(impl Fn(&[Diagnostic]) + Sync),
@@ -96,6 +108,7 @@ fn lint_unlimited(
             registry,
             settings,
             diagnostics,
+            inspected,
             stop,
             fail_count,
             on_file,
@@ -109,6 +122,7 @@ fn lint_fail_fast_batches(
     registry: &CopRegistry,
     settings: CacheSettings<'_>,
     diagnostics: &Mutex<Vec<Diagnostic>>,
+    inspected: &Mutex<Vec<PathBuf>>,
     stop: &AtomicBool,
     fail_count: &AtomicU32,
     on_file: &(impl Fn(&[Diagnostic]) + Sync),
@@ -130,6 +144,7 @@ fn lint_fail_fast_batches(
                 registry,
                 settings,
                 diagnostics,
+                inspected,
                 stop,
                 fail_count,
                 on_file,
@@ -140,6 +155,28 @@ fn lint_fail_fast_batches(
     Ok(())
 }
 
+fn bump_fail_fast(prep: &RunPrep, add: u32, fail_count: &AtomicU32, stop: &AtomicBool) {
+    if prep.fail_fast_limit == 0 || add == 0 {
+        return;
+    }
+    let total = fail_count.fetch_add(add, Ordering::Relaxed) + add;
+    if total >= prep.fail_fast_limit {
+        stop.store(true, Ordering::Relaxed);
+    }
+}
+
+fn apply_diags(
+    path: &Path,
+    diags: &mut Vec<Diagnostic>,
+    inspected: &Mutex<Vec<PathBuf>>,
+    diagnostics: &Mutex<Vec<Diagnostic>>,
+    on_file: &impl Fn(&[Diagnostic]),
+) {
+    on_file(diags);
+    inspected.lock().unwrap().push(path.to_path_buf());
+    diagnostics.lock().unwrap().append(diags);
+}
+
 fn lint_path_job(
     path: &Path,
     prep: &RunPrep,
@@ -147,6 +184,7 @@ fn lint_path_job(
     registry: &CopRegistry,
     settings: CacheSettings<'_>,
     diagnostics: &Mutex<Vec<Diagnostic>>,
+    inspected: &Mutex<Vec<PathBuf>>,
     stop: &AtomicBool,
     fail_count: &AtomicU32,
     on_file: &impl Fn(&[Diagnostic]),
@@ -154,7 +192,7 @@ fn lint_path_job(
     if stop.load(Ordering::Relaxed) {
         return Ok(());
     }
-    let mut file_diags = lint_file(
+    let mut diags = lint_file(
         path,
         config,
         registry,
@@ -166,15 +204,13 @@ fn lint_path_job(
         prep.cache.as_ref(),
         settings,
     )?;
-    let add = counted_offenses(&file_diags, prep.fail_fast_uncorrected_only);
-    if prep.fail_fast_limit > 0 && add > 0 {
-        let total = fail_count.fetch_add(add, Ordering::Relaxed) + add;
-        if total >= prep.fail_fast_limit {
-            stop.store(true, Ordering::Relaxed);
-        }
-    }
-    on_file(&file_diags);
-    diagnostics.lock().unwrap().append(&mut file_diags);
+    bump_fail_fast(
+        prep,
+        counted_offenses(&diags, prep.fail_fast_uncorrected_only),
+        fail_count,
+        stop,
+    );
+    apply_diags(path, &mut diags, inspected, diagnostics, on_file);
     Ok(())
 }
 

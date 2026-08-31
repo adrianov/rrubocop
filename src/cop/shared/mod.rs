@@ -192,6 +192,16 @@ pub fn only_spaces(bytes: &[u8], start: usize, end: usize) -> bool {
         .all(|&b| b == b' ' || b == b'\t')
 }
 
+/// True if [start,end) is non-empty and contains only spaces/tabs (no newlines).
+pub fn only_hspace(bytes: &[u8], start: usize, end: usize) -> bool {
+    if end <= start {
+        return false;
+    }
+    bytes[start..end.min(bytes.len())]
+        .iter()
+        .all(|&b| b == b' ' || b == b'\t')
+}
+
 /// True if [start,end) contains a space or tab.
 pub fn has_hspace(bytes: &[u8], start: usize, end: usize) -> bool {
     if end <= start {

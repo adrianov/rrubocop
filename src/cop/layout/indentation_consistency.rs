@@ -16,7 +16,16 @@ fn is_container(kind: &str) -> bool {
 }
 
 fn skip_kid(kind: &str) -> bool {
-    matches!(kind, "identifier" | "constant" | "superclass" | "method_parameters" | "parameters" | "block_parameters")
+    matches!(
+        kind,
+        "identifier"
+            | "constant"
+            | "superclass"
+            | "method_parameters"
+            | "parameters"
+            | "block_parameters"
+            | "comment"
+    )
 }
 
 fn nested_ok(kind: &str) -> bool {

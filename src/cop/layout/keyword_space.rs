@@ -49,10 +49,22 @@ fn keyword_token_span(bytes: &[u8], n: Node<'_>) -> Option<(usize, usize)> {
     })
 }
 
-fn named_kind_span(n: Node<'_>) -> Option<(usize, usize)> {
+fn leaf_kw_span(bytes: &[u8], n: Node<'_>) -> Option<(usize, usize)> {
     let k = n.kind();
-    // Named keyword kinds with no separate token child (`return`, `break`, …).
-    is_kw_kind(k).then(|| (n.start_byte(), n.start_byte() + k.len()))
+    if !is_kw_kind(k) {
+        return None;
+    }
+    let start = n.start_byte();
+    let end = start + k.len();
+    (end <= n.end_byte() && &bytes[start..end] == k.as_bytes()).then_some((start, end))
+}
+
+fn anon_kw_span(bytes: &[u8], n: Node<'_>) -> Option<(usize, usize)> {
+    let t = &bytes[n.start_byte()..n.end_byte()];
+    KEYWORDS
+        .iter()
+        .any(|&kw| t == kw)
+        .then_some((n.start_byte(), n.end_byte()))
 }
 
 pub fn kw_span(bytes: &[u8], n: Node<'_>) -> Option<(usize, usize)> {
@@ -60,10 +72,9 @@ pub fn kw_span(bytes: &[u8], n: Node<'_>) -> Option<(usize, usize)> {
         return do_end(n).map(|d| (d.start_byte(), d.end_byte()));
     }
     if !n.is_named() {
-        return Some((n.start_byte(), n.end_byte()));
+        return anon_kw_span(bytes, n);
     }
-    // Prefer the keyword token child — the named node may start earlier (indent).
-    keyword_token_span(bytes, n).or_else(|| named_kind_span(n))
+    keyword_token_span(bytes, n).or_else(|| leaf_kw_span(bytes, n))
 }
 
 fn need_space_after(next: u8) -> bool {
@@ -75,6 +86,11 @@ fn skip_after_punct(next: u8) -> bool {
     next.is_ascii_whitespace() || matches!(next, b';' | b',' | b')' | b']' | b'}')
 }
 
+const ACCEPT_LEFT_PAREN: &[&str] = &[
+    "break", "defined?", "next", "not", "rescue", "super", "yield",
+];
+const ACCEPT_LEFT_BRACKET: &[&str] = &["super", "yield"];
+
 fn missing_after(bytes: &[u8], k: &str, end: usize) -> bool {
     let Some(&next) = bytes.get(end) else {
         return false;
@@ -82,7 +98,17 @@ fn missing_after(bytes: &[u8], k: &str, end: usize) -> bool {
     if skip_after_punct(next) {
         return false;
     }
+    if next == b'(' && ACCEPT_LEFT_PAREN.contains(&k) {
+        return false;
+    }
+    if next == b'[' && ACCEPT_LEFT_BRACKET.contains(&k) {
+        return false;
+    }
     if k == "defined?" && next == b'(' {
+        return false;
+    }
+    // `end` before `.` / `::` / `)` is fine (e.g. `class << self; end`)
+    if k == "end" && matches!(next, b'.' | b':' | b')' | b']' | b'}' | b',') {
         return false;
     }
     need_space_after(next) || next.is_ascii_graphic()

@@ -29,7 +29,8 @@ fn expected_indent(indent: usize, prev: usize, width: usize) -> usize {
 
 fn bad_step(indent: usize, prev: usize, width: usize) -> bool {
     let diff = indent.abs_diff(prev);
-    diff != 0 && diff != width && indent > 0
+    // Allow any multiple of Width (block outdent/indent may span levels).
+    diff != 0 && width != 0 && diff % width != 0 && indent > 0
 }
 
 fn report_width(

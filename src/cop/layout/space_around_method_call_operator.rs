@@ -117,8 +117,8 @@ impl Cop for SpaceAroundMethodCallOperator {
         let Some((op_start, op_end)) = op_span(bytes, recv, method) else {
             return;
         };
-        let before = shared::has_hspace(bytes, recv.end_byte(), op_start);
-        let after = shared::has_hspace(bytes, op_end, method.start_byte());
+        let before = shared::only_hspace(bytes, recv.end_byte(), op_start);
+        let after = shared::only_hspace(bytes, op_end, method.start_byte());
         if !(before || after) {
             return;
         }

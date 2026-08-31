@@ -1,17 +1,12 @@
 use tree_sitter::Node;
 
-use crate::cop::shared::{call_method_name, for_each_descendant};
+use crate::cop::shared::call_receiver;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::source::SourceFile;
 
-/// Lint/NonLocalExitFromIterator — bare return in iterator block.
+/// Lint/NonLocalExitFromIterator — bare return in chained iterator block.
 pub struct NonLocalExitFromIterator;
-
-const ITERATORS: &[&[u8]] = &[
-    b"each", b"map", b"collect", b"select", b"find_all", b"reject", b"detect", b"find",
-    b"any?", b"all?", b"none?", b"one?", b"times", b"loop", b"upto", b"downto", b"step",
-];
 
 impl Cop for NonLocalExitFromIterator {
     fn name(&self) -> &'static str {
@@ -23,7 +18,7 @@ impl Cop for NonLocalExitFromIterator {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call"]
+        &["return"]
     }
 
     fn check_node(
@@ -34,29 +29,54 @@ impl Cop for NonLocalExitFromIterator {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let Some(meth) = call_method_name(source, node) else {
-            return;
-        };
-        if !ITERATORS.contains(&meth) {
+        // Named `return` only — anonymous keyword tokens share kind `return`.
+        if !node.is_named() || node.named_child_count() > 0 {
             return;
         }
-        let Some(block) = node.child_by_field_name("block") else {
+        if !exits_chained_iterator(node) {
             return;
-        };
-        for_each_descendant(block, |n| {
-            if n.kind() != "return" {
-                return;
-            }
-            if n.named_child_count() > 0 {
-                return; // return with value is ok-ish / different
-            }
-            let (line, col) = source.offset_to_line_col(n.start_byte());
-            diagnostics.push(self.diagnostic(
-                source,
-                line,
-                col,
-                "Non-local exit from iterator, without return value. `next`, `break`, `Array#find`, etc. are preferred.".to_string(),
-            ));
-        });
+        }
+        let (line, col) = source.offset_to_line_col(node.start_byte());
+        diagnostics.push(self.diagnostic(
+            source,
+            line,
+            col,
+            "Non-local exit from iterator, without return value. `next`, `break`, `Array#find`, etc. are preferred.".to_string(),
+        ));
     }
+}
+
+fn exits_chained_iterator(ret: Node<'_>) -> bool {
+    let mut p = ret.parent();
+    while let Some(n) = p {
+        match n.kind() {
+            "method" | "singleton_method" | "lambda" => return false,
+            "block" | "do_block" => {
+                return block_is_chained_iterator(n);
+            }
+            _ => p = n.parent(),
+        }
+    }
+    false
+}
+
+fn block_is_chained_iterator(block: Node<'_>) -> bool {
+    let Some(send) = block.parent() else {
+        return false;
+    };
+    if !matches!(send.kind(), "call" | "command") {
+        return false;
+    }
+    // RuboCop: block must take arguments, and the send must be chained.
+    if !block_has_args(block) {
+        return false;
+    }
+    call_receiver(send).is_some()
+}
+
+fn block_has_args(block: Node<'_>) -> bool {
+    block.child_by_field_name("parameters").is_some_and(|p| {
+        let mut cur = p.walk();
+        p.named_children(&mut cur).next().is_some()
+    })
 }

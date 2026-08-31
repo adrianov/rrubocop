@@ -11,14 +11,21 @@ use crate::parse::source::SourceFile;
 pub struct SpaceInLambdaLiteral;
 
 fn arrow_paren_gap(bytes: &[u8], node: Node<'_>) -> Option<(usize, usize, bool)> {
-    if !bytes[node.start_byte()..].starts_with(b"->") { return None; }
+    if !bytes[node.start_byte()..].starts_with(b"->") {
+        return None;
+    }
     let arrow_end = node.start_byte() + 2;
     let rest = &bytes[arrow_end..node.end_byte()];
-    let paren_rel = rest.iter().position(|&b| b == b'(')?;
-    let between = &rest[..paren_rel];
-    if between.iter().any(|&b| b == b'\n') { return None; }
-    let has_space = between.iter().any(|&b| b == b' ' || b == b'\t');
-    Some((arrow_end, paren_rel, has_space))
+    // Skip spaces; only `-> (` / `->(` — not `-> {`.
+    let mut i = 0;
+    while i < rest.len() && matches!(rest[i], b' ' | b'\t') {
+        i += 1;
+    }
+    if rest.get(i) != Some(&b'(') {
+        return None;
+    }
+    let has_space = i > 0;
+    Some((arrow_end, i, has_space))
 }
 
 impl Cop for SpaceInLambdaLiteral {

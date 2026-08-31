@@ -13,5 +13,5 @@ Rust RuboCop drop-in for Ruby (tree-sitter). No Ruby for linting; ERB configs ne
 - `src/formatter/` — text/json/progress (live marks)/…
 - `src/abc/`, `src/model/` — Metrics/AbcSize (tree-sitter)
 - `vendor/tree-sitter-ruby/` — grammar
-- `scripts/cross_test_nitrocop.py` — offense compare vs local nitrocop
+- `testdata/cross_test_nitrocop.py` — offense compare vs local nitrocop
 - Reference clones (outside repo): `/home/crexus/nitrocop`, `/home/crexus/rubocop`, `/home/crexus/abcop`

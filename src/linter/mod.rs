@@ -60,10 +60,11 @@ pub fn run_linter_with(
 ) -> Result<LintResult> {
     let prep = prepare_run(args, config, registry, discovered);
     on_start(prep.files.len());
-    let diagnostics = parallel::lint_all_files(&prep, config, registry, on_file)?;
+    let batch = parallel::lint_all_files(&prep, config, registry, on_file)?;
     Ok(LintResult {
-        diagnostics,
-        files: prep.files,
+        diagnostics: batch.diagnostics,
+        // Only paths actually linted (fail-fast may stop early).
+        files: batch.inspected,
     })
 }
 

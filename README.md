@@ -74,7 +74,7 @@ Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rruboco
 With a local nitrocop build:
 
 ```sh
-scripts/cross_test_nitrocop.py /path/to/fixture_dir
+testdata/cross_test_nitrocop.py /path/to/fixture_dir
 ```
 
 Compares `(path, line, cop_name)` offense sets.

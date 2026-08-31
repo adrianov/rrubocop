@@ -30,7 +30,8 @@ fn check_params(cop: &dyn Cop, source: &SourceFile, node: Node<'_>, start_line: 
 
 fn first_body<'a>(node: Node<'a>) -> Option<Node<'a>> {
     let mut cur = node.walk();
-    node.named_children(&mut cur).find(|n| n.kind() != "block_parameters")
+    node.named_children(&mut cur)
+        .find(|n| !matches!(n.kind(), "block_parameters" | "comment"))
 }
 
 fn check_body(

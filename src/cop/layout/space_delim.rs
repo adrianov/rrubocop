@@ -172,6 +172,10 @@ pub fn strip_space_before(
     if !(d.sp_b && !d.nl_b) {
         return;
     }
+    // `]\n` alone on a line: leading indent is not "space inside brackets".
+    if delim_first_on_line(bytes, d.inner_e) {
+        return;
+    }
     let mut s = d.inner_e;
     while s > d.inner_s && matches!(bytes[s - 1], b' ' | b'\t') {
         s -= 1;
@@ -187,6 +191,19 @@ pub fn strip_space_before(
         d.inner_e,
         String::new(),
     );
+}
+
+fn delim_first_on_line(bytes: &[u8], pos: usize) -> bool {
+    let mut i = pos;
+    while i > 0 {
+        i -= 1;
+        match bytes[i] {
+            b'\n' => return true,
+            b' ' | b'\t' | b'\r' => {}
+            _ => return false,
+        }
+    }
+    true
 }
 
 /// Enforce spaces; after-open reports at `open_off`, before-close at `close_off` when adding.

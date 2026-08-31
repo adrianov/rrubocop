@@ -31,6 +31,45 @@ fn report_same_line(
     diagnostics.push(diag);
 }
 
+fn elem_end_line(source: &SourceFile, n: Node<'_>) -> usize {
+    source.offset_to_line_col(n.end_byte().saturating_sub(1)).0
+}
+
+fn named_elems<'a>(node: Node<'a>) -> Vec<Node<'a>> {
+    let mut cur = node.walk();
+    node.named_children(&mut cur)
+        .filter(|n| n.kind() != "comment")
+        .collect()
+}
+
+fn all_first_lines_equal(source: &SourceFile, elems: &[Node<'_>]) -> bool {
+    let first = shared::node_line(source, elems[0]);
+    elems
+        .iter()
+        .all(|e| shared::node_line(source, *e) == first)
+}
+
+fn scan_breaks(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    elems: &[Node<'_>],
+    message: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    let mut last_seen = 0usize;
+    let mut seen = false;
+    for e in elems {
+        let first = shared::node_line(source, *e);
+        if seen && last_seen >= first {
+            report_same_line(cop, source, *e, message, diagnostics, corrections);
+        } else {
+            last_seen = elem_end_line(source, *e);
+            seen = true;
+        }
+    }
+}
+
 /// Require each named child on its own line when the parent spans lines.
 pub fn check_breaks(
     cop: &dyn Cop,
@@ -40,19 +79,32 @@ pub fn check_breaks(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let mut cur = node.walk();
-    let elems: Vec<_> = node.named_children(&mut cur).collect();
+    check_breaks_cfg(cop, source, node, message, diagnostics, corrections, false);
+}
+
+/// When `allow_multiline_final`, RuboCop `AllowMultilineFinalElement`: if every
+/// element's *first* line equals the first element's, do not flag
+/// (`foo(a, b, { … })`).
+pub fn check_breaks_cfg(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    message: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+    allow_multiline_final: bool,
+) {
+    let elems = named_elems(node);
     if elems.len() < 2 {
         return;
     }
     let start_line = shared::node_line(source, node);
-    let (end_line, _) = source.offset_to_line_col(node.end_byte().saturating_sub(1));
+    let end_line = elem_end_line(source, node);
     if start_line == end_line {
         return;
     }
-    for w in elems.windows(2) {
-        if shared::node_line(source, w[0]) == shared::node_line(source, w[1]) {
-            report_same_line(cop, source, w[1], message, diagnostics, corrections);
-        }
+    if allow_multiline_final && all_first_lines_equal(source, &elems) {
+        return;
     }
+    scan_breaks(cop, source, &elems, message, diagnostics, corrections);
 }

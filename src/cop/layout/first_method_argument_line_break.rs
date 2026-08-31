@@ -19,11 +19,11 @@ impl Cop for FirstMethodArgumentLineBreak {
         &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let _ = config;
-        first_break::check_first_break_min(
+        let allow_final = config.get_bool("AllowMultilineFinalElement", false);
+        first_break::check_first_break_cfg(
             self, source, node, 2,
             "Add a line break after the method call opening `(` or before the first argument.",
-            diagnostics, &mut corrections,
+            diagnostics, &mut corrections, allow_final,
         );
     }
 }

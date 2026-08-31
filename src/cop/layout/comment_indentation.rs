@@ -13,35 +13,60 @@ use crate::parse::source::SourceFile;
 pub struct CommentIndentation;
 
 fn standalone_comment(bytes: &[u8], ls: usize, start: usize) -> bool {
-    !bytes[ls..start].iter().any(|&b| b != b' ' && b != b'\t')
+    !bytes[ls..start]
+        .iter()
+        .any(|&b| b != b' ' && b != b'\t')
 }
 
-fn line_content_indent(bytes: &[u8], nls: usize) -> Option<usize> {
-    let mut i = nls;
-    while i < bytes.len() && bytes[i] != b'\n' {
-        if bytes[i] != b' ' && bytes[i] != b'\t' && bytes[i] != b'\r' {
-            if bytes[i] == b'#' {
-                return None;
-            }
-            return Some(i - nls);
-        }
-        i += 1;
-    }
-    None
+fn line_body(bytes: &[u8], nls: usize) -> &[u8] {
+    let end = bytes[nls..]
+        .iter()
+        .position(|&b| b == b'\n')
+        .map(|i| nls + i)
+        .unwrap_or(bytes.len());
+    &bytes[nls..end]
 }
 
-fn next_code_indent(source: &SourceFile, bytes: &[u8], line: usize) -> Option<usize> {
-    let mut check_line = line + 1;
-    while let Some(nls) = source.line_start(check_line) {
-        if let Some(ind) = line_content_indent(bytes, nls) {
-            return Some(ind);
-        }
-        check_line += 1;
-        if check_line > line + 20 {
-            break;
-        }
+fn content_indent(line: &[u8]) -> Option<usize> {
+    let i = line.iter().take_while(|&&b| matches!(b, b' ' | b'\t')).count();
+    (i < line.len() && line[i] != b'#').then_some(i)
+}
+
+fn stripped(line: &[u8]) -> &[u8] {
+    let i = line.iter().take_while(|&&b| matches!(b, b' ' | b'\t')).count();
+    &line[i..]
+}
+
+fn less_indented(line: &[u8]) -> bool {
+    let rest = stripped(line);
+    rest.starts_with(b"end") || rest.first().is_some_and(|b| matches!(b, b'}' | b')' | b']'))
+}
+
+fn two_alternatives(line: &[u8]) -> bool {
+    let rest = stripped(line);
+    rest.starts_with(b"else")
+        || rest.starts_with(b"elsif")
+        || rest.starts_with(b"when")
+        || rest.starts_with(b"in ")
+        || rest.starts_with(b"rescue")
+        || rest.starts_with(b"ensure")
+}
+
+fn next_code_line<'a>(source: &SourceFile, bytes: &'a [u8], line: usize) -> Option<&'a [u8]> {
+    (line + 1..=line + 40).find_map(|ln| {
+        let nls = source.line_start(ln)?;
+        let body = line_body(bytes, nls);
+        content_indent(body).map(|_| body)
+    })
+}
+
+fn expected_col(next: &[u8], width: usize) -> usize {
+    let base = content_indent(next).unwrap_or(0);
+    if less_indented(next) {
+        base + width
+    } else {
+        base
     }
-    None
 }
 
 fn check_comment(
@@ -49,6 +74,7 @@ fn check_comment(
     source: &SourceFile,
     bytes: &[u8],
     comment: Node<'_>,
+    width: usize,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
@@ -58,22 +84,23 @@ fn check_comment(
     if !standalone_comment(bytes, ls, start) {
         return;
     }
-    let Some(ni) = next_code_indent(source, bytes, line) else {
+    let Some(next) = next_code_line(source, bytes, line) else {
         return;
     };
-    if col == ni {
+    let expected = expected_col(next, width);
+    if col == expected || (two_alternatives(next) && col == expected + width) {
         return;
     }
     report::report_fix(
         cop,
         source,
         start,
-        format!("Incorrect indentation detected (column {col} instead of {ni})."),
+        format!("Incorrect indentation detected (column {col} instead of {expected})."),
         diagnostics,
         corrections,
         ls,
         start,
-        " ".repeat(ni),
+        " ".repeat(expected),
     );
 }
 
@@ -89,15 +116,23 @@ impl Cop for CommentIndentation {
         &self,
         source: &SourceFile,
         tree: &Tree,
-        code_map: &CodeMap,
+        _code_map: &CodeMap,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let _ = (code_map, config);
+        let width = config.get_usize("Width", 2);
         let bytes = source.as_bytes();
         for comment in shared::collect_comments(tree.root_node()) {
-            check_comment(self, source, bytes, comment, diagnostics, &mut corrections);
+            check_comment(
+                self,
+                source,
+                bytes,
+                comment,
+                width,
+                diagnostics,
+                &mut corrections,
+            );
         }
     }
 }

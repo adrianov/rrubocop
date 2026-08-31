@@ -39,50 +39,58 @@ impl Directives {
     }
 }
 
+fn apply_enable(d: &mut Directives, rest: &str, line_no: usize) {
+    for name in cop_names(rest.trim_start_matches([' ', ':'])) {
+        if let Some(start) = d.open_blocks.remove(&name) {
+            d.range_disables
+                .entry(name)
+                .or_default()
+                .push((start, line_no));
+        }
+    }
+}
+
+fn apply_disable(d: &mut Directives, rest: &str, line: &str, line_no: usize) {
+    let mut names = cop_names(rest.trim_start_matches([' ', ':']));
+    if names.is_empty() {
+        names.push("all".into());
+    }
+    let trailing = !line.trim_start().starts_with('#');
+    for name in names {
+        if trailing {
+            d.line_disables
+                .entry(name)
+                .or_default()
+                .insert(line_no);
+        } else {
+            d.open_blocks.entry(name).or_insert(line_no);
+        }
+    }
+}
+
+fn apply_line(d: &mut Directives, line: &str, line_no: usize) {
+    let Some(comment) = extract_rubocop_comment(line) else {
+        return;
+    };
+    if let Some(rest) = comment.strip_prefix("enable") {
+        apply_enable(d, rest, line_no);
+        return;
+    }
+    if let Some(rest) = comment
+        .strip_prefix("disable")
+        .or_else(|| comment.strip_prefix("todo"))
+    {
+        apply_disable(d, rest, line, line_no);
+    }
+}
+
 pub fn parse(src: &str) -> Directives {
     let mut d = Directives::default();
     let mut line_no = 0usize;
     for line in src.lines() {
         line_no += 1;
-        let Some(comment) = extract_rubocop_comment(line) else {
-            continue;
-        };
-        if let Some(rest) = comment.strip_prefix("enable") {
-            let names = cop_names(rest.trim_start_matches([' ', ':']));
-            for name in names {
-                if let Some(start) = d.open_blocks.remove(&name) {
-                    d.range_disables
-                        .entry(name)
-                        .or_default()
-                        .push((start, line_no));
-                }
-            }
-            continue;
-        }
-        if let Some(rest) = comment
-            .strip_prefix("disable")
-            .or_else(|| comment.strip_prefix("todo"))
-        {
-            let names = cop_names(rest.trim_start_matches([' ', ':']));
-            let names = if names.is_empty() {
-                vec!["all".to_string()]
-            } else {
-                names
-            };
-            let trailing = !line.trim_start().starts_with('#');
-            for name in names {
-                if trailing {
-                    d.line_disables
-                        .entry(name.clone())
-                        .or_default()
-                        .insert(line_no);
-                } else {
-                    d.open_blocks.entry(name).or_insert(line_no);
-                }
-            }
-        }
+        apply_line(&mut d, line, line_no);
     }
-    // Unclosed blocks disable through EOF
     for (name, start) in d.open_blocks.drain() {
         d.range_disables
             .entry(name)
@@ -94,8 +102,7 @@ pub fn parse(src: &str) -> Directives {
 
 fn extract_rubocop_comment(line: &str) -> Option<&str> {
     let idx = line.find('#')?;
-    let after = line[idx + 1..].trim_start();
-    after.strip_prefix("rubocop:")
+    line[idx + 1..].trim_start().strip_prefix("rubocop:")
 }
 
 fn cop_names(after: &str) -> Vec<String> {
