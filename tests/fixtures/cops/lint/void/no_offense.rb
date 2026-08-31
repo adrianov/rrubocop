@@ -10,3 +10,9 @@ end
 def returns_literal
   42
 end
+
+# Non-literal array elements are not void literals (RSpec before hooks)
+before do
+  [deposit]
+  allow(x).to receive(:y)
+end

@@ -70,15 +70,49 @@ fn void_msg(
     idx: usize,
     stmt: Node<'_>,
 ) -> Option<String> {
+    if let Some(msg) = void_literal_kind(source, stmt) {
+        return Some(msg);
+    }
     match stmt.kind() {
-        "integer" | "float" | "string" | "simple_symbol" | "regex" | "array" | "hash" | "true"
-        | "false" | "nil" => Some(void_literal_msg(source, stmt)),
         "self" => Some("`self` used in void context.".to_string()),
         "constant" => Some(void_named_msg("Constant", source, stmt)),
         k if is_var_kind(k) => Some(void_named_msg("Variable", source, stmt)),
         "identifier" => void_ident_msg(source, stmts, idx, stmt),
         "binary" => void_binary_msg(source, stmt),
         _ => None,
+    }
+}
+
+fn void_literal_kind(source: &SourceFile, stmt: Node<'_>) -> Option<String> {
+    match stmt.kind() {
+        "integer" | "float" | "string" | "simple_symbol" | "regex" | "true" | "false" | "nil" => {
+            Some(void_literal_msg(source, stmt))
+        }
+        "array" | "hash" => entirely_literal(source, stmt).then(|| void_literal_msg(source, stmt)),
+        _ => None,
+    }
+}
+
+fn kids_all_literal(source: &SourceFile, node: Node<'_>) -> bool {
+    let mut cur = node.walk();
+    node.named_children(&mut cur)
+        .all(|n| entirely_literal(source, n))
+}
+
+/// RuboCop `entirely_literal?` — `[deposit]` is not a void literal.
+fn entirely_literal(source: &SourceFile, node: Node<'_>) -> bool {
+    match node.kind() {
+        "integer" | "float" | "string" | "simple_symbol" | "regex" | "true" | "false" | "nil" => {
+            true
+        }
+        "array" | "hash" | "pair" => kids_all_literal(source, node),
+        "call" => {
+            call_method_name(source, node) == Some(b"freeze")
+                && node
+                    .child_by_field_name("receiver")
+                    .is_some_and(|r| entirely_literal(source, r))
+        }
+        _ => false,
     }
 }
 

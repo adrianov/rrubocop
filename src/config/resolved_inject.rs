@@ -313,3 +313,25 @@ pub(crate) fn inject_quoted_symbols(cfg: &ResolvedConfig, name: &str, config: &m
         "single_quotes",
     );
 }
+
+/// RuboCop CommentConfig seeds `disable_count` with config-disabled cops so
+/// `# rubocop:enable Layout/LineLength` is not "extra" when LineLength is off.
+pub(crate) fn inject_config_disabled_cops(
+    cfg: &ResolvedConfig,
+    name: &str,
+    config: &mut CopConfig,
+) {
+    if name != "Lint/RedundantCopEnableDirective" {
+        return;
+    }
+    let disabled: Vec<Value> = cfg
+        .cop_configs
+        .iter()
+        .filter(|(_, c)| matches!(c.enabled, EnabledState::False))
+        .map(|(n, _)| Value::String(n.clone()))
+        .collect();
+    config
+        .options
+        .entry("ConfigDisabledCops".into())
+        .or_insert(Value::Sequence(disabled));
+}

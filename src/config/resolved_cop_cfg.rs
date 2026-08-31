@@ -3,10 +3,10 @@
 use crate::cop::CopConfig;
 
 use super::resolved_inject::{
-    inject_active_support, inject_end_alignment, inject_first_hash_indent, inject_globals,
-    inject_hash_alignment, inject_indentation_width, inject_line_length, inject_missing_else,
-    inject_quoted_symbols, inject_rack_version, inject_redundant_line_break,
-    inject_rescue_ensure_alignment, inject_space_after_comma,
+    inject_active_support, inject_config_disabled_cops, inject_end_alignment,
+    inject_first_hash_indent, inject_globals, inject_hash_alignment, inject_indentation_width,
+    inject_line_length, inject_missing_else, inject_quoted_symbols, inject_rack_version,
+    inject_redundant_line_break, inject_rescue_ensure_alignment, inject_space_after_comma,
 };
 use super::ResolvedConfig;
 
@@ -17,20 +17,25 @@ impl ResolvedConfig {
     /// cops can access them without special plumbing.
     pub fn cop_config(&self, name: &str) -> CopConfig {
         let mut config = self.cop_configs.get(name).cloned().unwrap_or_default();
-        inject_globals(self, &mut config);
-        inject_rack_version(self, name, &mut config);
-        inject_line_length(self, name, &mut config);
-        inject_redundant_line_break(self, name, &mut config);
-        inject_active_support(self, name, &mut config);
-        inject_hash_alignment(self, name, &mut config);
-        inject_first_hash_indent(self, name, &mut config);
-        inject_end_alignment(self, name, &mut config);
-        inject_rescue_ensure_alignment(self, name, &mut config);
-        inject_indentation_width(self, name, &mut config);
-        inject_space_after_comma(self, name, &mut config);
-        inject_missing_else(self, name, &mut config);
-        inject_quoted_symbols(self, name, &mut config);
+        self.inject_cop_options(name, &mut config);
         config
+    }
+
+    fn inject_cop_options(&self, name: &str, config: &mut CopConfig) {
+        inject_globals(self, config);
+        inject_rack_version(self, name, config);
+        inject_line_length(self, name, config);
+        inject_redundant_line_break(self, name, config);
+        inject_active_support(self, name, config);
+        inject_hash_alignment(self, name, config);
+        inject_first_hash_indent(self, name, config);
+        inject_end_alignment(self, name, config);
+        inject_rescue_ensure_alignment(self, name, config);
+        inject_indentation_width(self, name, config);
+        inject_space_after_comma(self, name, config);
+        inject_missing_else(self, name, config);
+        inject_quoted_symbols(self, name, config);
+        inject_config_disabled_cops(self, name, config);
     }
 
     /// Get the resolved config for a cop, applying directory-specific overrides

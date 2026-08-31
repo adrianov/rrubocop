@@ -28,6 +28,16 @@ fn directive_names(rest: &str) -> Vec<String> {
     }
 }
 
+fn config_disabled(config: &CopConfig) -> HashSet<String> {
+    match config.options.get("ConfigDisabledCops") {
+        Some(serde_yml::Value::Sequence(items)) => items
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect(),
+        _ => HashSet::new(),
+    }
+}
+
 fn check_enable(
     cop: &RedundantCopEnableDirective,
     source: &SourceFile,
@@ -69,11 +79,12 @@ impl Cop for RedundantCopEnableDirective {
         source: &SourceFile,
         _tree: &tree_sitter::Tree,
         _code_map: &CodeMap,
-        _config: &CopConfig,
+        config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let mut disabled: HashSet<String> = HashSet::new();
+        // RuboCop seeds disable counts with cops disabled in config.
+        let mut disabled = config_disabled(config);
         for (i, line) in source.lines().enumerate() {
             let s = String::from_utf8_lossy(line);
             if let Some(rest) = s.split("# rubocop:disable").nth(1) {
@@ -83,5 +94,30 @@ impl Cop for RedundantCopEnableDirective {
             }
             check_enable(self, source, &mut disabled, &s, i + 1, diagnostics);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(
+        RedundantCopEnableDirective,
+        "cops/lint/redundant_cop_enable_directive"
+    );
+
+    #[test]
+    fn config_disabled_enable_ok() {
+        let mut config = CopConfig::default();
+        config.options.insert(
+            "ConfigDisabledCops".into(),
+            serde_yml::Value::Sequence(vec![serde_yml::Value::String(
+                "Layout/LineLength".into(),
+            )]),
+        );
+        crate::testutil::assert_cop_no_offenses_full_with_config(
+            &RedundantCopEnableDirective,
+            b"x = 1\n# rubocop:enable Layout/LineLength\n",
+            config,
+        );
     }
 }
