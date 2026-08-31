@@ -2,7 +2,6 @@
 
 use tree_sitter::{Node, Tree};
 
-use crate::cop::layout::report;
 use crate::cop::shared;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
@@ -25,60 +24,212 @@ fn is_modifier(name: &[u8]) -> bool {
 }
 
 fn bare_modifier(n: Node<'_>) -> bool {
-    if n.kind() == "identifier" { return true; }
+    if n.kind() == "identifier" {
+        return !matches!(n.parent().map(|p| p.kind()), Some("call" | "command"));
+    }
     match n.child_by_field_name("arguments") {
         Some(a) => a.named_child_count() == 0,
         None => true,
     }
 }
 
-fn maybe_before(
-    cop: &dyn Cop, source: &SourceFile, line: usize, style: &str, before_ok: bool, name: &[u8],
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
-) {
-    if !(style == "around" || style == "only_before") || before_ok { return; }
-    let modifier = String::from_utf8_lossy(name);
-    report::insert_newline(
-        cop, source, line,
-        format!("Keep a blank line before and after `{modifier}`."),
-        diagnostics, corrections,
-    );
+fn is_comment_line(source: &SourceFile, line: usize) -> bool {
+    let Some(start) = source.line_start(line) else {
+        return false;
+    };
+    let bytes = source.as_bytes();
+    let mut i = start;
+    while i < bytes.len() && bytes[i] != b'\n' {
+        match bytes[i] {
+            b' ' | b'\t' | b'\r' => i += 1,
+            b'#' => return true,
+            _ => return false,
+        }
+    }
+    false
 }
 
-fn maybe_after(
-    cop: &dyn Cop, source: &SourceFile, line: usize, style: &str, after_ok: bool, name: &[u8],
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
-) {
-    if !(style == "around" || style == "only_after") || after_ok { return; }
+fn superclass_or_self(class_node: Node<'_>) -> Option<Node<'_>> {
+    class_node
+        .child_by_field_name("superclass")
+        .or_else(|| class_node.child_by_field_name("value"))
+}
+
+/// RuboCop `class_def?` / `block_start?`: modifier on the line right after the body opener.
+fn at_body_opening(source: &SourceFile, n: Node<'_>) -> bool {
+    let line = shared::node_line(source, n);
+    let mut cur = n.parent();
+    while let Some(parent) = cur {
+        match parent.kind() {
+            "body_statement" => cur = parent.parent(),
+            "class" | "module" | "singleton_class" => {
+                let open = superclass_or_self(parent)
+                    .map(|s| shared::node_line(source, s))
+                    .unwrap_or_else(|| shared::node_line(source, parent));
+                return line == open + 1;
+            }
+            "do_block" | "block" | "lambda" => {
+                return line == shared::node_line(source, parent) + 1;
+            }
+            _ => return false,
+        }
+    }
+    false
+}
+
+fn previous_line_ok(source: &SourceFile, line: usize, n: Node<'_>) -> bool {
+    if at_body_opening(source, n) || line <= 1 {
+        return true;
+    }
+    let mut prev = line - 1;
+    while prev >= 1 && is_comment_line(source, prev) {
+        prev -= 1;
+    }
+    prev < 1 || shared::line_blank(source, prev)
+}
+
+fn in_method_body(n: Node<'_>) -> bool {
+    let mut p = n.parent();
+    while let Some(parent) = p {
+        match parent.kind() {
+            "method" | "singleton_method" => return true,
+            "class" | "module" | "singleton_class" | "do_block" | "block" | "program" => {
+                return false
+            }
+            _ => p = parent.parent(),
+        }
+    }
+    false
+}
+
+fn push_newline_at(
+    corrections: &mut Option<&mut Vec<Correction>>,
+    source: &SourceFile,
+    line: usize,
+    cop_name: &'static str,
+) -> bool {
+    let Some(corr) = corrections.as_deref_mut() else {
+        return false;
+    };
+    let Some(offset) = source.line_start(line) else {
+        return false;
+    };
+    corr.push(Correction {
+        start: offset,
+        end: offset,
+        replacement: "\n".into(),
+        cop_name,
+        cop_index: 0,
+    });
+    true
+}
+
+fn modifier_message(
+    name: &[u8],
+    style: &str,
+    at_opening: bool,
+    before_ok: bool,
+    need_after: bool,
+) -> String {
     let modifier = String::from_utf8_lossy(name);
-    report::insert_newline(
-        cop, source, line + 1,
-        format!("Keep a blank line after `{modifier}`."),
-        diagnostics, corrections,
+    if style == "only_before" {
+        format!("Keep a blank line before `{modifier}`.")
+    } else if at_opening || (before_ok && need_after) {
+        format!("Keep a blank line after `{modifier}`.")
+    } else {
+        format!("Keep a blank line before and after `{modifier}`.")
+    }
+}
+
+fn blank_needs(style: &str, before_ok: bool, after_ok: bool) -> (bool, bool) {
+    (
+        (style == "around" || style == "only_before") && !before_ok,
+        (style == "around" || style == "only_after") && !after_ok,
+    )
+}
+
+fn access_modifier_at<'a>(
+    source: &'a SourceFile,
+    n: Node<'a>,
+) -> Option<&'a [u8]> {
+    if !matches!(n.kind(), "call" | "command" | "identifier") {
+        return None;
+    }
+    let name = modifier_name(source, n)?;
+    (is_modifier(name) && bare_modifier(n) && !in_method_body(n)).then_some(name)
+}
+
+fn emit_modifier(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    n: Node<'_>,
+    name: &[u8],
+    style: &str,
+    line: usize,
+    before_ok: bool,
+    need_before: bool,
+    need_after: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    let (diag_line, diag_col) = source.offset_to_line_col(n.start_byte());
+    let mut diag = cop.diagnostic(
+        source,
+        diag_line,
+        diag_col,
+        modifier_message(name, style, at_body_opening(source, n), before_ok, need_after),
     );
+    let mut fixed = false;
+    if need_before {
+        fixed |= push_newline_at(corrections, source, line, cop.name());
+    }
+    if need_after {
+        fixed |= push_newline_at(corrections, source, line + 1, cop.name());
+    }
+    if fixed {
+        diag.corrected = true;
+    }
+    diagnostics.push(diag);
 }
 
 fn check_modifier(
-    cop: &dyn Cop, source: &SourceFile, n: Node<'_>, style: &str,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    n: Node<'_>,
+    style: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    if !matches!(n.kind(), "call" | "command" | "identifier") { return; }
-    let Some(name) = modifier_name(source, n) else { return; };
-    if !is_modifier(name) || !bare_modifier(n) { return; }
+    let Some(name) = access_modifier_at(source, n) else {
+        return;
+    };
     let line = shared::node_line(source, n);
-    let before_ok = line <= 1 || shared::line_blank(source, line - 1);
-    let after_ok = shared::line_blank(source, line + 1);
-    maybe_before(cop, source, line, style, before_ok, name, diagnostics, corrections);
-    maybe_after(cop, source, line, style, after_ok, name, diagnostics, corrections);
+    let before_ok = previous_line_ok(source, line, n);
+    let (need_before, need_after) =
+        blank_needs(style, before_ok, shared::line_blank(source, line + 1));
+    if need_before || need_after {
+        emit_modifier(
+            cop, source, n, name, style, line, before_ok, need_before, need_after, diagnostics,
+            corrections,
+        );
+    }
 }
 
 impl Cop for EmptyLinesAroundAccessModifier {
-    fn name(&self) -> &'static str { "Layout/EmptyLinesAroundAccessModifier" }
-    fn supports_autocorrect(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "Layout/EmptyLinesAroundAccessModifier"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
 
     fn check_source(
-        &self, source: &SourceFile, tree: &Tree, code_map: &CodeMap,
-        config: &CopConfig, diagnostics: &mut Vec<Diagnostic>,
+        &self,
+        source: &SourceFile,
+        tree: &Tree,
+        code_map: &CodeMap,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = code_map;
@@ -87,4 +238,13 @@ impl Cop for EmptyLinesAroundAccessModifier {
             check_modifier(self, source, n, style, diagnostics, &mut corrections);
         });
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(
+        EmptyLinesAroundAccessModifier,
+        "cops/layout/empty_lines_around_access_modifier"
+    );
 }

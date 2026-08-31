@@ -34,7 +34,20 @@ impl Cop for HashSyntax {
             source,
             line,
             col,
-            "Style/HashSyntax offense.".to_string(),
+            hash_syntax_message(config),
         ));
     }
+}
+
+fn hash_syntax_message(config: &CopConfig) -> String {
+    match config.get_str("EnforcedStyle", "ruby19") {
+        "hash_rockets" => "Use hash rockets syntax.".to_string(),
+        _ => "Use the new Ruby 1.9 hash syntax.".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(HashSyntax, "cops/style/hash_syntax");
 }

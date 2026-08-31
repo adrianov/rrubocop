@@ -115,8 +115,13 @@ fn quote_mismatch(style: &str, b: &[u8]) -> bool {
     }
 }
 
+fn is_multiline_string(source: &SourceFile, node: Node<'_>) -> bool {
+    source.offset_to_line_col(node.start_byte()).0
+        != source.offset_to_line_col(node.end_byte().saturating_sub(1)).0
+}
+
 pub fn matches_string_literals(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
-    if node.kind() != "string" {
+    if node.kind() != "string" || inside_interpolation(node) || is_multiline_string(source, node) {
         return false;
     }
     let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
@@ -124,4 +129,22 @@ pub fn matches_string_literals(source: &SourceFile, node: Node<'_>, config: &Cop
         && !b.starts_with(b"?")
         && !has_interpolation(node)
         && quote_mismatch(config.get_str("EnforcedStyle", "single_quotes"), b)
+}
+
+fn inside_interpolation(node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(n) = p {
+        if n.kind() == "interpolation" {
+            return true;
+        }
+        // Stay within the enclosing string/symbol/regexp literal only.
+        if matches!(
+            n.kind(),
+            "string" | "chained_string" | "symbol" | "delimited_symbol" | "regex" | "program"
+        ) {
+            break;
+        }
+        p = n.parent();
+    }
+    false
 }

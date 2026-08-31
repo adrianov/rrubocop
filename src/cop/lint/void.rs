@@ -163,11 +163,17 @@ impl Cop for Void {
         let mut cur = node.walk();
         let stmts: Vec<_> = node
             .named_children(&mut cur)
-            .filter(|n| !matches!(n.kind(), "rescue" | "else" | "ensure"))
+            .filter(|n| !matches!(n.kind(), "rescue" | "else" | "ensure" | "comment"))
             .collect();
         check_void_stmts(source, &stmts, self, diagnostics);
         if config.get_bool("CheckForMethodsWithNoSideEffects", false) {
             check_nonmutating(source, &stmts, self, diagnostics);
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(Void, "cops/lint/void");
 }

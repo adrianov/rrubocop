@@ -29,12 +29,19 @@ impl Cop for StringLiterals {
         if !matches_string_literals(source, node, config) {
             return;
         }
+        let style = config.get_str("EnforcedStyle", "single_quotes");
+        let msg = if style == "double_quotes" {
+            "Prefer double-quoted strings unless you need single quotes to avoid extra backslashes for escaping."
+        } else {
+            "Prefer single-quoted strings when you don't need string interpolation or special symbols."
+        };
         let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Style/StringLiterals offense.".to_string(),
-        ));
+        diagnostics.push(self.diagnostic(source, line, col, msg.to_string()));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(StringLiterals, "cops/style/string_literals");
 }

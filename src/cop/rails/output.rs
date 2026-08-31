@@ -2,7 +2,7 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared::{call_method_name, call_receiver, method_node, node_text, push_replace};
+use crate::cop::shared::{call_method_name, call_receiver, method_node, push_replace};
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
@@ -17,17 +17,12 @@ fn stdout_span(source: &SourceFile, node: Node<'_>) -> Option<(usize, usize)> {
     if !METHODS.contains(&method) {
         return None;
     }
-    if let Some(recv) = call_receiver(node) {
-        let t = node_text(source, recv);
-        if t != "Kernel" && t != "::Kernel" {
-            return None;
-        }
+    // RuboCop: only receiver-less puts/print/… (not `Kernel.puts`).
+    if call_receiver(node).is_some() {
+        return None;
     }
     let meth = method_node(node).unwrap_or(node);
-    let start = call_receiver(node)
-        .map(|r| r.start_byte())
-        .unwrap_or(meth.start_byte());
-    Some((start, meth.end_byte()))
+    Some((meth.start_byte(), meth.end_byte()))
 }
 
 impl Cop for Output {
@@ -85,4 +80,10 @@ impl Cop for Output {
         }
         diagnostics.push(diag);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(Output, "cops/rails/output");
 }

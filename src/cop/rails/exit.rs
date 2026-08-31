@@ -10,7 +10,8 @@ use crate::parse::source::SourceFile;
 pub struct Exit;
 
 fn is_exit_name(method: &[u8]) -> bool {
-    matches!(method, b"exit" | b"exit!" | b"abort")
+    // RuboCop Rails/Exit: only `exit` / `exit!` (not `abort`).
+    matches!(method, b"exit" | b"exit!")
 }
 
 fn allowed_receiver(source: &SourceFile, node: Node<'_>) -> bool {
@@ -68,4 +69,10 @@ impl Cop for Exit {
             format!("Do not use `{name}` in Rails applications."),
         ));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(Exit, "cops/rails/exit");
 }

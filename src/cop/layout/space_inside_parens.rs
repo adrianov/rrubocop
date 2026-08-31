@@ -29,6 +29,14 @@ fn hanging_close(source: &SourceFile, node: Node<'_>) -> bool {
     shared::line_indent(source, close_off) == close_col
 }
 
+fn comment_after_open(bytes: &[u8], inner_s: usize, inner_e: usize) -> bool {
+    let mut i = inner_s;
+    while i < inner_e && matches!(bytes[i], b' ' | b'\t') {
+        i += 1;
+    }
+    bytes.get(i) == Some(&b'#')
+}
+
 fn enforce_paren_spaces(
     cop: &SpaceInsideParens,
     source: &SourceFile,
@@ -37,6 +45,7 @@ fn enforce_paren_spaces(
     d: &DelimSpace,
     want: bool,
     hanging: bool,
+    skip_open_space: bool,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
@@ -46,20 +55,22 @@ fn enforce_paren_spaces(
         "Space inside parentheses detected."
     };
     let close_off = node.end_byte() - 1;
-    if want {
-        space_delim::add_space_after(
-            cop,
-            source,
-            d,
-            node.start_byte(),
-            msg.into(),
-            diagnostics,
-            corrections,
-        );
-    } else {
-        space_delim::strip_space_after(
-            cop, source, bytes, d, msg.into(), diagnostics, corrections,
-        );
+    if !skip_open_space {
+        if want {
+            space_delim::add_space_after(
+                cop,
+                source,
+                d,
+                node.start_byte(),
+                msg.into(),
+                diagnostics,
+                corrections,
+            );
+        } else {
+            space_delim::strip_space_after(
+                cop, source, bytes, d, msg.into(), diagnostics, corrections,
+            );
+        }
     }
     if hanging {
         return;
@@ -114,8 +125,15 @@ impl Cop for SpaceInsideParens {
             &d,
             config.get_str("EnforcedStyle", "no_space") != "no_space",
             hanging_close(source, node),
+            comment_after_open(bytes, inner_s, inner_e),
             diagnostics,
             &mut corrections,
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(SpaceInsideParens, "cops/layout/space_inside_parens");
 }

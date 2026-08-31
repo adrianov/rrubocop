@@ -77,7 +77,11 @@ fn check_one(
 
 fn collect_items<'a>(node: Node<'a>) -> Vec<Node<'a>> {
     let mut cur = node.walk();
-    node.named_children(&mut cur).collect()
+    // Tree-sitter exposes inline comments as named children; RuboCop does not
+    // treat them as alignable hash/arg elements.
+    node.named_children(&mut cur)
+        .filter(|n| n.kind() != "comment")
+        .collect()
 }
 
 fn align_cols(source: &SourceFile, node: Node<'_>, items: &[Node<'_>], width: usize) -> (usize, usize, usize) {

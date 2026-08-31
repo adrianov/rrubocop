@@ -26,3 +26,9 @@ impl Cop for MultilineHashKeyLineBreaks {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(MultilineHashKeyLineBreaks, "cops/layout/multiline_hash_key_line_breaks");
+}

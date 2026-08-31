@@ -1,0 +1,13 @@
+_x = $stdout
+_y = $stderr
+_z = $LOAD_PATH
+_w = $VERBOSE
+_n = $0
+_a = $DEFAULT_OUTPUT
+_b = $DEFAULT_INPUT
+_c = $IGNORECASE
+_d = $ARGV
+_e = $CLASSPATH
+_f = $JRUBY_VERSION
+_g = $JRUBY_REVISION
+_h = $ENV_JAVA

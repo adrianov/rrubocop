@@ -12,8 +12,9 @@ use crate::parse::source::SourceFile;
 
 pub struct VariableName;
 
+// Locals, `@ivar`, `@@cvar`, `$gvar` — RuboCop strips sigils when matching style.
 static SNAKE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\A[@$]?[\p{Ll}\d_]+[!?=]?\z").unwrap());
+    LazyLock::new(|| Regex::new(r"\A(?:@@|@|\$)?[\p{Ll}\d_]+[!?=]?\z").unwrap());
 
 impl Cop for VariableName {
     fn name(&self) -> &'static str {
@@ -56,4 +57,10 @@ impl Cop for VariableName {
             "Use snake_case for variable names.".into(),
         ));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(VariableName, "cops/naming/variable_name");
 }

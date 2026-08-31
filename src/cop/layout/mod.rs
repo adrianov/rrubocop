@@ -46,6 +46,8 @@ mod first_parameter_indentation;
 mod hash_alignment;
 mod heredoc_indentation;
 mod indentation_consistency;
+mod indentation_consistency_check;
+mod indentation_consistency_util;
 mod indentation_style;
 mod indentation_width;
 mod initial_indentation;

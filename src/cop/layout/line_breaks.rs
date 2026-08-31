@@ -49,6 +49,14 @@ fn all_first_lines_equal(source: &SourceFile, elems: &[Node<'_>]) -> bool {
         .all(|e| shared::node_line(source, *e) == first)
 }
 
+/// RuboCop `MultilineElementLineBreaks#all_on_same_line?` (without `ignore_last`):
+/// braces may wrap lines while every element still sits on one line.
+fn all_elems_same_line(source: &SourceFile, elems: &[Node<'_>]) -> bool {
+    let first = shared::node_line(source, elems[0]);
+    let last_end = elem_end_line(source, *elems.last().unwrap());
+    first == last_end
+}
+
 fn scan_breaks(
     cop: &dyn Cop,
     source: &SourceFile,
@@ -101,6 +109,10 @@ pub fn check_breaks_cfg(
     let start_line = shared::node_line(source, node);
     let end_line = elem_end_line(source, node);
     if start_line == end_line {
+        return;
+    }
+    // All keys/args on one line (even if `{` / `}` wrap) → not an offense.
+    if all_elems_same_line(source, &elems) {
         return;
     }
     if allow_multiline_final && all_first_lines_equal(source, &elems) {

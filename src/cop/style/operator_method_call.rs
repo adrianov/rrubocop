@@ -31,26 +31,31 @@ impl Cop for OperatorMethodCall {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let Some((method, recv)) = detect(source, node) else {
+        let Some((method, recv, op)) = detect(source, node) else {
             return;
         };
-        report(self, source, node, method, recv, diagnostics, &mut corrections);
+        report(self, source, node, method, recv, op, diagnostics, &mut corrections);
     }
 }
 
-fn detect<'a>(source: &'a SourceFile, node: Node<'a>) -> Option<(&'a [u8], Node<'a>)> {
+fn detect<'a>(source: &'a SourceFile, node: Node<'a>) -> Option<(&'a [u8], Node<'a>, Node<'a>)> {
     let method = call_method_name(source, node)?;
     let recv = call_receiver(node)?;
     if !is_op(method) || node.child_by_field_name("arguments").is_none() {
         return None;
     }
-    Some((method, recv))
+    // RuboCop: only `.` method calls (not `&.`); never `[]` / `[]=`.
+    let op = node.child_by_field_name("operator")?;
+    if node_text(source, op) != "." {
+        return None;
+    }
+    Some((method, recv, op))
 }
 
 fn is_op(method: &[u8]) -> bool {
     matches!(
         method,
-        b"+" | b"-" | b"*" | b"/" | b"%" | b"|" | b"&" | b"^" | b"<<" | b">>" | b"[]" | b"[]="
+        b"+" | b"-" | b"*" | b"/" | b"%" | b"|" | b"&" | b"^" | b"<<" | b">>"
     )
 }
 
@@ -60,15 +65,16 @@ fn report(
     node: Node<'_>,
     method: &[u8],
     recv: Node<'_>,
+    op: Node<'_>,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let (line, col) = source.offset_to_line_col(node.start_byte());
+    let (line, col) = source.offset_to_line_col(op.start_byte());
     let mut diag = cop.diagnostic(
         source,
         line,
         col,
-        "Prefer operator syntax over operator method call.".to_string(),
+        "Redundant dot detected.".to_string(),
     );
     if let Some(corr) = corrections.as_mut() {
         push_op_form(cop, source, node, method, recv, corr, &mut diag);
@@ -86,7 +92,7 @@ fn push_op_form(
     diag: &mut Diagnostic,
 ) {
     let args = argument_nodes(node);
-    if method == b"[]" || method == b"[]=" || args.len() != 1 {
+    if args.len() != 1 {
         return;
     }
     let op = String::from_utf8_lossy(method);
@@ -100,4 +106,10 @@ fn push_op_form(
         cop_index: 0,
     });
     diag.corrected = true;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(OperatorMethodCall, "cops/style/operator_method_call");
 }

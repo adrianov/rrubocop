@@ -18,7 +18,7 @@ fn is_paren_wrapped(bytes: &[u8], node: Node<'_>) -> bool {
 
 fn first_named_child(node: Node<'_>) -> Option<Node<'_>> {
     let mut cur = node.walk();
-    node.named_children(&mut cur).next()
+    node.named_children(&mut cur).find(|n| n.kind() != "comment")
 }
 
 fn expected_close_col(source: &SourceFile, node: Node<'_>, indent_width: usize) -> usize {

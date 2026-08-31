@@ -13,11 +13,6 @@ pub const KEYWORDS: &[&[u8]] = &[
     b"return", b"super", b"yield", b"defined?",
 ];
 
-const NAMED_KW: &[&str] = &[
-    "if", "unless", "while", "until", "for", "case", "when", "else", "elsif", "begin", "rescue",
-    "ensure", "do_block",
-];
-
 fn is_kw_kind(k: &str) -> bool {
     KEYWORDS.iter().any(|&kw| kw == k.as_bytes())
         || matches!(k, "return" | "break" | "next" | "yield" | "super")
@@ -29,8 +24,14 @@ fn is_anon_kw(bytes: &[u8], n: Node<'_>) -> bool {
 }
 
 pub fn should_check(bytes: &[u8], n: Node<'_>) -> bool {
-    let k = n.kind();
-    is_kw_kind(k) || is_anon_kw(bytes, n) || NAMED_KW.contains(&k)
+    // Prefer anonymous keyword tokens so container nodes (e.g. `if`) are not
+    // double-reported alongside their `if` child.
+    if is_anon_kw(bytes, n) {
+        return true;
+    }
+    // Named leaves whose span is exactly the keyword (`return`, `super`, …).
+    n.is_named()
+        && leaf_kw_span(bytes, n).is_some_and(|(s, e)| e - s == n.end_byte() - n.start_byte())
 }
 
 fn do_end(n: Node<'_>) -> Option<Node<'_>> {
@@ -91,27 +92,32 @@ const ACCEPT_LEFT_PAREN: &[&str] = &[
 ];
 const ACCEPT_LEFT_BRACKET: &[&str] = &["super", "yield"];
 
+fn accept_punct(next: u8) -> bool {
+    // RuboCop: /[\s;,#\\)}\].]/ plus `.` (already partly in skip_after_punct).
+    skip_after_punct(next) || matches!(next, b'.' | b'\\' | b'#')
+}
+
+fn accept_kw_delim(k: &str, next: u8) -> bool {
+    (next == b'[' && ACCEPT_LEFT_BRACKET.contains(&k))
+        || (next == b'(' && ACCEPT_LEFT_PAREN.contains(&k))
+}
+
+fn accept_no_space(bytes: &[u8], k: &str, end: usize, next: u8) -> bool {
+    if accept_punct(next) || accept_kw_delim(k, next) {
+        return true;
+    }
+    match next {
+        b':' => bytes.get(end + 1) == Some(&b':'),
+        b'&' => bytes.get(end + 1) == Some(&b'.'),
+        _ => false,
+    }
+}
+
 fn missing_after(bytes: &[u8], k: &str, end: usize) -> bool {
     let Some(&next) = bytes.get(end) else {
         return false;
     };
-    if skip_after_punct(next) {
-        return false;
-    }
-    if next == b'(' && ACCEPT_LEFT_PAREN.contains(&k) {
-        return false;
-    }
-    if next == b'[' && ACCEPT_LEFT_BRACKET.contains(&k) {
-        return false;
-    }
-    if k == "defined?" && next == b'(' {
-        return false;
-    }
-    // `end` before `.` / `::` / `)` is fine (e.g. `class << self; end`)
-    if k == "end" && matches!(next, b'.' | b':' | b')' | b']' | b'}' | b',') {
-        return false;
-    }
-    need_space_after(next) || next.is_ascii_graphic()
+    !accept_no_space(bytes, k, end, next) && (need_space_after(next) || next.is_ascii_graphic())
 }
 
 fn missing_before(bytes: &[u8], kw_start: usize) -> bool {

@@ -7,6 +7,17 @@ use crate::parse::source::SourceFile;
 /// Lint/ElseLayout — odd else layout (statement on else line).
 pub struct ElseLayout;
 
+fn body_stmts<'a>(node: Node<'a>) -> Vec<Node<'a>> {
+    let mut cur = node.walk();
+    node.named_children(&mut cur)
+        .filter(|n| n.kind() != "comment")
+        .collect()
+}
+
+fn same_line(source: &SourceFile, a: Node<'_>, b: Node<'_>) -> bool {
+    source.offset_to_line_col(a.start_byte()).0 == source.offset_to_line_col(b.start_byte()).0
+}
+
 impl Cop for ElseLayout {
     fn name(&self) -> &'static str {
         "Lint/ElseLayout"
@@ -29,21 +40,15 @@ impl Cop for ElseLayout {
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
         // Odd layout: first body stmt shares line with `else` keyword.
-        let mut cur = node.walk();
-        let named: Vec<_> = node.named_children(&mut cur).collect();
-        let Some(first) = named.first() else {
+        // Trailing comments (`else # note`) are not body statements.
+        let named = body_stmts(node);
+        let Some(&first) = named.first() else {
             return;
         };
-        let (else_line, _) = source.offset_to_line_col(node.start_byte());
-        let (stmt_line, _) = source.offset_to_line_col(first.start_byte());
-        if else_line != stmt_line {
+        if !same_line(source, node, first) || named.len() < 2 {
             return;
         }
-        // Need another statement on a following line (RuboCop pattern)
-        if named.len() < 2 {
-            return;
-        }
-        let (line, col) = source.offset_to_line_col(node.start_byte());
+        let (line, col) = source.offset_to_line_col(first.start_byte());
         diagnostics.push(self.diagnostic(
             source,
             line,
@@ -51,4 +56,10 @@ impl Cop for ElseLayout {
             "Odd `else` layout detected. Did you mean to use `elsif`?".to_string(),
         ));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(ElseLayout, "cops/lint/else_layout");
 }

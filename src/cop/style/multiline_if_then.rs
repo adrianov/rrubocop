@@ -1,8 +1,8 @@
-//! Style/MultilineIfThen — no `then` on multi-line if/unless.
+//! Style/MultilineIfThen — no `then` when body starts on the next line.
 
 use tree_sitter::Node;
 
-use crate::cop::shared::node_bytes;
+use crate::cop::shared::{node_bytes, node_line};
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
@@ -20,7 +20,7 @@ impl Cop for MultilineIfThen {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["if", "unless"]
+        &["if", "unless", "elsif"]
     }
 
     fn check_node(
@@ -37,23 +37,37 @@ impl Cop for MultilineIfThen {
         let Some(then_kw) = find_then_keyword(source, node) else {
             return;
         };
-        report(self, source, then_kw, diagnostics, &mut corrections);
+        // RuboCop: allow `if cond then a` / `elsif cond then b` when body shares the then line.
+        if then_body_same_line(source, node, then_kw) {
+            return;
+        }
+        report(self, source, node, then_kw, diagnostics, &mut corrections);
+    }
+}
+
+fn keyword_label(kind: &str) -> &'static str {
+    match kind {
+        "unless" => "unless",
+        "elsif" => "elsif",
+        _ => "if",
     }
 }
 
 fn report(
     cop: &MultilineIfThen,
     source: &SourceFile,
+    node: Node<'_>,
     then_kw: Node<'_>,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
+    let kw = keyword_label(node.kind());
     let (line, col) = source.offset_to_line_col(then_kw.start_byte());
     let mut diag = cop.diagnostic(
         source,
         line,
         col,
-        "Do not use `then` for multi-line `if`/`unless`.".to_string(),
+        format!("Do not use `then` for multi-line `{kw}`."),
     );
     if let Some(corr) = corrections {
         let src = source.as_bytes();
@@ -73,7 +87,35 @@ fn report(
     diagnostics.push(diag);
 }
 
-/// Locate the `then` keyword token under a multi-line if/unless.
+fn then_body_same_line(source: &SourceFile, node: Node<'_>, then_kw: Node<'_>) -> bool {
+    let then_line = node_line(source, then_kw);
+    if let Some(body) = consequence_body(node) {
+        return node_line(source, body) == then_line;
+    }
+    // Empty body after `then` — still same line if nothing follows on a later line
+    // before `end`/`elsif`/`else` on this branch; RuboCop flags `then` alone on a line.
+    false
+}
+
+fn consequence_body(node: Node<'_>) -> Option<Node<'_>> {
+    if let Some(c) = node.child_by_field_name("consequence") {
+        return first_stmt_in(c);
+    }
+    let mut cur = node.walk();
+    for child in node.named_children(&mut cur) {
+        if child.kind() == "then" {
+            return first_stmt_in(child);
+        }
+    }
+    None
+}
+
+fn first_stmt_in(node: Node<'_>) -> Option<Node<'_>> {
+    let mut cur = node.walk();
+    node.named_children(&mut cur)
+        .find(|n| n.kind() != "comment")
+}
+
 fn find_then_keyword<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
     let mut cur = node.walk();
     for child in node.children(&mut cur) {
@@ -95,4 +137,10 @@ fn then_in_then_node<'a>(source: &SourceFile, child: Node<'a>) -> Option<Node<'a
     child
         .children(&mut tc)
         .find(|gc| node_bytes(source, *gc) == b"then")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(MultilineIfThen, "cops/style/multiline_if_then");
 }

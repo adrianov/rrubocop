@@ -14,7 +14,26 @@ pub struct IndentationWidth;
 fn line_indent(line: &[u8]) -> Option<usize> {
     if line.iter().all(|&b| b == b' ' || b == b'\t' || b == b'\r') { return None; }
     let indent = line.iter().take_while(|&&b| b == b' ' || b == b'\t').count();
-    if line[indent..].starts_with(b"#") { None } else { Some(indent) }
+    let rest = &line[indent..];
+    // Leading-dot continuations are Layout/MultilineMethodCallIndentation's job.
+    if rest.starts_with(b"#") || rest.starts_with(b".") || rest.starts_with(b"&.") {
+        None
+    } else {
+        Some(indent)
+    }
+}
+
+fn ends_with_open_delim(line: &[u8]) -> bool {
+    let mut i = line.len();
+    while i > 0 {
+        i -= 1;
+        match line[i] {
+            b' ' | b'\t' | b'\r' => continue,
+            b'(' | b'[' | b'{' => return true,
+            _ => return false,
+        }
+    }
+    false
 }
 
 fn expected_indent(indent: usize, prev: usize, width: usize) -> usize {
@@ -60,10 +79,14 @@ impl Cop for IndentationWidth {
     ) {
         let width = config.get_usize("Width", 2);
         let mut prev_indent: Option<usize> = None;
+        let mut prev_line: &[u8] = b"";
         for (i, line) in source.lines().enumerate() {
             let Some(indent) = line_indent(line) else { continue; };
             if let Some(prev) = prev_indent {
-                if bad_step(indent, prev, width) {
+                // RuboCop IndentationWidth is AST-based; aligned content after `(`/`[`/`{`
+                // is not a Width step (e.g. `params: (\n               …`).
+                let aligned_after_open = indent > prev && ends_with_open_delim(prev_line);
+                if !aligned_after_open && bad_step(indent, prev, width) {
                     report_width(
                         self, source, code_map, i + 1, indent, prev, width,
                         diagnostics, &mut corrections,
@@ -71,6 +94,13 @@ impl Cop for IndentationWidth {
                 }
             }
             prev_indent = Some(indent);
+            prev_line = line;
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(IndentationWidth, "cops/layout/indentation_width");
 }

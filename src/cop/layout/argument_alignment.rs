@@ -28,3 +28,9 @@ impl Cop for ArgumentAlignment {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(ArgumentAlignment, "cops/layout/argument_alignment");
+}

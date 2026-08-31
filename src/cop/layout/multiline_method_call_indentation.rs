@@ -20,11 +20,26 @@ fn expected_col(source: &SourceFile, recv: Node<'_>, style: &str, width: usize) 
     }
 }
 
+fn inside_paren_arg_list(node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(n) = p {
+        if n.kind() == "argument_list" {
+            return n.child(0).is_some_and(|c| !c.is_named() && c.kind() == "(");
+        }
+        if matches!(n.kind(), "program" | "method" | "singleton_method" | "class" | "module") {
+            break;
+        }
+        p = n.parent();
+    }
+    false
+}
+
 fn check_call(
     cop: &dyn Cop, source: &SourceFile, n: Node<'_>, style: &str, width: usize,
     diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     if n.kind() != "call" { return; }
+    if inside_paren_arg_list(n) { return; }
     let Some(recv) = n.child_by_field_name("receiver") else { return; };
     let Some(method) = n.child_by_field_name("method") else { return; };
     // Only leading-dot / continued calls (method on a line after receiver ends).

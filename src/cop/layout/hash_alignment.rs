@@ -28,3 +28,9 @@ impl Cop for HashAlignment {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(HashAlignment, "cops/layout/hash_alignment");
+}

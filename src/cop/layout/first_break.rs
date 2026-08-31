@@ -60,14 +60,20 @@ fn span_end_line(source: &SourceFile, elems: &[Node<'_>], node: Node<'_>, allow_
     }
 }
 
+fn non_comment_kids<'a>(node: Node<'a>) -> Vec<Node<'a>> {
+    let mut cur = node.walk();
+    node.named_children(&mut cur)
+        .filter(|n| n.kind() != "comment")
+        .collect()
+}
+
 fn first_break_target<'a>(
     source: &SourceFile,
     node: Node<'a>,
     min_elems: usize,
     allow_multiline_final: bool,
 ) -> Option<Node<'a>> {
-    let mut cur = node.walk();
-    let elems: Vec<_> = node.named_children(&mut cur).collect();
+    let elems = non_comment_kids(node);
     let first = *elems.first()?;
     if elems.len() < min_elems || !uses_parens(source, node, first) {
         return None;

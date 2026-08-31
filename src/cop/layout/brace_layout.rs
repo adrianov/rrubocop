@@ -181,7 +181,9 @@ fn report_bad_style(
 
 fn named_elems<'a>(node: Node<'a>) -> Vec<Node<'a>> {
     let mut cur = node.walk();
-    node.named_children(&mut cur).collect()
+    node.named_children(&mut cur)
+        .filter(|n| n.kind() != "comment")
+        .collect()
 }
 
 /// Check open/close delimiter placement against EnforcedStyle.

@@ -60,3 +60,9 @@ impl Cop for SpaceAroundKeyword {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(SpaceAroundKeyword, "cops/layout/space_around_keyword");
+}

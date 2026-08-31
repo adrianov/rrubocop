@@ -33,3 +33,9 @@ impl Cop for MultilineMethodCallBraceLayout {
         brace_layout::check_braces(self, source, node, b'(', style, diagnostics, &mut corrections);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(MultilineMethodCallBraceLayout, "cops/layout/multiline_method_call_brace_layout");
+}

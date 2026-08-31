@@ -47,6 +47,10 @@ fn digit_backref(source: &SourceFile, node: Node<'_>) -> Option<String> {
     if !n.iter().all(|b| b.is_ascii_digit()) {
         return None;
     }
+    // `$0` is the program name (Style/GlobalVars built-in), not a regexp backref.
+    if n.iter().all(|&b| b == b'0') {
+        return None;
+    }
     Some(String::from_utf8_lossy(n).into_owned())
 }
 
@@ -61,7 +65,12 @@ fn report(
     let preferred = format!("Regexp.last_match({digits})");
     let (line, col) = source.offset_to_line_col(node.start_byte());
     let mut diag =
-        cop.diagnostic(source, line, col, "Avoid the use of Perl-style backrefs.".to_string());
+        cop.diagnostic(
+            source,
+            line,
+            col,
+            format!("Prefer `{preferred}` over `${digits}`."),
+        );
     if let Some(corr) = corrections.as_mut() {
         corr.push(Correction {
             start: node.start_byte(),
@@ -73,4 +82,10 @@ fn report(
         diag.corrected = true;
     }
     diagnostics.push(diag);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(PerlBackrefs, "cops/style/perl_backrefs");
 }
