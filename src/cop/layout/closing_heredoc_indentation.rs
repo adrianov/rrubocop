@@ -65,16 +65,25 @@ impl Cop for ClosingHeredocIndentation {
     ) {
         let open_text = shared::node_text(source, node);
         let delim = delim_of(&open_text);
-        let open_col = shared::node_col(source, node);
+        // RuboCop compares leading indent of the *lines*, not the column of `<<~`.
+        let open_indent = shared::line_indent(source, node.start_byte());
         let Some(end_n) = find_heredoc_end(source, root_of(node), node.start_byte(), delim) else {
             return;
         };
-        if shared::node_col(source, end_n) == open_col { return; }
+        if shared::line_indent(source, end_n.start_byte()) == open_indent {
+            return;
+        }
         report::fix_indent(
             self, source, end_n.start_byte(),
             format!("`{delim}` is not aligned with `{open_text}`."),
             diagnostics, &mut corrections,
-            shared::line_indent(source, end_n.start_byte()), open_col,
+            shared::line_indent(source, end_n.start_byte()), open_indent,
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(ClosingHeredocIndentation, "cops/layout/closing_heredoc_indentation");
 }

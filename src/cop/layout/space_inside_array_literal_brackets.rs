@@ -59,8 +59,44 @@ impl Cop for SpaceInsideArrayLiteralBrackets {
         let Some(d) = space_delim::scan_inner(bytes, node.start_byte() + 1, node.end_byte() - 1) else { return; };
         if space_delim::is_blank_inner(bytes, d.inner_s, d.inner_e) {
             check_empty(self, source, config, &d, diagnostics, &mut corrections);
+        } else if comment_after_open(bytes, d.inner_s, d.inner_e) {
+            // RuboCop `next_to_comment?`: `[ # comment` is allowed for no_space.
+            check_close_only(self, source, bytes, &d, style, diagnostics, &mut corrections);
         } else {
             check_filled(self, source, bytes, node, &d, style, diagnostics, &mut corrections);
         }
     }
+}
+
+fn comment_after_open(bytes: &[u8], inner_s: usize, inner_e: usize) -> bool {
+    let mut i = inner_s;
+    while i < inner_e && matches!(bytes[i], b' ' | b'\t') {
+        i += 1;
+    }
+    bytes.get(i) == Some(&b'#')
+}
+
+fn check_close_only(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    bytes: &[u8],
+    d: &DelimSpace,
+    style: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    let want = style == "space" || style == "compact";
+    let cmd = if want { "Use" } else { "Do not use" };
+    let msg = format!("{cmd} space inside array brackets.");
+    if want {
+        space_delim::add_space_before(cop, source, d, d.inner_e, msg, diagnostics, corrections);
+    } else {
+        space_delim::strip_space_before(cop, source, bytes, d, msg, diagnostics, corrections);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(SpaceInsideArrayLiteralBrackets, "cops/layout/space_inside_array_literal_brackets");
 }
