@@ -6,7 +6,12 @@ rrubocop \- fast RuboCop-compatible Ruby linter
 [\fIOPTIONS\fR] [\fIPATH\fR]...
 .SH DESCRIPTION
 rrubocop is a Rust RuboCop drop-in for Ruby. It parses with tree-sitter and
-does not require a Ruby runtime for linting. It reads
+does not require a Ruby runtime for linting source files. Configuration that
+contains ERB still needs
+.B ruby
+(or
+.B bundle exec ruby
+) to expand, as with RuboCop. It reads
 .B .rubocop.yml
 and emits RuboCop-compatible diagnostics.
 .SH OPTIONS

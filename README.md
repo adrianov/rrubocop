@@ -1,6 +1,6 @@
 # rrubocop
 
-Fast **RuboCop-compatible** Ruby linter written in Rust. Uses [tree-sitter](https://tree-sitter.github.io/tree-sitter/) — **no Ruby runtime required** for linting.
+Fast **RuboCop-compatible** Ruby linter written in Rust. Uses [tree-sitter](https://tree-sitter.github.io/tree-sitter/) — **no Ruby runtime required** for linting itself. Config files with ERB (`<% … %>`) still need `ruby` / `bundle exec ruby` to expand, matching RuboCop.
 
 Drop-in goals: read your existing `.rubocop.yml`, emit RuboCop-like text/JSON, support `-a`/`-A` autocorrect, and grow cop coverage over time.
 
@@ -16,7 +16,7 @@ rrubocop [OPTIONS] [PATH]...
 
 ## Features
 
-- **Config** — RuboCop-compatible resolution: walk-up discovery, `inherit_from` / `inherit_gem` / `require`/`plugins`, `inherit_mode` (merge/override), nested `.rubocop.yml` overrides, `DisabledByDefault`, `NewCops` / `Enabled: pending`, plus per-cop `Enabled` / `Exclude` / `Include` / options
+- **Config** — RuboCop-compatible resolution: walk-up discovery, `inherit_from` / `inherit_gem` / `require`/`plugins`, `inherit_mode` (merge/override), nested `.rubocop.yml` overrides, `DisabledByDefault`, `NewCops` / `Enabled: pending`, plus per-cop `Enabled` / `Exclude` / `Include` / options; ERB in YAML is expanded via Ruby when present
 - **Autocorrect** — `-a` (safe) / `-A` (all)
 - **Output** — `progress`, `text`, `json`, `github`, `quiet`, `files`, …
 - **Directives** — `# rubocop:disable` / `enable`

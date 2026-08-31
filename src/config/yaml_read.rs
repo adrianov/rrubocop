@@ -1,4 +1,7 @@
-//! Read RuboCop YAML with ERB expansion (matches ConfigLoader#load_yaml_configuration).
+//! Read RuboCop YAML; expand ERB via Ruby only when the file contains `<%`.
+//!
+//! Plain YAML needs no Ruby. ERB configs (Shopify-style `rubocop.yml`) shell out
+//! to `ruby` / `bundle exec ruby` — same as RuboCop's ConfigLoader.
 
 use std::path::Path;
 use std::process::Command;
@@ -12,7 +15,7 @@ const ERB_SCRIPT: &str = concat!(
     "Dir.chdir(File.dirname(path)) { print ERB.new(File.read(path)).result }"
 );
 
-/// Read a config file: expand ERB when present (RuboCop-compatible), strip Ruby YAML tags.
+/// Read a config file: expand ERB when present (needs Ruby), strip `!ruby/regexp`.
 pub(crate) fn load_yaml_text(config_path: &Path, working_dir: &Path) -> Result<String> {
     let raw = std::fs::read_to_string(config_path)
         .with_context(|| format!("failed to read config {}", config_path.display()))?;
