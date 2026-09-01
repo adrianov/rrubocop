@@ -14,6 +14,7 @@ pub(crate) const PLUGIN_GEM_DEPARTMENTS: &[(&str, &str)] = &[
     ("Capybara", "rubocop-capybara"),
     ("Rake", "rubocop-rake"),
     ("Performance", "rubocop-performance"),
+    ("GraphQL", "rubocop-graphql"),
     // standard-family wrapper gems
     ("Rails", "standard-rails"),
     ("Migration", "standard-rails"),

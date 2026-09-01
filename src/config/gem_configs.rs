@@ -41,6 +41,8 @@ mod tests {
     fn embeds_baseline_rubocop_default() {
         assert!(file("rubocop", "1.84.2", "config/default.yml").is_some());
         assert!(file("rubocop-rails", "2.34.3", "config/default.yml").is_some());
+        assert!(file("rubocop-graphql", "1.5.6", "config/default.yml").is_some());
+        assert!(file("rubocop-graphql", "1.8.0", "config/default.yml").is_some());
         assert!(file("test-prof", "1.4.4", "config/rubocop-rspec.yml").is_some());
     }
 

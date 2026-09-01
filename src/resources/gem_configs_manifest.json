@@ -30,6 +30,11 @@
       "files": ["config/default.yml"],
       "versions": ["2.27.1", "2.28.0"]
     },
+    "rubocop-graphql": {
+      "repo": "DmitryTsepelev/rubocop-graphql",
+      "files": ["config/default.yml"],
+      "versions": ["1.5.6", "1.8.0"]
+    },
     "test-prof": {
       "repo": "test-prof/test-prof",
       "files": ["config/rubocop-rspec.yml"],

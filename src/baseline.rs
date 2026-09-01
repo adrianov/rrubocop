@@ -11,20 +11,23 @@ pub const GEMS: &[(&str, &str)] = &[
     ("rubocop-rspec", "3.9.0"),
     ("rubocop-rspec_rails", "2.32.0"),
     ("rubocop-factory_bot", "2.28.0"),
+    ("rubocop-graphql", "1.8.0"),
 ];
 
 /// Shown at the top of `--help`.
 pub const ABOUT: &str = concat!(
     env!("CARGO_PKG_DESCRIPTION"),
     "\nCorresponds to rubocop 1.84.2 with rubocop-rails 2.34.3, rubocop-performance 1.26.1, ",
-    "rubocop-rspec 3.9.0, rubocop-rspec_rails 2.32.0, rubocop-factory_bot 2.28.0"
+    "rubocop-rspec 3.9.0, rubocop-rspec_rails 2.32.0, rubocop-factory_bot 2.28.0, ",
+    "rubocop-graphql 1.8.0"
 );
 
 /// Shown by `-V` / `--version`.
 pub const VERSION: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     " (corresponds to rubocop 1.84.2 with rubocop-rails 2.34.3, rubocop-performance 1.26.1, ",
-    "rubocop-rspec 3.9.0, rubocop-rspec_rails 2.32.0, rubocop-factory_bot 2.28.0)"
+    "rubocop-rspec 3.9.0, rubocop-rspec_rails 2.32.0, rubocop-factory_bot 2.28.0, ",
+    "rubocop-graphql 1.8.0)"
 );
 
 #[cfg(test)]
@@ -41,6 +44,6 @@ mod tests {
             assert!(VERSION.contains(&needle), "{needle} missing from VERSION");
         }
         assert_eq!(RUBOCOP, "1.84.2");
-        assert_eq!(GEMS.len(), 5);
+        assert_eq!(GEMS.len(), 6);
     }
 }
