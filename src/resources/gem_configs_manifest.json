@@ -1,0 +1,39 @@
+{
+  "gems": {
+    "rubocop": {
+      "repo": "rubocop/rubocop",
+      "files": ["config/default.yml"],
+      "versions": ["1.77.0", "1.84.2"]
+    },
+    "rubocop-rails": {
+      "repo": "rubocop/rubocop-rails",
+      "files": ["config/default.yml"],
+      "versions": ["2.32.0", "2.34.3"]
+    },
+    "rubocop-performance": {
+      "repo": "rubocop/rubocop-performance",
+      "files": ["config/default.yml"],
+      "versions": ["1.25.0", "1.26.1"]
+    },
+    "rubocop-rspec": {
+      "repo": "rubocop/rubocop-rspec",
+      "files": ["config/default.yml"],
+      "versions": ["3.6.0", "3.9.0"]
+    },
+    "rubocop-rspec_rails": {
+      "repo": "rubocop/rubocop-rspec_rails",
+      "files": ["config/default.yml"],
+      "versions": ["2.31.0", "2.32.0"]
+    },
+    "rubocop-factory_bot": {
+      "repo": "rubocop/rubocop-factory_bot",
+      "files": ["config/default.yml"],
+      "versions": ["2.27.1", "2.28.0"]
+    },
+    "test-prof": {
+      "repo": "test-prof/test-prof",
+      "files": ["config/rubocop-rspec.yml"],
+      "versions": ["1.4.4"]
+    }
+  }
+}

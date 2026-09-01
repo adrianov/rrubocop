@@ -4,6 +4,8 @@
 //! nested configs, `DisabledByDefault`, and `NewCops` / `Enabled: pending`.
 
 pub mod gem_path;
+mod gem_configs;
+mod gem_path_version;
 
 mod types;
 mod yaml_read;

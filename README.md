@@ -44,7 +44,7 @@ rrubocop [OPTIONS] [PATH]...
 
 ## Features
 
-- **Config** — RuboCop-compatible resolution: walk-up discovery, `inherit_from` / `inherit_gem` / `require`/`plugins`, `inherit_mode` (merge/override), nested `.rubocop.yml` overrides, `DisabledByDefault`, `NewCops` / `Enabled: pending`, plus per-cop `Enabled` / `Exclude` / `Include` / options; simple ERB in YAML expands natively (Ruby only for unsupported tags)
+- **Config** — RuboCop-compatible resolution: walk-up discovery, `inherit_from` / `inherit_gem` / `require`/`plugins`, `inherit_mode` (merge/override), nested `.rubocop.yml` overrides, `DisabledByDefault`, `NewCops` / `Enabled: pending`, plus per-cop `Enabled` / `Exclude` / `Include` / options; gem defaults/`inherit_gem` YAML are vendored by version (from `Gemfile.lock`) and parsed in memory (no `bundle info`); simple ERB in YAML expands natively (Ruby only for unsupported tags)
 - **Autocorrect** — `-a` (safe) / `-A` (all)
 - **Output** — `progress` (marks stream as files finish), `text`, `json`, `github`, `quiet`, `files`, … (TTY color like RuboCop; `--color` / `--no-color`)
 - **Directives** — `# rubocop:disable` / `enable`

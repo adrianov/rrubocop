@@ -8,7 +8,7 @@ use serde_yml::Value;
 use crate::cop::EnabledState;
 
 use super::gem_path;
-use super::load_recursive::load_config_recursive;
+use super::load_recursive::{load_config_recursive, load_config_recursive_inner};
 use super::merge::merge_layer_into;
 use super::standard::{standard_gem_config_path, PLUGIN_GEM_DEPARTMENTS};
 use super::types::ConfigLayer;
@@ -73,33 +73,29 @@ fn gem_config_rel_path(gem_name: &str, ruby_version: Option<f64>) -> Option<Stri
     }
 }
 
-fn resolve_named_gem(
+fn load_gem_yaml_layer(
     gem_name: &str,
+    rel_path: &str,
     working_dir: &Path,
+    visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
-) -> Option<PathBuf> {
-    if let Some(path) = gem_cache.and_then(|c| c.get(gem_name)) {
-        return Some(path.clone());
+) -> anyhow::Result<ConfigLayer> {
+    if let Some(root) = gem_cache.and_then(|c| c.get(gem_name)) {
+        return load_config_recursive(&root.join(rel_path), working_dir, visited, gem_cache);
     }
-    match gem_path::resolve_gem_path(gem_name, working_dir) {
-        Ok(p) => Some(p),
-        Err(e) => {
-            eprintln!("warning: require '{}': {e:#}", gem_name);
-            None
-        }
-    }
+    let (version, yaml) = gem_path::embedded_yaml(gem_name, rel_path, working_dir)?;
+    let path = gem_path::virtual_config_path(gem_name, &version, rel_path);
+    load_config_recursive_inner(&path, working_dir, visited, gem_cache, Some(yaml))
 }
 
-fn merge_require_layer(base_layer: &mut ConfigLayer, gem_name: &str, layer: ConfigLayer) {
+fn merge_require_layer(base_layer: &mut ConfigLayer, layer: ConfigLayer) {
     // Keep AllCops.Exclude from rubocop-* gems (e.g. rubocop-rails `db/*schema.rb`).
-    // Patterns stay project-relative — do not rewrite them against the gem path.
-    let _ = gem_name;
+    // Patterns stay project-relative — do not rewrite them against a gem path.
     merge_layer_into(base_layer, &layer, None);
 }
 
 fn load_require_fallback(
     gem_name: &str,
-    gem_root: &Path,
     working_dir: &Path,
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
@@ -108,18 +104,9 @@ fn load_require_fallback(
     if gem_name.starts_with("rubocop-") {
         return;
     }
-    let fallback = gem_root.join("config").join("base.yml");
-    if !fallback.exists() {
-        return;
-    }
-    match load_config_recursive(&fallback, working_dir, visited, gem_cache) {
+    match load_gem_yaml_layer(gem_name, "config/base.yml", working_dir, visited, gem_cache) {
         Ok(layer) => merge_layer_into(base_layer, &layer, None),
-        Err(e) => {
-            eprintln!(
-                "warning: failed to load default config for {}: {e:#}",
-                gem_name
-            );
-        }
+        Err(_) => {}
     }
 }
 
@@ -134,28 +121,20 @@ fn load_one_require_gem(
     let Some(config_rel_path) = gem_config_rel_path(gem_name, ruby_version) else {
         return;
     };
-    let Some(gem_root) = resolve_named_gem(gem_name, working_dir, gem_cache) else {
-        return;
-    };
-    let config_file = gem_root.join(&config_rel_path);
-    if !config_file.exists() {
-        load_require_fallback(
-            gem_name,
-            &gem_root,
-            working_dir,
-            visited,
-            gem_cache,
-            base_layer,
-        );
-        return;
-    }
-    match load_config_recursive(&config_file, working_dir, visited, gem_cache) {
-        Ok(layer) => merge_require_layer(base_layer, gem_name, layer),
+    match load_gem_yaml_layer(
+        gem_name,
+        &config_rel_path,
+        working_dir,
+        visited,
+        gem_cache,
+    ) {
+        Ok(layer) => merge_require_layer(base_layer, layer),
         Err(e) => {
-            eprintln!(
-                "warning: failed to load default config for {}: {e:#}",
-                gem_name
-            );
+            if gem_name.starts_with("rubocop-") {
+                eprintln!("warning: require '{gem_name}': {e:#}");
+                return;
+            }
+            load_require_fallback(gem_name, working_dir, visited, gem_cache, base_layer);
         }
     }
 }

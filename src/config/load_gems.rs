@@ -7,44 +7,46 @@ use anyhow::{Context, Result};
 use serde_yml::Value;
 
 use super::gem_path;
-use super::load_recursive::load_config_recursive;
+use super::load_recursive::{load_config_recursive, load_config_recursive_inner};
 use super::load_require::collect_yaml_strings;
 use super::merge::merge_layer_into;
 use super::types::ConfigLayer;
 
-fn resolve_gem_root(
+fn load_inherit_gem_yaml(
     gem_name: &str,
-    working_dir: &Path,
-    gem_cache: Option<&HashMap<String, PathBuf>>,
-) -> Result<PathBuf> {
-    if let Some(path) = gem_cache.and_then(|c| c.get(gem_name)) {
-        return Ok(path.clone());
-    }
-    gem_path::resolve_gem_path(gem_name, working_dir).with_context(|| {
-        format!(
-            "inherit_gem: failed to resolve gem '{gem_name}'. \
-             Run `bundle install` to install it, or remove it from inherit_gem in .rubocop.yml."
-        )
-    })
-}
-
-fn load_inherit_gem_file(
-    gem_name: &str,
-    full_path: &Path,
+    rel_path: &str,
     working_dir: &Path,
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
 ) -> Result<ConfigLayer> {
-    // See WARNING in load_require — do NOT make excludes absolute to gem dir.
-    load_config_recursive(full_path, working_dir, visited, gem_cache).with_context(|| {
-        format!(
-            "inherit_gem: failed to load config {} from gem '{gem_name}'",
-            full_path.display()
-        )
-    })
+    if let Some(root) = gem_cache.and_then(|c| c.get(gem_name)) {
+        let full_path = root.join(rel_path);
+        return load_config_recursive(&full_path, working_dir, visited, gem_cache).with_context(
+            || {
+                format!(
+                    "inherit_gem: failed to load config {} from gem '{gem_name}'",
+                    full_path.display()
+                )
+            },
+        );
+    }
+    let (version, yaml) = gem_path::embedded_yaml(gem_name, rel_path, working_dir).with_context(
+        || {
+            format!(
+                "inherit_gem: failed to resolve vendored config for gem '{gem_name}'. \
+                 Ensure it is listed in Gemfile.lock and vendored in rrubocop \
+                 (src/resources/gem_configs_manifest.json)."
+            )
+        },
+    )?;
+    let path = gem_path::virtual_config_path(gem_name, &version, rel_path);
+    // Do NOT make excludes absolute to a gem dir — patterns stay project-relative.
+    load_config_recursive_inner(&path, working_dir, visited, gem_cache, Some(yaml)).with_context(
+        || format!("inherit_gem: failed to load config {rel_path} from gem '{gem_name}'"),
+    )
 }
 
-/// Resolve `inherit_gem` entries to config layers (hard-fail if gem missing).
+/// Resolve `inherit_gem` entries to config layers.
 pub(crate) fn resolve_inherit_gem(
     gem_name: &str,
     paths_value: &Value,
@@ -52,19 +54,11 @@ pub(crate) fn resolve_inherit_gem(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
 ) -> Result<Vec<ConfigLayer>> {
-    let gem_root = resolve_gem_root(gem_name, working_dir, gem_cache)?;
     let mut layers = Vec::new();
     for rel_path in &collect_yaml_strings(paths_value) {
-        let full_path = gem_root.join(rel_path);
-        if !full_path.exists() {
-            anyhow::bail!(
-                "inherit_gem: config file not found: {} (gem '{gem_name}')",
-                full_path.display(),
-            );
-        }
-        layers.push(load_inherit_gem_file(
+        layers.push(load_inherit_gem_yaml(
             gem_name,
-            &full_path,
+            rel_path,
             working_dir,
             visited,
             gem_cache,
