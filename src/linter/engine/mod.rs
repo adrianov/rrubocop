@@ -11,6 +11,7 @@ use crate::cop::walker::BatchedWalker;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::{Correction, CorrectionSet};
 use crate::diagnostic::Diagnostic;
+use crate::model;
 use crate::parse;
 use crate::parse::codemap::CodeMap;
 use crate::parse::directives;
@@ -243,7 +244,8 @@ fn run_line_phase(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) {
-    for (cop, cfg, idx) in active {
+    // Shared line-phase group: only cops that opted in (skips hundreds of no-ops).
+    for (cop, cfg, idx) in active.iter().filter(|(c, _, _)| c.uses_line_phase()) {
         let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
         let before = diagnostics.len();
         cop.check_lines(source, cfg, diagnostics, corr_buf.as_mut());
@@ -260,7 +262,33 @@ fn run_source_phase(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) {
-    for (cop, cfg, idx) in active {
+    // One FileModel build shared by variable/metrics cops.
+    let model_cops: Vec<_> = active
+        .iter()
+        .filter(|(c, _, _)| c.needs_file_model())
+        .collect();
+    if !model_cops.is_empty() {
+        let file_model = model::build(source.as_bytes(), tree.clone());
+        for (cop, cfg, idx) in model_cops {
+            let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
+            let before = diagnostics.len();
+            cop.check_file_model(
+                source,
+                tree,
+                code_map,
+                &file_model,
+                cfg,
+                diagnostics,
+                corr_buf.as_mut(),
+            );
+            finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, *idx, corrections);
+        }
+    }
+
+    for (cop, cfg, idx) in active
+        .iter()
+        .filter(|(c, _, _)| c.uses_source_phase() && !c.needs_file_model())
+    {
         let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
         let before = diagnostics.len();
         cop.check_source(source, tree, code_map, cfg, diagnostics, corr_buf.as_mut());
@@ -277,9 +305,17 @@ fn run_node_phase(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) {
+    // Single AST walk over cops that declared node-kind interest.
+    let ast: Vec<_> = active
+        .iter()
+        .filter(|(c, _, _)| !c.interested_node_kinds().is_empty())
+        .collect();
+    if ast.is_empty() {
+        return;
+    }
     let walker = BatchedWalker::new(
-        active.iter().map(|(c, _, _)| *c).collect(),
-        active.iter().map(|(_, c, _)| c).collect(),
+        ast.iter().map(|(c, _, _)| *c).collect(),
+        ast.iter().map(|(_, c, _)| c).collect(),
     );
     let mut node_corr = corr_bucket(mode);
     walker.walk(source, tree.root_node(), diagnostics, node_corr.as_mut());

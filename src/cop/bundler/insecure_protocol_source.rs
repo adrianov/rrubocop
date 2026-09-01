@@ -23,6 +23,10 @@ impl Cop for InsecureProtocolSource {
         &["**/*.gemfile", "**/Gemfile", "**/gems.rb"]
     }
 
+    fn uses_line_phase(&self) -> bool {
+        true
+    }
+
     fn check_lines(
         &self,
         source: &SourceFile,

@@ -20,6 +20,10 @@ impl Cop for Desc {
         RAKE_DEFAULT_INCLUDE
     }
 
+    fn uses_source_phase(&self) -> bool {
+        true
+    }
+
     fn check_source(
         &self,
         source: &SourceFile,

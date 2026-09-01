@@ -1,6 +1,5 @@
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
-use crate::model;
 use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
 
@@ -16,17 +15,21 @@ impl Cop for UnderscorePrefixedVariableName {
         Severity::Warning
     }
 
-    fn check_source(
+    fn needs_file_model(&self) -> bool {
+        true
+    }
+
+    fn check_file_model(
         &self,
         source: &SourceFile,
-        tree: &tree_sitter::Tree,
+        _tree: &tree_sitter::Tree,
         _code_map: &CodeMap,
+        file_model: &crate::model::FileModel<'_>,
         _config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let fm = model::build(source.as_bytes(), tree.clone());
-        for scope in &fm.scopes {
+        for scope in &file_model.scopes {
             for (name, entry) in &scope.entries {
                 if !name.starts_with('_') || name.as_ref() == "_" {
                     continue;
@@ -34,7 +37,7 @@ impl Cop for UnderscorePrefixedVariableName {
                 if entry.reads.is_empty() {
                     continue;
                 }
-                let (line, col) = fm.line_col(entry.intro_byte);
+                let (line, col) = file_model.line_col(entry.intro_byte);
                 diagnostics.push(self.diagnostic(
                     source,
                     line,

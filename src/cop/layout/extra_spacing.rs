@@ -132,6 +132,10 @@ impl Cop for ExtraSpacing {
         true
     }
 
+    fn uses_source_phase(&self) -> bool {
+        true
+    }
+
     fn check_source(
         &self,
         source: &SourceFile,

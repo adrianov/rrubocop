@@ -22,6 +22,10 @@ impl Cop for FileName {
         "Naming/FileName"
     }
 
+    fn uses_line_phase(&self) -> bool {
+        true
+    }
+
     fn check_lines(
         &self,
         source: &SourceFile,

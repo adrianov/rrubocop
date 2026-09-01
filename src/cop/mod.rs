@@ -139,6 +139,11 @@ pub trait Cop: Send + Sync {
         true
     }
 
+    /// Opt into the shared line phase (engine skips no-op line cops).
+    fn uses_line_phase(&self) -> bool {
+        false
+    }
+
     #[allow(unused_variables)]
     fn check_lines(
         &self,
@@ -147,6 +152,17 @@ pub trait Cop: Send + Sync {
         diagnostics: &mut Vec<Diagnostic>,
         corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
+    }
+
+    /// Opt into the shared source phase (engine skips no-op source cops).
+    fn uses_source_phase(&self) -> bool {
+        false
+    }
+
+    /// When true, engine builds one shared [`crate::model::FileModel`] and
+    /// calls [`Self::check_file_model`] instead of [`Self::check_source`].
+    fn needs_file_model(&self) -> bool {
+        false
     }
 
     #[allow(unused_variables)]
@@ -161,7 +177,23 @@ pub trait Cop: Send + Sync {
     ) {
     }
 
-    /// tree-sitter node kinds this cop cares about; empty = all nodes.
+    /// Shared FileModel pass — used by variable/metrics cops that would
+    /// otherwise each rebuild the model.
+    #[allow(unused_variables)]
+    fn check_file_model(
+        &self,
+        source: &SourceFile,
+        tree: &tree_sitter::Tree,
+        code_map: &CodeMap,
+        file_model: &crate::model::FileModel<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        corrections: Option<&mut Vec<crate::correction::Correction>>,
+    ) {
+    }
+
+    /// tree-sitter node kinds this cop cares about.
+    /// Empty means the cop is not registered in the AST walker (line/source only).
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &[]
     }
