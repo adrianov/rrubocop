@@ -34,7 +34,9 @@ impl Cop for Loop {
         if body.kind() != "begin" {
             return;
         }
-        let (line, col) = source.offset_to_line_col(node.start_byte());
+        let Some((line, col)) = modifier_keyword_pos(source, node) else {
+            return;
+        };
         diagnostics.push(self.diagnostic(
             source,
             line,
@@ -43,4 +45,18 @@ impl Cop for Loop {
                 .to_string(),
         ));
     }
+}
+
+fn modifier_keyword_pos(source: &SourceFile, node: Node<'_>) -> Option<(usize, usize)> {
+    let bytes = source.as_bytes();
+    let mut cur = node.walk();
+    for child in node.children(&mut cur) {
+        if !child.is_named() {
+            let t = &bytes[child.start_byte()..child.end_byte()];
+            if t == b"while" || t == b"until" {
+                return Some(source.offset_to_line_col(child.start_byte()));
+            }
+        }
+    }
+    None
 }

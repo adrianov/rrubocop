@@ -56,12 +56,80 @@ fn report_misaligned_end(
     diagnostics.push(diag);
 }
 
+/// Column of the assignment/`<<` receiver when `kw_offset` sits on its RHS
+/// (e.g. `x = if`, `@x ||= if`, `buf << if`). Mirrors nitrocop / RuboCop
+/// variable-alignment context: first non-whitespace on the assignment line.
+pub fn assignment_context_base_col(source: &SourceFile, kw_offset: usize) -> Option<usize> {
+    let bytes = source.as_bytes();
+    let mut line_start = kw_offset;
+    while line_start > 0 && bytes[line_start - 1] != b'\n' {
+        line_start -= 1;
+    }
+    let before = &bytes[line_start..kw_offset];
+    let mut i = 0;
+    while i < before.len() {
+        if before[i] != b'=' {
+            i += 1;
+            continue;
+        }
+        let next = before.get(i + 1).copied().unwrap_or(b' ');
+        if matches!(next, b'=' | b'~' | b'>') {
+            i += 2;
+            continue;
+        }
+        // Skip !=, <=, >=, == (second `=` already handled above).
+        if i > 0 && matches!(before[i - 1], b'!' | b'<' | b'>' | b'=') {
+            i += 1;
+            continue;
+        }
+        // Bare `=` / `||=` / `+=` / … — align with line's first non-ws.
+        return before.iter().position(|&b| b != b' ' && b != b'\t');
+    }
+    let mut j = 0;
+    while j + 1 < before.len() {
+        if before[j] == b'<' && before[j + 1] == b'<' {
+            let next = before.get(j + 2).copied().unwrap_or(b' ');
+            if matches!(next, b'=' | b'~' | b'-') {
+                j += 3;
+                continue;
+            }
+            return before.iter().position(|&b| b != b' ' && b != b'\t');
+        }
+        j += 1;
+    }
+    None
+}
+
 fn align_col(source: &SourceFile, node: Node<'_>, style: &str) -> usize {
     match style {
-        // Common style: align with line start of the statement (not `do`/`if` kw).
-        "variable" | "start_of_line" => shared::line_indent(source, node.start_byte()),
+        "start_of_line" => shared::line_indent(source, node.start_byte()),
+        // RuboCop: variable style falls back to keyword unless same-line assignment RHS.
+        "variable" => same_line_assign_col(source, node)
+            .or_else(|| assignment_context_base_col(source, node.start_byte()))
+            .unwrap_or_else(|| shared::node_col(source, node)),
         _ => shared::node_col(source, node),
     }
+}
+
+/// Column of a same-line `=` / `||=` / `+=` assignment that has `node` on its RHS
+/// (RuboCop `CheckAssignment` / variable EndAlignment).
+pub fn same_line_assign_col(source: &SourceFile, node: Node<'_>) -> Option<usize> {
+    let kw_line = shared::node_line(source, node);
+    let mut p = node.parent();
+    while let Some(cur) = p {
+        if matches!(cur.kind(), "assignment" | "operator_assignment") {
+            let same = shared::node_line(source, cur) == kw_line;
+            return same.then(|| shared::node_col(source, cur));
+        }
+        if matches!(
+            cur.kind(),
+            "program" | "method" | "singleton_method" | "class" | "module"
+        ) {
+            break;
+        }
+        p = cur.parent();
+    }
+    None
 }
 
 /// Align `end` using `EnforcedStyleAlignWith` (`keyword` / `variable` / `start_of_line`).

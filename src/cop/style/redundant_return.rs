@@ -84,8 +84,9 @@ fn is_trailing_return(node: Node<'_>) -> bool {
     };
     if !matches!(
         container.kind(),
-        "method" | "singleton_method" | "do_block" | "block" | "lambda"
+        "method" | "singleton_method"
     ) {
+        // `return` inside a block exits the enclosing method — never redundant.
         return false;
     }
     let Some(body) = return_body(parent, container) else {

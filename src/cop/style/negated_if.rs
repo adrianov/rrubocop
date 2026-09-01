@@ -34,6 +34,16 @@ impl Cop for NegatedIf {
         let Some(cond) = node.child_by_field_name("condition") else {
             return;
         };
+        // RuboCop: only ifs without else/elsif (cannot convert to unless).
+        if node.kind() == "if" {
+            let mut cur = node.walk();
+            if node
+                .named_children(&mut cur)
+                .any(|c| matches!(c.kind(), "else" | "elsif"))
+            {
+                return;
+            }
+        }
         let Some(inner) = negated_operand(source, cond) else {
             return;
         };
@@ -116,5 +126,22 @@ fn negated_operand<'a>(source: &SourceFile, cond: Node<'a>) -> Option<Node<'a>> 
     if !has_neg {
         return None;
     }
-    cond.child_by_field_name("operand")
+    let operand = cond.child_by_field_name("operand")?;
+    // `!!x` / `not not x` — RuboCop does not suggest `unless !x`.
+    if operand.kind() == "unary" {
+        let mut c2 = operand.walk();
+        if operand.children(&mut c2).any(|c| {
+            let t = node_bytes(source, c);
+            t == b"!" || t == b"not"
+        }) {
+            return None;
+        }
+    }
+    Some(operand)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(NegatedIf, "cops/style/negated_if");
 }

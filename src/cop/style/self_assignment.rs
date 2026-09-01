@@ -41,22 +41,29 @@ impl Cop for SelfAssignment {
 
 fn self_assign_op<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<&'a [u8]> {
     let left = node.child_by_field_name("left")?;
-    let right = node.child_by_field_name("right")?;
+    // RuboCop only checks lvasgn / ivasgn / cvasgn — not `obj.x = obj.x - 1`.
+    if !matches!(left.kind(), "identifier" | "instance_variable" | "class_variable") {
+        return None;
+    }
+    binary_self_op(source, left, node.child_by_field_name("right")?)
+}
+
+fn binary_self_op<'a>(
+    source: &'a SourceFile,
+    left: Node<'_>,
+    right: Node<'_>,
+) -> Option<&'a [u8]> {
     if right.kind() != "binary" {
         return None;
     }
     let mut cur = right.walk();
     let kids: Vec<_> = right.children(&mut cur).collect();
-    if kids.len() < 3 {
-        return None;
-    }
-    if node_bytes(source, left) != node_bytes(source, kids[0]) {
-        return None;
-    }
-    let op = node_bytes(source, kids[1]);
-    matches!(
-        op,
-        b"+" | b"-" | b"*" | b"/" | b"|" | b"&" | b"^" | b"<<" | b">>" | b"||" | b"&&"
-    )
-    .then_some(op)
+    (kids.len() >= 3 && node_bytes(source, left) == node_bytes(source, kids[0]))
+        .then(|| node_bytes(source, kids[1]))
+        .filter(|op| {
+            matches!(
+                *op,
+                b"+" | b"-" | b"*" | b"/" | b"|" | b"&" | b"^" | b"<<" | b">>" | b"||" | b"&&"
+            )
+        })
 }

@@ -107,8 +107,35 @@ pub fn check_breaks_cfg(
         return;
     }
     let start_line = shared::node_line(source, node);
-    let end_line = elem_end_line(source, node);
-    if start_line == end_line {
+    // For method args only: RuboCop send first_line includes receiver — skip when
+    // args begin after the call expression's first line (chained `.with(a,`).
+    if matches!(node.kind(), "argument_list" | "command_argument_list") {
+        let call_start = node
+            .parent()
+            .map(|p| shared::node_line(source, p))
+            .unwrap_or(start_line);
+        let first_elem_line = shared::node_line(source, elems[0]);
+        if call_start != first_elem_line {
+            return;
+        }
+    }
+    let end_line = if allow_multiline_final {
+        elems
+            .iter()
+            .map(|e| shared::node_line(source, *e))
+            .max()
+            .unwrap_or(start_line)
+    } else {
+        elem_end_line(source, node)
+    };
+    let align_start = if matches!(node.kind(), "argument_list" | "command_argument_list") {
+        node.parent()
+            .map(|p| shared::node_line(source, p))
+            .unwrap_or(start_line)
+    } else {
+        start_line
+    };
+    if align_start == end_line {
         return;
     }
     // All keys/args on one line (even if `{` / `}` wrap) → not an offense.

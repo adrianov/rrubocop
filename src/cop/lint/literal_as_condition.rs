@@ -18,12 +18,32 @@ fn is_literal(node: Node<'_>) -> bool {
             | "true"
             | "false"
             | "nil"
-            | "array"
-            | "hash"
             | "regex"
             | "string_array"
             | "symbol_array"
-    )
+    ) || primitive_array(node)
+}
+
+fn primitive_array(node: Node<'_>) -> bool {
+    if node.kind() != "array" {
+        return false;
+    }
+    let mut cur = node.walk();
+    let kids: Vec<_> = node.named_children(&mut cur).collect();
+    !kids.is_empty()
+        && kids.iter().all(|c| {
+            matches!(
+                c.kind(),
+                "integer"
+                    | "float"
+                    | "string"
+                    | "simple_symbol"
+                    | "true"
+                    | "false"
+                    | "nil"
+                    | "regex"
+            )
+        })
 }
 
 fn unwrap(mut node: Node<'_>) -> Node<'_> {
@@ -67,8 +87,12 @@ impl Cop for LiteralAsCondition {
         if !is_literal(cond) {
             return;
         }
-        // while/until true/false are common idioms — RuboCop still flags most literals
         let lit = node_text(source, cond);
+        // RuboCop skips `while true` / `until false` (Style/InfiniteLoop owns those).
+        if (node.kind() == "while" && lit == "true") || (node.kind() == "until" && lit == "false")
+        {
+            return;
+        }
         let (line, col) = source.offset_to_line_col(cond.start_byte());
         diagnostics.push(self.diagnostic(
             source,
@@ -77,4 +101,10 @@ impl Cop for LiteralAsCondition {
             format!("Literal `{lit}` appeared as a condition."),
         ));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(LiteralAsCondition, "cops/lint/literal_as_condition");
 }

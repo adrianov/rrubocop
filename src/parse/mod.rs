@@ -1,4 +1,5 @@
 pub mod codemap;
+pub mod comment_hash;
 pub mod directives;
 pub mod source;
 

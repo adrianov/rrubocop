@@ -34,8 +34,30 @@ impl Cop for RedundantSelf {
         let Some(recv) = call_receiver(node) else {
             return;
         };
-        if recv.kind() != "self" || !self_is_redundant(source, node) {
+        if recv.kind() != "self" {
             return;
+        }
+        // `self.foo = bar` is often `assignment` with call LHS, not `foo=`.
+        if call_is_assign_lhs(node) {
+            return;
+        }
+        // `self.foo[i] =` / `self.foo[i] ||=` — self required for attr + index write.
+        if call_is_index_assign_recv(node) {
+            return;
+        }
+        if !self_is_redundant(source, node) {
+            return;
+        }
+        // RuboCop tracks assignment LHS names in a shared class-level scope; once
+        // `self.data ||= {}` appears, `self.data` reads elsewhere aren't flagged.
+        if let Some(method) = call_method_name(source, node) {
+            let bare = method.strip_suffix(b"=").unwrap_or(method);
+            if self_assign_names_in_enclosing_type(source, node)
+                .iter()
+                .any(|n| n.as_slice() == bare)
+            {
+                return;
+            }
         }
         report(self, source, node, recv, diagnostics, &mut corrections);
     }
@@ -65,11 +87,122 @@ fn report(
     diagnostics.push(diag);
 }
 
+fn call_is_assign_lhs(node: Node<'_>) -> bool {
+    node.parent().is_some_and(|p| {
+        matches!(p.kind(), "assignment" | "operator_assignment")
+            && p.child_by_field_name("left").is_some_and(|l| l.id() == node.id())
+    })
+}
+
+/// `self.rates[id] ||= {}` — walk through element_reference to assignment.
+fn call_is_index_assign_recv(node: Node<'_>) -> bool {
+    let mut cur = node;
+    for _ in 0..4 {
+        let Some(parent) = cur.parent() else {
+            return false;
+        };
+        if matches!(parent.kind(), "assignment" | "operator_assignment") {
+            return parent
+                .child_by_field_name("left")
+                .is_some_and(|l| l.id() == cur.id() || contains_node(l, node));
+        }
+        if matches!(parent.kind(), "element_reference" | "call") {
+            // Continue if we're the receiver of [] / []=
+            let recv = parent
+                .child_by_field_name("object")
+                .or_else(|| parent.child_by_field_name("receiver"));
+            if recv.is_some_and(|r| r.id() == cur.id()) {
+                cur = parent;
+                continue;
+            }
+        }
+        return false;
+    }
+    false
+}
+
+fn contains_node(root: Node<'_>, target: Node<'_>) -> bool {
+    if root.id() == target.id() {
+        return true;
+    }
+    let mut cur = root.walk();
+    root.named_children(&mut cur).any(|c| contains_node(c, target))
+}
+
+/// Names assigned via `self.foo` / `self.foo[…] =` under the same class/module
+/// (RuboCop RedundantSelf class-scope local-name leakage parity).
+fn self_assign_names_in_enclosing_type(source: &SourceFile, node: Node<'_>) -> Vec<Vec<u8>> {
+    let mut p = node.parent();
+    let mut type_node = None;
+    while let Some(n) = p {
+        if matches!(n.kind(), "class" | "module" | "singleton_class") {
+            type_node = Some(n);
+            break;
+        }
+        p = n.parent();
+    }
+    let Some(root) = type_node else {
+        return Vec::new();
+    };
+    let mut names = Vec::new();
+    collect_self_assign_names(source, root, &mut names);
+    names
+}
+
+fn collect_self_assign_names(source: &SourceFile, node: Node<'_>, out: &mut Vec<Vec<u8>>) {
+    if matches!(node.kind(), "assignment" | "operator_assignment") {
+        if let Some(left) = node.child_by_field_name("left") {
+            push_self_call_name(source, left, out);
+        }
+    }
+    let mut cur = node.walk();
+    for c in node.children(&mut cur) {
+        collect_self_assign_names(source, c, out);
+    }
+}
+
+fn push_self_call_name(source: &SourceFile, mut node: Node<'_>, out: &mut Vec<Vec<u8>>) {
+    // Unwrap element_reference / call chain to the self.foo receiver.
+    for _ in 0..4 {
+        if node.kind() == "element_reference" {
+            if let Some(obj) = node
+                .child_by_field_name("object")
+                .or_else(|| node.child_by_field_name("receiver"))
+            {
+                node = obj;
+                continue;
+            }
+        }
+        break;
+    }
+    if node.kind() != "call" {
+        return;
+    }
+    if call_receiver(node).is_none_or(|r| r.kind() != "self") {
+        return;
+    }
+    if let Some(method) = call_method_name(source, node) {
+        let bare = method.strip_suffix(b"=").unwrap_or(method);
+        if !out.iter().any(|n| n == bare) {
+            out.push(bare.to_vec());
+        }
+    }
+}
+
 fn self_is_redundant(source: &SourceFile, node: Node<'_>) -> bool {
     let Some(method) = call_method_name(source, node) else {
         return false;
     };
     if method == b"class" || method.starts_with(b"[") {
+        return false;
+    }
+    // `self.CONST` / CamelCase — constant-style names aren't RedundantSelf targets.
+    if method.first().is_some_and(|b| b.is_ascii_uppercase()) {
+        return false;
+    }
+    // `self.foo =` is never redundant (local would be assignment, not setter call).
+    if method.ends_with(b"=") && method != b"==" && method != b"!=" && method != b"=~" && method != b"!~"
+    {
         return false;
     }
     if !method

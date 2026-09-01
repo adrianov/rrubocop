@@ -34,6 +34,10 @@ impl Cop for SignalException {
         let Some(method) = call_method_name(source, node) else {
             return;
         };
+        // `obj.fail` is not Kernel#fail (e.g. AASM `withdraw.fail`).
+        if crate::cop::shared::call_receiver(node).is_some() {
+            return;
+        }
         let Some((bad, good)) = map_style(config.get_str("EnforcedStyle", "only_raise"), method)
         else {
             return;

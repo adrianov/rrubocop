@@ -84,10 +84,6 @@ pub fn consecutive_lines(a: Node<'_>, b: Node<'_>) -> bool {
     a.end_position().row + 1 == b.start_position().row
 }
 
-pub fn method_line_count(node: Node<'_>) -> usize {
-    node.end_position().row.saturating_sub(node.start_position().row) + 1
-}
-
 pub fn collect_calls_named<'a>(
     root: Node<'a>,
     source: &SourceFile,

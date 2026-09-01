@@ -43,6 +43,13 @@ fn empty_args<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
     if matches!(call_method_name(source, node), Some(b"super" | b"yield")) {
         return None;
     }
+    let Some(meth) = call_method_name(source, node) else {
+        return None;
+    };
+    // RuboCop `camel_case_method?` — `Success()`, `Failure()`, etc.
+    if meth.first().is_some_and(|b| b.is_ascii_uppercase()) {
+        return None;
+    }
     let args = node.child_by_field_name("arguments")?;
     let mut cur = args.walk();
     if args.named_children(&mut cur).next().is_some() {

@@ -32,17 +32,31 @@ fn line_has_nonspace_at(line: &[u8], col: usize) -> bool {
     line.get(col).is_some_and(|b| !matches!(b, b' ' | b'\t' | b'\n' | b'\r'))
 }
 
-/// RuboCop `AllowForAlignment`: extra spaces OK when arg aligns with something nearby.
+fn is_full_line_comment(line: &[u8]) -> bool {
+    let mut i = 0;
+    while i < line.len() && matches!(line[i], b' ' | b'\t') {
+        i += 1;
+    }
+    line.get(i) == Some(&b'#')
+}
+
+/// RuboCop `AllowForAlignment` / `aligned_words?`: arg column matches a word
+/// start on another (non-comment) line.
 fn aligned_with_adjacent(source: &SourceFile, first_start: usize) -> bool {
     let (line, col) = source.offset_to_line_col(first_start);
-    if line == 0 {
+    if line == 0 || col == 0 {
         return false;
     }
     let lines: Vec<&[u8]> = source.lines().collect();
     let idx = line - 1;
-    [idx.wrapping_sub(1), idx + 1]
-        .into_iter()
-        .any(|other| other < lines.len() && other != idx && line_has_nonspace_at(lines[other], col))
+    lines.iter().enumerate().any(|(other, line_bytes)| {
+        if other == idx || is_full_line_comment(line_bytes) {
+            return false;
+        }
+        // `\s\S` at `col-1` / `col` — word begins at the argument column.
+        matches!(line_bytes.get(col - 1), Some(b' ') | Some(b'\t'))
+            && line_has_nonspace_at(line_bytes, col)
+    })
 }
 
 fn offense(source: &SourceFile, node: Node<'_>, allow_align: bool) -> Option<(usize, usize)> {

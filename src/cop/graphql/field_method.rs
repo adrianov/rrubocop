@@ -65,11 +65,19 @@ fn method_from_body(source: &SourceFile, method: Node<'_>) -> Option<String> {
     if !matches!(expr.kind(), "call" | "command" | "command_call") {
         return None;
     }
+    if call_uses_safe_navigation(expr) {
+        return None;
+    }
     let recv = call_receiver(expr)?;
     if node_text(source, recv) != "object" || !argument_nodes(expr).is_empty() {
         return None;
     }
     call_method_name(source, expr).map(|n| String::from_utf8_lossy(n).into_owned())
+}
+
+fn call_uses_safe_navigation(call: Node<'_>) -> bool {
+    let mut cur = call.walk();
+    call.children(&mut cur).any(|c| !c.is_named() && c.kind() == "&.")
 }
 
 fn sole_body_expr(method: Node<'_>) -> Option<Node<'_>> {
@@ -80,4 +88,10 @@ fn sole_body_expr(method: Node<'_>) -> Option<Node<'_>> {
         vec![body]
     };
     (stmts.len() == 1).then_some(stmts[0])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(FieldMethod, "cops/graphql/field_method");
 }

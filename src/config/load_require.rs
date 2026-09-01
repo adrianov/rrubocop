@@ -90,12 +90,10 @@ fn resolve_named_gem(
     }
 }
 
-fn merge_require_layer(base_layer: &mut ConfigLayer, gem_name: &str, mut layer: ConfigLayer) {
-    // WARNING: Do NOT make gem Exclude patterns absolute relative to the gem's
-    // config directory — patterns are project-relative. See git history.
-    if gem_name.starts_with("rubocop-") {
-        layer.global_excludes.clear();
-    }
+fn merge_require_layer(base_layer: &mut ConfigLayer, gem_name: &str, layer: ConfigLayer) {
+    // Keep AllCops.Exclude from rubocop-* gems (e.g. rubocop-rails `db/*schema.rb`).
+    // Patterns stay project-relative — do not rewrite them against the gem path.
+    let _ = gem_name;
     merge_layer_into(base_layer, &layer, None);
 }
 

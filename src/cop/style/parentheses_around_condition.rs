@@ -39,6 +39,12 @@ impl Cop for ParenthesesAroundCondition {
         if cond.kind() != "parenthesized_statements" {
             return;
         }
+        if matches!(
+            node.kind(),
+            "if_modifier" | "unless_modifier" | "while_modifier" | "until_modifier"
+        ) {
+            return;
+        }
         // RuboCop AllowSafeAssignment (default true): `if (x = y)` is allowed.
         if config.get_bool("AllowSafeAssignment", true) && condition_has_assignment(cond) {
             return;

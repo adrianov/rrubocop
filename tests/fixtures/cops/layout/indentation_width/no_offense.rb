@@ -1,13 +1,9 @@
-def post_json(destination, body, headers = {})
-  post(
-    destination,
-    params: (
-               String === body ? body : body.to_json
-             ),
-    headers: headers,
-  )
-end
+# frozen_string_literal: true
 
-def ok
-  1
+class Deposits < Grape::API
+  params do
+    optional :currency, type: String, values: -> { Currency.enabled.codes(bothcase: true) }, desc: -> {
+                                                                                                       "Currency value contains #{Currency.enabled.codes(bothcase: true).join(',')}"
+                                                                                                     }
+  end
 end

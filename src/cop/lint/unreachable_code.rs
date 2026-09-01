@@ -54,7 +54,9 @@ impl Cop for UnreachableCode {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["body_statement", "block_body", "then", "else"]
+        // Method/`begin` bodies (Parser begin). Keep block_body for do-blocks
+        // (RuboCop flags `next`+code there unless disabled).
+        &["body_statement", "block_body", "begin", "then", "else"]
     }
 
     fn check_node(
@@ -70,8 +72,19 @@ impl Cop for UnreachableCode {
         // unreachable code after return/raise in the statement list.
         let stmts: Vec<_> = node
             .named_children(&mut cur)
-            .filter(|n| !matches!(n.kind(), "rescue" | "else" | "ensure" | "comment"))
+            .filter(|n| {
+                !matches!(
+                    n.kind(),
+                    "rescue" | "else" | "ensure" | "comment" | "heredoc_body"
+                )
+            })
             .collect();
         check_stmts(source, &stmts, self, diagnostics);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(UnreachableCode, "cops/lint/unreachable_code");
 }

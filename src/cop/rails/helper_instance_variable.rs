@@ -28,10 +28,24 @@ fn assigned_ivar<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
 
 fn target_ivar<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
     match node.kind() {
-        "instance_variable" => Some(node),
+        "instance_variable" => {
+            // RuboCop skips `||=` memoization; the ivar child still fires `on_ivar`.
+            if parent_is_or_eq(source, node) {
+                None
+            } else {
+                Some(node)
+            }
+        }
         "assignment" | "operator_assignment" => assigned_ivar(source, node),
         _ => None,
     }
+}
+
+fn parent_is_or_eq(source: &SourceFile, ivar: Node<'_>) -> bool {
+    let Some(parent) = ivar.parent() else {
+        return false;
+    };
+    parent.kind() == "operator_assignment" && is_or_eq_assign(source, parent)
 }
 
 fn nested_in_class(node: Node<'_>) -> bool {

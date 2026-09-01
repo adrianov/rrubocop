@@ -13,6 +13,18 @@ fn matching_close(open: u8) -> u8 {
     match open { b'(' => b')', b'[' => b']', b'{' => b'}', b'<' => b'>', c => c }
 }
 
+fn percent_type(text: &[u8]) -> Option<u8> {
+    if !text.starts_with(b"%") || text.len() < 3 {
+        return None;
+    }
+    let b = text[1];
+    if b.is_ascii_alphanumeric() {
+        Some(b)
+    } else {
+        None
+    }
+}
+
 fn find_open(text: &[u8]) -> Option<usize> {
     if !text.starts_with(b"%") || text.len() < 4 { return None; }
     Some(text.iter().position(|&b| !b.is_ascii_alphanumeric() && b != b'%').unwrap_or(1))
@@ -63,7 +75,8 @@ impl Cop for SpaceInsidePercentLiteralDelimiters {
     fn name(&self) -> &'static str { "Layout/SpaceInsidePercentLiteralDelimiters" }
     fn supports_autocorrect(&self) -> bool { true }
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["string_array", "symbol_array", "string", "regex", "%w", "%W", "%i", "%I", "%q", "%Q", "%r", "%s", "%x"]
+        // RuboCop only checks %i/%I/%w/%W/%x — not %() / %Q / %r / %s strings.
+        &["string_array", "symbol_array", "%w", "%W", "%i", "%I", "%x"]
     }
 
     fn check_node(
@@ -72,9 +85,21 @@ impl Cop for SpaceInsidePercentLiteralDelimiters {
     ) {
         let _ = config;
         let bytes = source.as_bytes();
+        let text = &bytes[node.start_byte()..node.end_byte()];
+        // Guard: only %w/%W/%i/%I/%x (case-insensitive type letter).
+        if !matches!(
+            percent_type(text),
+            Some(b'w' | b'W' | b'i' | b'I' | b'x' | b'X')
+        ) {
+            return;
+        }
         let Some((inner_s, inner_e)) = percent_inner(bytes, node) else { return; };
         let sp_a = matches!(bytes.get(inner_s), Some(b' ') | Some(b'\t'));
         let sp_b = matches!(bytes.get(inner_e - 1), Some(b' ') | Some(b'\t'));
+        let inner = &bytes[inner_s..inner_e];
+        if inner.first() == Some(&b'\n') || inner.last() == Some(&b'\n') {
+            return;
+        }
         if sp_a || sp_b {
             report_spaces(self, source, bytes, node, inner_s, inner_e, sp_a, sp_b, diagnostics, &mut corrections);
         }

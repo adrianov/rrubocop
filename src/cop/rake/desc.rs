@@ -37,6 +37,10 @@ impl Cop for Desc {
             if call_method_name(source, node) != Some(b"task") {
                 return;
             }
+            // RuboCop: default task needs no desc (`rake` with no args).
+            if task_name_is_default(source, node) {
+                return;
+            }
             if preceded_by_desc(source, node) {
                 return;
             }
@@ -58,14 +62,19 @@ fn preceded_by_desc(source: &SourceFile, task: Node<'_>) -> bool {
     let mut cur = parent.walk();
     let siblings: Vec<_> = parent.named_children(&mut cur).collect();
     let Some(idx) = siblings.iter().position(|n| n.id() == task.id()) else {
-        // task may be nested in expression statement
         return scan_back_for_desc(source, task);
     };
-    if idx == 0 {
-        return false;
+    // Skip heredoc_body that follows `desc <<~DESC` / `desc <<-DESC`.
+    let mut i = idx;
+    while i > 0 {
+        i -= 1;
+        let prev = siblings[i];
+        if prev.kind() == "heredoc_body" {
+            continue;
+        }
+        return is_desc_call(source, prev);
     }
-    let prev = siblings[idx - 1];
-    is_desc_call(source, prev)
+    false
 }
 
 fn scan_back_for_desc(source: &SourceFile, task: Node<'_>) -> bool {
@@ -73,10 +82,18 @@ fn scan_back_for_desc(source: &SourceFile, task: Node<'_>) -> bool {
         return false;
     };
     loop {
+        if node.kind() == "heredoc_body" {
+            match node.prev_named_sibling() {
+                Some(p) => {
+                    node = p;
+                    continue;
+                }
+                None => return false,
+            }
+        }
         if is_desc_call(source, node) {
             return true;
         }
-        // blank / comment-ish: keep looking one step
         if matches!(node.kind(), "comment") {
             match node.prev_named_sibling() {
                 Some(p) => node = p,
@@ -102,4 +119,40 @@ fn is_desc_call(source: &SourceFile, node: Node<'_>) -> bool {
         }
     };
     call_method_name(source, node) == Some(b"desc")
+}
+
+fn task_name_is_default(source: &SourceFile, task: Node<'_>) -> bool {
+    let Some(args) = task.child_by_field_name("arguments") else {
+        return false;
+    };
+    let mut cur = args.walk();
+    for child in args.named_children(&mut cur) {
+        match child.kind() {
+            "simple_symbol" | "hash_key_symbol" | "symbol" => {
+                let b = crate::cop::shared::node_bytes(source, child);
+                let name = b.strip_prefix(b":").unwrap_or(b);
+                if name == b"default" {
+                    return true;
+                }
+            }
+            "pair" => {
+                if let Some(key) = child.child_by_field_name("key").or_else(|| {
+                    let mut c2 = child.walk();
+                    child.named_children(&mut c2).next()
+                }) {
+                    let b = crate::cop::shared::node_bytes(source, key);
+                    let name = b.strip_prefix(b":").unwrap_or(b);
+                    if name == b"default" || name.starts_with(b"default") {
+                        // `default:` hash key symbol may include trailing `:`
+                        let bare = name.strip_suffix(b":").unwrap_or(name);
+                        if bare == b"default" {
+                            return true;
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    false
 }

@@ -19,7 +19,7 @@ impl Cop for HashAlignment {
         &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyle", "with_fixed_indentation");
+        let style = config.get_str("EnforcedStyle", "key");
         let width = config.get_usize("IndentationWidth", 2);
         align_items::check_align(
             self, source, node, style, width,

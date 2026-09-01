@@ -16,6 +16,22 @@ fn method_body(node: Node<'_>) -> Option<Node<'_>> {
     })
 }
 
+fn is_endless_method(source: &SourceFile, node: Node<'_>) -> bool {
+    // `def name(...) = expr` — no `end`, `=` after parameters/name.
+    if shared_has_end(node) {
+        return false;
+    }
+    let bytes = source.as_bytes();
+    let start = node.start_byte();
+    let end = node.end_byte().min(bytes.len());
+    bytes[start..end].contains(&b'=')
+}
+
+fn shared_has_end(node: Node<'_>) -> bool {
+    let mut cur = node.walk();
+    node.children(&mut cur).any(|c| !c.is_named() && c.kind() == "end")
+}
+
 fn body_is_empty(body: Node<'_>) -> bool {
     let mut cur = body.walk();
     !body
@@ -41,6 +57,10 @@ impl Cop for SingleLineMethods {
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
         if node.start_position().row != node.end_position().row {
+            return;
+        }
+        // RuboCop skips endless methods (`def foo = bar`).
+        if is_endless_method(source, node) {
             return;
         }
         let allow_empty = config.get_bool("AllowIfMethodIsEmpty", true);

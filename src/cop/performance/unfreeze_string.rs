@@ -13,6 +13,16 @@ fn empty_string_literal(source: &SourceFile, recv: Node<'_>) -> bool {
     matches!(node_text(source, recv).as_str(), "''" | "\"\"")
 }
 
+fn string_new_ok(node: Node<'_>) -> bool {
+    use crate::cop::shared::argument_nodes;
+    let args = argument_nodes(node);
+    match args.as_slice() {
+        [] => true,
+        [a] => matches!(a.kind(), "string" | "heredoc_beginning"),
+        _ => false,
+    }
+}
+
 fn is_unfreeze(source: &SourceFile, node: Node<'_>) -> bool {
     let Some(method) = call_method_name(source, node) else {
         return false;
@@ -21,7 +31,8 @@ fn is_unfreeze(source: &SourceFile, node: Node<'_>) -> bool {
         return false;
     };
     match method {
-        b"new" | b"to_s" | b"to_str" => is_const_named(source, recv, b"String"),
+        b"new" => is_const_named(source, recv, b"String") && string_new_ok(node),
+        b"to_s" | b"to_str" => is_const_named(source, recv, b"String"),
         b"dup" | b"clone" => empty_string_literal(source, recv),
         _ => false,
     }
@@ -55,4 +66,10 @@ impl Cop for UnfreezeString {
             "Prefer unary plus to get an unfrozen string literal.".to_string(),
         ));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(UnfreezeString, "cops/performance/unfreeze_string");
 }

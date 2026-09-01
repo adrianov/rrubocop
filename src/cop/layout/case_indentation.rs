@@ -47,6 +47,20 @@ fn is_case_branch(node: Node<'_>) -> bool {
         && !(node.kind() == "else" && parent.kind() == "when")
 }
 
+/// RuboCop `end_and_last_conditional_same_line?` — compact trailing branch/`end`.
+fn end_and_last_conditional_same_line(source: &SourceFile, case_node: Node<'_>) -> bool {
+    let Some(end_kw) = shared::end_keyword(case_node) else {
+        return false;
+    };
+    let end_line = shared::node_line(source, end_kw);
+    let mut cur = case_node.walk();
+    let last_branch = case_node
+        .named_children(&mut cur)
+        .filter(|c| matches!(c.kind(), "when" | "else" | "in"))
+        .last();
+    last_branch.is_some_and(|b| shared::node_line(source, b) == end_line)
+}
+
 impl Cop for CaseIndentation {
     fn name(&self) -> &'static str {
         "Layout/CaseIndentation"
@@ -70,7 +84,18 @@ impl Cop for CaseIndentation {
             return;
         }
         let parent = node.parent().unwrap();
+        // RuboCop skips single-line `case … when … end`.
+        let case_line = shared::node_line(source, parent);
+        let end_line = shared::end_keyword(parent)
+            .map(|e| shared::node_line(source, e))
+            .unwrap_or(case_line);
+        if case_line == end_line {
+            return;
+        }
         let style = config.get_str("EnforcedStyle", "case");
+        if style == "end" && end_and_last_conditional_same_line(source, parent) {
+            return;
+        }
         let expected = expected_col(
             source,
             parent,
@@ -92,4 +117,10 @@ impl Cop for CaseIndentation {
             expected,
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(CaseIndentation, "cops/layout/case_indentation");
 }

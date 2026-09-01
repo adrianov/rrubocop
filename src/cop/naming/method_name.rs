@@ -15,6 +15,13 @@ pub struct MethodName;
 static SNAKE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\A(?:[\p{Ll}\d_]+[!?=]?|[!<>=~+\-*/%&^|]+)\z").unwrap());
 
+/// rubocop-ast `OPERATOR_METHODS` — skipped by Naming/MethodName.
+const OPERATOR_METHODS: &[&[u8]] = &[
+    b"|", b"^", b"&", b"<=>", b"==", b"===", b"=~", b">", b">=", b"<", b"<=", b"<<", b">>", b"+",
+    b"-", b"*", b"/", b"%", b"**", b"~", b"+@", b"-@", b"!@", b"~@", b"[]", b"[]=", b"!", b"!=",
+    b"!~", b"`",
+];
+
 impl Cop for MethodName {
     fn name(&self) -> &'static str {
         "Naming/MethodName"
@@ -39,6 +46,9 @@ impl Cop for MethodName {
             return;
         };
         let name = node_bytes(source, name_node);
+        if OPERATOR_METHODS.contains(&name) {
+            return;
+        }
         if SNAKE.is_match(&String::from_utf8_lossy(name)) {
             return;
         }
@@ -50,4 +60,10 @@ impl Cop for MethodName {
             "Use snake_case for method names. (https://rubystyle.guide#snake-case-symbols-methods-vars)".into(),
         ));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(MethodName, "cops/naming/method_name");
 }

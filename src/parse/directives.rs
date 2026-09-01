@@ -101,8 +101,15 @@ pub fn parse(src: &str) -> Directives {
 }
 
 fn extract_rubocop_comment(line: &str) -> Option<&str> {
-    let idx = line.find('#')?;
-    line[idx + 1..].trim_start().strip_prefix("rubocop:")
+    let idx = crate::parse::comment_hash::first_comment_hash(line.as_bytes())?;
+    let comment = line[idx..].trim_start();
+    // RuboCop matches `# rubocop:` anywhere in the trailing comment (e.g.
+    // `# note # rubocop:disable Cop`), not only at the first `#`.
+    let lower = comment.to_ascii_lowercase();
+    let marker = "# rubocop:";
+    let pos = lower.find(marker)?;
+    // Map ASCII lower find back to original (ASCII-only marker).
+    Some(comment[pos + marker.len()..].trim_start())
 }
 
 fn cop_names(after: &str) -> Vec<String> {
@@ -112,4 +119,23 @@ fn cop_names(after: &str) -> Vec<String> {
         .map(|s| s.trim().trim_start_matches(':').to_string())
         .filter(|s| !s.is_empty())
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn disable_after_interpolation_hash() {
+        let d = parse("x = \"a #{b}\" # rubocop:disable Style/StringLiterals\n");
+        assert!(d.suppresses("Style/StringLiterals", 1));
+    }
+
+    #[test]
+    fn disable_after_other_hash_in_comment() {
+        let d = parse(
+            "x = 1 # priv: \"abc\" # rubocop:disable Lint/UnreachableCode\n",
+        );
+        assert!(d.suppresses("Lint/UnreachableCode", 1));
+    }
 }

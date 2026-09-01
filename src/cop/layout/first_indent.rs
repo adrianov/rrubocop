@@ -64,6 +64,15 @@ pub fn check_first(
     if shared::node_line(source, first) == start_line {
         return;
     }
+    if elems.len() > 1 {
+        let last = elems[elems.len() - 1];
+        if shared::node_line(source, last) != start_line
+            && shared::line_indent(source, first.start_byte())
+                == shared::line_indent(source, last.start_byte())
+        {
+            return;
+        }
+    }
     let expected = expected_col(source, node, width, style);
     let actual = shared::line_indent(source, first.start_byte());
     if actual != expected {

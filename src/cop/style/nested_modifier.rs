@@ -46,10 +46,14 @@ impl Cop for NestedModifier {
 }
 
 fn has_nested_mod(node: Node<'_>) -> bool {
-    let mut cur = node.walk();
-    if node.named_children(&mut cur).any(|c| MODS.contains(&c.kind())) {
-        return true;
+    if matches!(node.kind(), "while_modifier" | "until_modifier") {
+        if node
+            .child_by_field_name("body")
+            .is_some_and(|b| b.kind() == "begin")
+        {
+            return false;
+        }
     }
-    node.child_by_field_name("body")
-        .is_some_and(|body| MODS.contains(&body.kind()))
+    node.parent()
+        .is_some_and(|p| MODS.contains(&p.kind()))
 }

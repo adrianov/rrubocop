@@ -19,11 +19,63 @@ fn modifier_is_guard(source: &SourceFile, node: Node<'_>) -> bool {
     // Only `return`/`break`/`next`/`raise` … if/unless — not arbitrary modifiers.
     matches!(k, "return" | "break" | "next")
         || shared::call_method_name(source, body) == Some(b"raise")
-        || shared::node_bytes(source, body).starts_with(b"raise")
+        || (body.kind() == "identifier" && shared::node_bytes(source, body) == b"raise")
 }
 
 fn is_guard_node(source: &SourceFile, node: Node<'_>) -> bool {
     matches!(node.kind(), "if_modifier" | "unless_modifier") && modifier_is_guard(source, node)
+}
+
+fn is_statement_level(node: Node<'_>) -> bool {
+    let Some(parent) = node.parent() else {
+        return false;
+    };
+    // Exclude block/do bodies — Parser `begin` inside blocks is checked by RuboCop
+    // for other cops, but EmptyLineAfterGuardClause only flags top-level-ish stmts.
+    // Match RuboCop: guard is a direct child of the body that holds sequential stmts
+    // outside of a block argument (parent of block_body is block/do_block).
+    if matches!(parent.kind(), "block_body" | "block" | "do_block") {
+        return false;
+    }
+    matches!(
+        parent.kind(),
+        "body_statement" | "begin" | "then" | "else" | "ensure" | "rescue" | "program"
+    )
+}
+
+fn contains_guard_clause(source: &SourceFile, node: Node<'_>) -> bool {
+    if is_guard_node(source, node) {
+        return true;
+    }
+    let mut cur = node.walk();
+    for c in node.named_children(&mut cur) {
+        if matches!(c.kind(), "return" | "next" | "break") {
+            return true;
+        }
+        if contains_guard_clause(source, c) {
+            return true;
+        }
+    }
+    false
+}
+
+/// RuboCop `next_sibling_empty_or_guard_clause?`.
+fn next_sibling_is_guard_if(source: &SourceFile, node: Node<'_>) -> bool {
+    let Some(parent) = node.parent() else {
+        return false;
+    };
+    let mut cur = parent.walk();
+    let kids: Vec<_> = parent
+        .named_children(&mut cur)
+        .filter(|n| !matches!(n.kind(), "comment" | "rescue" | "ensure" | "else"))
+        .collect();
+    let Some(idx) = kids.iter().position(|k| k.id() == node.id()) else {
+        return false;
+    };
+    let Some(next) = kids.get(idx + 1) else {
+        return true;
+    };
+    matches!(next.kind(), "if" | "unless") && contains_guard_clause(source, *next)
 }
 
 fn next_is_kw_or_comment(bytes: &[u8], ls: usize) -> bool {
@@ -82,6 +134,11 @@ impl Cop for EmptyLineAfterGuardClause {
         if !is_guard_node(source, node) {
             return;
         }
+        // RuboCop only considers statement-level guards in begin/method bodies —
+        // not modifiers nested inside block arguments (`tap { raise x if err }`).
+        if !is_statement_level(node) {
+            return;
+        }
         let (end_line, _) = source.offset_to_line_col(node.end_byte().saturating_sub(1));
         let next = end_line + 1;
         if source.line_start(next).is_none() || shared::line_blank(source, next) {
@@ -96,6 +153,10 @@ impl Cop for EmptyLineAfterGuardClause {
         if line_starts_with_guard(source, next) {
             return;
         }
+        // RuboCop: next sibling `if` that itself contains a guard clause — no blank.
+        if next_sibling_is_guard_if(source, node) {
+            return;
+        }
         report::insert_newline(
             self,
             source,
@@ -105,4 +166,10 @@ impl Cop for EmptyLineAfterGuardClause {
             &mut corrections,
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(EmptyLineAfterGuardClause, "cops/layout/empty_line_after_guard_clause");
 }

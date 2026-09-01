@@ -35,6 +35,20 @@ fn find_percent(bytes: &[u8], mut i: usize) -> Option<usize> {
     None
 }
 
+fn consume_angle_named(bytes: &[u8], mut i: usize) -> usize {
+    // %<name>s — skip until '>' then type char
+    while i < bytes.len() && bytes[i] != b'>' {
+        i += 1;
+    }
+    if i < bytes.len() {
+        i += 1; // '>'
+    }
+    if i < bytes.len() {
+        i += 1; // type
+    }
+    i
+}
+
 /// Returns (next_index, counted_field, is_named).
 fn after_percent(bytes: &[u8], mut i: usize) -> (usize, bool, bool) {
     i += 1;
@@ -43,6 +57,9 @@ fn after_percent(bytes: &[u8], mut i: usize) -> (usize, bool, bool) {
     }
     if bytes.get(i) == Some(&b'{') {
         return (consume_named(bytes, i).saturating_add(1), true, true);
+    }
+    if bytes.get(i) == Some(&b'<') {
+        return (consume_angle_named(bytes, i + 1), true, true);
     }
     i = skip_flags(bytes, i);
     if i >= bytes.len() {
@@ -57,7 +74,8 @@ fn scan_percent(bytes: &[u8], i: usize) -> Option<(usize, bool, bool)> {
     Some(after_percent(bytes, i))
 }
 
-fn field_count(fmt: &str) -> Option<usize> {
+/// Named formats (`%{x}` / `%<x>s`) expect one hash/kwargs argument (RuboCop).
+fn field_count(fmt: &str) -> Option<(usize, bool)> {
     let bytes = fmt.as_bytes();
     let mut i = 0;
     let mut count = 0;
@@ -69,7 +87,7 @@ fn field_count(fmt: &str) -> Option<usize> {
         named |= is_named;
         i = next;
     }
-    (!named).then_some(count)
+    Some((count, named))
 }
 
 fn string_content(source: &SourceFile, node: Node<'_>) -> Option<String> {
@@ -91,6 +109,19 @@ fn string_content(source: &SourceFile, node: Node<'_>) -> Option<String> {
 fn array_len(node: Node<'_>) -> usize {
     let mut cur = node.walk();
     node.named_children(&mut cur).count()
+}
+
+fn count_format_args(args: &[Node<'_>]) -> usize {
+    if args.is_empty() {
+        return 0;
+    }
+    // Trailing keywords / hash → one arg (RuboCop / MRI format).
+    let all_pairs = args.iter().all(|a| a.kind() == "pair" || a.kind() == "hash");
+    if all_pairs {
+        return 1;
+    }
+    let has_kw = args.iter().any(|a| a.kind() == "pair");
+    args.iter().filter(|a| a.kind() != "pair").count() + usize::from(has_kw)
 }
 
 fn report_mismatch(
@@ -137,14 +168,17 @@ fn check_percent(
     let Some(fmt) = string_content(source, left) else {
         return;
     };
-    let Some(expected) = field_count(&fmt) else {
+    let Some((expected, named)) = field_count(&fmt) else {
         return;
     };
     let actual = if right.kind() == "array" {
         array_len(right)
+    } else if named {
+        1
     } else {
         1
     };
+    let expected = if named { 1 } else { expected };
     report_mismatch(cop, source, node, "String#%", actual, expected, diagnostics);
 }
 
@@ -168,11 +202,23 @@ fn check_format(
     let Some(fmt) = string_content(source, args[0]) else {
         return;
     };
-    let Some(expected) = field_count(&fmt) else {
+    let Some((expected, named)) = field_count(&fmt) else {
         return;
     };
+    let rest = &args[1..];
+    let actual = if named {
+        if rest.is_empty() {
+            0
+        } else {
+            1
+        }
+    } else {
+        // Keyword args / trailing hash count as one argument (Ruby format).
+        count_format_args(rest)
+    };
+    let expected = if named { 1 } else { expected };
     let method = String::from_utf8_lossy(meth);
-    report_mismatch(cop, source, node, &method, args.len() - 1, expected, diagnostics);
+    report_mismatch(cop, source, node, &method, actual, expected, diagnostics);
 }
 
 impl Cop for FormatParameterMismatch {
@@ -202,4 +248,10 @@ impl Cop for FormatParameterMismatch {
             check_format(self, source, node, diagnostics);
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(FormatParameterMismatch, "cops/lint/format_parameter_mismatch");
 }

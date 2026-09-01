@@ -13,7 +13,8 @@ use crate::parse::source::SourceFile;
 pub struct SpaceAroundOperators;
 
 fn space_ok(slice: &[u8]) -> bool {
-    slice == b" " || slice.iter().any(|&b| b == b'\n')
+    // RuboCop AllowForAlignment: any run of spaces (or a newline) is fine.
+    !slice.is_empty() && slice.iter().all(|&b| b == b' ' || b == b'\t' || b == b'\n' || b == b'\r')
 }
 
 fn sides<'a>(n: Node<'a>) -> Option<(Node<'a>, Node<'a>, Node<'a>)> {
@@ -68,10 +69,20 @@ fn check_binary(
     }
     let before = &bytes[left.end_byte()..op.start_byte()];
     let after = &bytes[op.end_byte()..right.start_byte()];
-    if space_ok(before) && space_ok(after) {
+    // Line-continuation `\` before the operator (next-line `||`) — RuboCop allows.
+    if before.contains(&b'\\') || after.contains(&b'\\') {
+        return;
+    }
+    if space_ok(before) && (space_ok(after) || after_ok_with_comment(after)) {
         return;
     }
     report_op(cop, source, left, right, op, op_bytes, diagnostics, corrections);
+}
+
+fn after_ok_with_comment(after: &[u8]) -> bool {
+    // `&& # rubocop:disable …\n` — newline after comment is fine.
+    let t = after.trim_ascii_start();
+    t.starts_with(b"#") || space_ok(after)
 }
 
 impl Cop for SpaceAroundOperators {

@@ -24,6 +24,19 @@ fn param_count(node: Node<'_>) -> usize {
     params.named_children(&mut cur).count()
 }
 
+fn has_single_positional_arg(node: Node<'_>) -> bool {
+    let Some(params) = node.child_by_field_name("parameters").or_else(|| {
+        let mut cur = node.walk();
+        node.named_children(&mut cur)
+            .find(|n| matches!(n.kind(), "method_parameters" | "parameters"))
+    }) else {
+        return false;
+    };
+    let mut cur = params.walk();
+    let kids: Vec<_> = params.named_children(&mut cur).collect();
+    kids.len() == 1 && kids[0].kind() == "identifier"
+}
+
 impl Cop for AccessorMethodName {
     fn name(&self) -> &'static str {
         "Naming/AccessorMethodName"
@@ -51,7 +64,7 @@ impl Cop for AccessorMethodName {
         let argc = param_count(node);
         let msg = if name.starts_with(b"get_") && argc == 0 {
             "Do not prefix reader method names with `get_`. (https://rubystyle.guide#accessor_methods)"
-        } else if name.starts_with(b"set_") && argc == 1 {
+        } else if name.starts_with(b"set_") && has_single_positional_arg(node) {
             "Do not prefix writer method names with `set_`. (https://rubystyle.guide#accessor_methods)"
         } else {
             return;

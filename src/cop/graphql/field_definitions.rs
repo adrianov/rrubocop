@@ -161,3 +161,9 @@ fn is_def_named(source: &SourceFile, node: Node<'_>, name: &str) -> bool {
             .map(|n| node_text(source, n) == name)
             .unwrap_or(false)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(FieldDefinitions, "cops/graphql/field_definitions");
+}

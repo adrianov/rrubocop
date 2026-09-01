@@ -11,9 +11,12 @@ use crate::parse::source::SourceFile;
 pub struct BinaryOperatorParameterName;
 
 const OPS: &[&[u8]] = &[
-    b"|", b"^", b"&", b"<=>", b"==", b"===", b"=~", b">", b">=", b"<", b"<=", b"<<", b">>", b"+",
-    b"-", b"*", b"/", b"%", b"**", b"~",
+    b"|", b"^", b"&", b"<=>", b"==", b"===", b"=~", b">", b">=", b"<", b"<=", b">>", b"+", b"-",
+    b"*", b"/", b"%", b"**", b"~",
 ];
+
+/// RuboCop excludes these from BinaryOperatorParameterName.
+const EXCLUDED: &[&[u8]] = &[b"+@", b"-@", b"[]", b"[]=", b"<<", b"===", b"`", b"=~"];
 
 impl Cop for BinaryOperatorParameterName {
     fn name(&self) -> &'static str {
@@ -64,7 +67,8 @@ impl Cop for BinaryOperatorParameterName {
 
 fn bad_op_param<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
     let name_node = node.child_by_field_name("name")?;
-    if !OPS.contains(&node_bytes(source, name_node)) {
+    let name = node_bytes(source, name_node);
+    if EXCLUDED.contains(&name) || !OPS.contains(&name) {
         return None;
     }
     let param = single_ident_param(node)?;

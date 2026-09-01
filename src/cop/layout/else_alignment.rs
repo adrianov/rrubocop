@@ -2,6 +2,7 @@
 
 use tree_sitter::Node;
 
+use crate::cop::layout::end_align::{assignment_context_base_col, same_line_assign_col};
 use crate::cop::layout::report;
 use crate::cop::shared;
 use crate::cop::{Cop, CopConfig};
@@ -29,41 +30,6 @@ fn last_when_col(source: &SourceFile, case_node: Node<'_>) -> Option<usize> {
         .filter(|n| matches!(n.kind(), "when" | "in"))
         .last()?;
     keyword_col(source, last, last.kind()).or_else(|| Some(shared::node_col(source, last)))
-}
-
-/// Column of first non-whitespace on the line when `kw_off` sits on an assignment RHS.
-fn assignment_line_indent(source: &SourceFile, kw_off: usize) -> Option<usize> {
-    let bytes = source.as_bytes();
-    let mut line_start = kw_off;
-    while line_start > 0 && bytes[line_start - 1] != b'\n' {
-        line_start -= 1;
-    }
-    let before = &bytes[line_start..kw_off];
-    if !has_bare_assign(before) {
-        return None;
-    }
-    before.iter().position(|&b| b != b' ' && b != b'\t')
-}
-
-fn has_bare_assign(before: &[u8]) -> bool {
-    let mut i = 0;
-    while i < before.len() {
-        if before[i] != b'=' {
-            i += 1;
-            continue;
-        }
-        let next = before.get(i + 1).copied().unwrap_or(b' ');
-        if matches!(next, b'=' | b'~' | b'>') {
-            i += 2;
-            continue;
-        }
-        if i > 0 && matches!(before[i - 1], b'!' | b'<' | b'>' | b'=') {
-            i += 1;
-            continue;
-        }
-        return true;
-    }
-    false
 }
 
 fn rescue_label(from: Node<'_>) -> &'static str {
@@ -108,7 +74,31 @@ fn if_align_col(source: &SourceFile, parent: Node<'_>, end_style: &str) -> Optio
     if !matches!(end_style, "variable" | "start_of_line") {
         return Some(kw_c);
     }
-    Some(assignment_line_indent(source, if_kw_offset(parent, kw)).unwrap_or(kw_c))
+    // RuboCop CheckAssignment: same-line `||=` / `=` / mass-assign → LHS column.
+    // Walk from the outermost `if` when parent is `elsif`.
+    let assign_anchor = outermost_if(parent);
+    Some(
+        same_line_assign_col(source, assign_anchor)
+            .or_else(|| {
+                assignment_context_base_col(
+                    source,
+                    if_kw_offset(assign_anchor, assign_anchor.kind()),
+                )
+            })
+            .or_else(|| assignment_context_base_col(source, if_kw_offset(parent, kw)))
+            .unwrap_or(kw_c),
+    )
+}
+
+fn outermost_if(mut node: Node<'_>) -> Node<'_> {
+    while let Some(p) = node.parent() {
+        if matches!(p.kind(), "if" | "unless") {
+            node = p;
+            continue;
+        }
+        break;
+    }
+    node
 }
 
 fn ancestor_kw_col(source: &SourceFile, from: Node<'_>) -> Option<usize> {
@@ -193,14 +183,27 @@ mod tests {
     crate::cop_fixture_tests!(ElseAlignment, "cops/layout/else_alignment");
 
     #[test]
-    fn variable_end_alignment_assignment() {
+    fn variable_style_or_asgn_if_else_no_offense() {
         let mut config = CopConfig::default();
         config
             .options
             .insert("EndAlignmentStyle".into(), serde_yml::Value::String("variable".into()));
         assert_cop_no_offenses_full_with_config(
             &ElseAlignment,
-            b"main_logger = if enabled?\n  a\nelse\n  b\nend\n",
+            b"      @x ||= if cond\n        1\n      else\n        2\n      end\n",
+            config,
+        );
+    }
+
+    #[test]
+    fn variable_style_mass_assign_if_else_no_offense() {
+        let mut config = CopConfig::default();
+        config
+            .options
+            .insert("EndAlignmentStyle".into(), serde_yml::Value::String("variable".into()));
+        assert_cop_no_offenses_full_with_config(
+            &ElseAlignment,
+            b"          a, b = if cond\n            [1, 2]\n          else\n            [3, 4]\n          end\n",
             config,
         );
     }

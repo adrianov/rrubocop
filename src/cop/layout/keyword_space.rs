@@ -88,7 +88,7 @@ fn skip_after_punct(next: u8) -> bool {
 }
 
 const ACCEPT_LEFT_PAREN: &[&str] = &[
-    "break", "defined?", "next", "not", "rescue", "super", "yield",
+    "break", "defined?", "next", "not", "rescue", "super", "yield", "while", "until",
 ];
 const ACCEPT_LEFT_BRACKET: &[&str] = &["super", "yield"];
 

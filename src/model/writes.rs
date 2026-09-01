@@ -95,6 +95,15 @@ impl Builder<'_> {
         if let Some(l) = n.child_by_field_name("left") {
             if l.kind() == "identifier" {
                 let name = self.text(l).to_string();
+                // `x += 1` reads `x` then writes — count the read for UselessAssignment.
+                self.record_read(
+                    scope,
+                    &name,
+                    crate::model::Read {
+                        byte: l.start_byte(),
+                        under_defined: false,
+                    },
+                );
                 let w = Write {
                     byte: l.start_byte(),
                     node_id: l.id(),

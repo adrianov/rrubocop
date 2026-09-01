@@ -85,5 +85,7 @@ fn right_string(node: Node<'_>) -> Option<Node<'_>> {
 
 fn left_operand(node: Node<'_>) -> Option<Node<'_>> {
     let mut cur = node.walk();
-    node.children(&mut cur).find(|ch| ch.is_named())
+    node.children(&mut cur)
+        .find(|ch| ch.is_named())
+        .filter(|n| matches!(n.kind(), "array" | "percent_literal"))
 }

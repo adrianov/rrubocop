@@ -20,11 +20,34 @@ fn is_bare_mod_call(source: &SourceFile, node: Node<'_>) -> bool {
             call_method_name(source, node),
             Some(b"private" | b"protected" | b"public" | b"module_function")
         )
+        && node.child_by_field_name("receiver").is_none()
         && node.child_by_field_name("arguments").is_none()
 }
 
 fn is_modifier(source: &SourceFile, node: Node<'_>) -> bool {
     is_mod_id(source, node) || is_bare_mod_call(source, node)
+}
+
+fn is_attr_call(source: &SourceFile, node: Node<'_>) -> bool {
+    matches!(
+        call_method_name(source, node),
+        Some(b"attr" | b"attr_reader" | b"attr_writer" | b"attr_accessor")
+    ) && node.child_by_field_name("receiver").is_none()
+}
+
+fn has_following_method(source: &SourceFile, children: &[Node<'_>], from: usize) -> bool {
+    for next in &children[from..] {
+        if is_mod_id(source, *next) || is_bare_mod_call(source, *next) {
+            return false;
+        }
+        if matches!(next.kind(), "method" | "singleton_method") {
+            return true;
+        }
+        if is_attr_call(source, *next) {
+            return true;
+        }
+    }
+    false
 }
 
 fn mod_name(source: &SourceFile, node: Node<'_>) -> String {
@@ -34,18 +57,6 @@ fn mod_name(source: &SourceFile, node: Node<'_>) -> String {
     call_method_name(source, node)
         .map(|m| String::from_utf8_lossy(m).into_owned())
         .unwrap_or_default()
-}
-
-fn has_following_method(source: &SourceFile, children: &[Node<'_>], from: usize) -> bool {
-    for next in &children[from..] {
-        if is_mod_id(source, *next) {
-            return false;
-        }
-        if matches!(next.kind(), "method" | "singleton_method") {
-            return true;
-        }
-    }
-    false
 }
 
 fn report_useless(
@@ -106,4 +117,10 @@ impl Cop for UselessAccessModifier {
         let children: Vec<_> = body.named_children(&mut cur).collect();
         scan_modifiers(self, source, &children, diagnostics);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(UselessAccessModifier, "cops/lint/useless_access_modifier");
 }

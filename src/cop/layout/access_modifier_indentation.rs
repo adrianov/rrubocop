@@ -26,6 +26,10 @@ fn is_modifier(name: &[u8]) -> bool {
 fn enclosing_type(node: Node<'_>) -> Option<Node<'_>> {
     let mut p = node.parent();
     while let Some(n) = p {
+        // `class_methods do` / similar — RuboCop treats the block as the module-like scope.
+        if matches!(n.kind(), "do_block" | "block") {
+            return Some(n);
+        }
         if matches!(n.kind(), "class" | "module" | "singleton_class") {
             return Some(n);
         }
@@ -34,8 +38,33 @@ fn enclosing_type(node: Node<'_>) -> Option<Node<'_>> {
     None
 }
 
-fn expected_col(style: &str, base: usize, width: usize) -> usize {
-    if style == "outdent" { base } else { base + width }
+fn base_col(source: &SourceFile, enclosing: Node<'_>) -> usize {
+    if matches!(enclosing.kind(), "do_block" | "block") {
+        // Align with sibling method defs: body indent (first stmt), not `do` column.
+        if let Some(body) = enclosing.child_by_field_name("body") {
+            let mut cur = body.walk();
+            if let Some(first) = body
+                .named_children(&mut cur)
+                .find(|c| !matches!(c.kind(), "comment" | "rescue" | "ensure"))
+            {
+                return shared::line_indent(source, first.start_byte());
+            }
+        }
+        return shared::line_indent(source, enclosing.start_byte());
+    }
+    shared::node_col(source, enclosing)
+}
+
+fn expected_col(style: &str, base: usize, width: usize, enclosing_is_block: bool) -> usize {
+    if enclosing_is_block {
+        // Inside `class_methods do`, modifiers align with method defs (same indent).
+        return base;
+    }
+    if style == "outdent" {
+        base
+    } else {
+        base + width
+    }
 }
 
 fn report_modifier(
@@ -89,10 +118,24 @@ impl Cop for AccessModifierIndentation {
         if !is_modifier(name) {
             return;
         }
+        // `obj.private` / argument identifiers are not access modifiers.
+        if node.kind() == "identifier"
+            && matches!(
+                node.parent().map(|p| p.kind()),
+                Some("call" | "command" | "command_call")
+            )
+        {
+            return;
+        }
+        if shared::call_receiver(node).is_some() {
+            return;
+        }
         let Some(enclosing) = enclosing_type(node) else {
             return;
         };
-        let expected = expected_col(style, shared::node_col(source, enclosing), width);
+        let base = base_col(source, enclosing);
+        let is_block = matches!(enclosing.kind(), "do_block" | "block");
+        let expected = expected_col(style, base, width, is_block);
         if shared::node_col(source, node) == expected {
             return;
         }

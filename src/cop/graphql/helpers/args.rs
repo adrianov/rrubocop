@@ -41,7 +41,9 @@ pub fn sym_text(source: &SourceFile, node: Node<'_>) -> Option<String> {
 }
 
 pub fn first_sym_arg(source: &SourceFile, node: Node<'_>) -> Option<String> {
-    let first = *argument_nodes(node).first()?;
+    let first = argument_nodes(node)
+        .into_iter()
+        .find(|n| n.kind() != "comment")?;
     sym_text(source, first).or_else(|| {
         if matches!(first.kind(), "string" | "string_content") {
             Some(strip_quotes(&node_text(source, first)))
@@ -49,6 +51,11 @@ pub fn first_sym_arg(source: &SourceFile, node: Node<'_>) -> Option<String> {
             None
         }
     })
+}
+
+/// Plain `field :name` send — excludes block/resolver bodies (`field :x do`).
+pub fn plain_field_definition(source: &SourceFile, node: Node<'_>) -> bool {
+    is_field_call(source, node) && call_block(node).is_none()
 }
 
 fn strip_quotes(s: &str) -> String {

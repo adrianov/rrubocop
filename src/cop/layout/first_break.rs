@@ -78,11 +78,20 @@ fn first_break_target<'a>(
     if elems.len() < min_elems || !uses_parens(source, node, first) {
         return None;
     }
-    let start = shared::node_line(source, node);
-    if start == span_end_line(source, &elems, node, allow_multiline_final) {
+    // RuboCop uses the send/call node's first line (includes receiver). When the
+    // receiver is on a prior line (`recv\n  .with(a,`), first arg is not on the
+    // call's first line → no offense.
+    let call_start = node
+        .parent()
+        .map(|p| shared::node_line(source, p))
+        .unwrap_or_else(|| shared::node_line(source, node));
+    if call_start != shared::node_line(source, first) {
         return None;
     }
-    (shared::node_line(source, first) == start).then_some(first)
+    if call_start == span_end_line(source, &elems, node, allow_multiline_final) {
+        return None;
+    }
+    Some(first)
 }
 
 /// Like [`check_first_break_min`], with `AllowMultilineFinalElement` support.

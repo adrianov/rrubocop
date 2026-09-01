@@ -60,6 +60,17 @@ fn check_kw(
     diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     if !matches!(n.kind(), "rescue" | "ensure" | "else") { return; }
+    // RuboCop only flags `else` inside begin/rescue — not if/case else.
+    if n.kind() == "else" {
+        let Some(parent) = n.parent() else { return; };
+        if !matches!(parent.kind(), "begin" | "body_statement") {
+            return;
+        }
+        let mut cur = parent.walk();
+        if !parent.named_children(&mut cur).any(|c| c.kind() == "rescue") {
+            return;
+        }
+    }
     let line = shared::node_line(source, n);
     let kw = n.kind();
     check_before(cop, source, line, kw, diagnostics, corrections);

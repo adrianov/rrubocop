@@ -25,7 +25,14 @@ fn is_modifier(name: &[u8]) -> bool {
 
 fn bare_modifier(n: Node<'_>) -> bool {
     if n.kind() == "identifier" {
-        return !matches!(n.parent().map(|p| p.kind()), Some("call" | "command"));
+        return !matches!(
+            n.parent().map(|p| p.kind()),
+            Some("call" | "command" | "command_call")
+        );
+    }
+    // `obj.private` is a method call, not an access modifier.
+    if crate::cop::shared::call_receiver(n).is_some() {
+        return false;
     }
     match n.child_by_field_name("arguments") {
         Some(a) => a.named_child_count() == 0,

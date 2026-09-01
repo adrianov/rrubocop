@@ -1,8 +1,30 @@
-//! Helpers for Style/TrailingCommaInArguments (RuboCop `elements` / line checks).
+//! Helpers for Style/TrailingCommaIn*Literal (and Arguments).
 
 use tree_sitter::Node;
 
 use crate::parse::source::SourceFile;
+
+pub(crate) fn begins_its_line(source: &SourceFile, offset: usize) -> bool {
+    crate::cop::shared::line_indent(source, offset) == source.offset_to_line_col(offset).1
+}
+
+/// RuboCop `allowed_multiline_argument?` — one element and closer not alone on its line.
+pub(crate) fn skip_single_elem_inline_close(
+    source: &SourceFile,
+    node: Node<'_>,
+    close_ch: u8,
+) -> bool {
+    let mut cur = node.walk();
+    let n = node
+        .named_children(&mut cur)
+        .filter(|c| c.kind() != "comment")
+        .count();
+    if n != 1 {
+        return false;
+    }
+    let close = node.end_byte().saturating_sub(1);
+    source.as_bytes().get(close) == Some(&close_ch) && !begins_its_line(source, close)
+}
 
 fn end_line(source: &SourceFile, start: usize, end: usize) -> usize {
     source
@@ -64,7 +86,11 @@ pub(crate) fn effective_locs(source: &SourceFile, args: &[Node<'_>]) -> Vec<(usi
 }
 
 /// RuboCop `no_elements_on_same_line?`.
-pub(crate) fn each_elem_own_line(source: &SourceFile, locs: &[(usize, usize)], close: usize) -> bool {
+pub(crate) fn each_elem_own_line(
+    source: &SourceFile,
+    locs: &[(usize, usize)],
+    close: usize,
+) -> bool {
     for w in locs.windows(2) {
         if end_line(source, w[0].0, w[0].1) == source.offset_to_line_col(w[1].0).0 {
             return false;
@@ -75,10 +101,6 @@ pub(crate) fn each_elem_own_line(source: &SourceFile, locs: &[(usize, usize)], c
         Some(_) => true,
         None => false,
     }
-}
-
-fn begins_its_line(source: &SourceFile, offset: usize) -> bool {
-    crate::cop::shared::line_indent(source, offset) == source.offset_to_line_col(offset).1
 }
 
 pub(crate) fn should_have_comma(

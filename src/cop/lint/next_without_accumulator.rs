@@ -42,11 +42,18 @@ impl Cop for NextWithoutAccumulator {
             if n.kind() != "next" {
                 return;
             }
-            // next without arguments
-            if n.named_child_count() > 0 {
+            // tree-sitter nests `next` / `next` — only flag the outer node.
+            if n.parent().is_some_and(|p| p.kind() == "next") {
                 return;
             }
-            // skip nested blocks' reduce — breadth-first: flag all bare next in this block
+            // RuboCop: only bare `next` (no value). `next acc if …` is fine.
+            if next_has_value(source, n) {
+                return;
+            }
+            // Only the reduce's own block — not nested blocks.
+            if parent_block(n).is_some_and(|b| b.id() != block.id()) {
+                return;
+            }
             let (line, col) = source.offset_to_line_col(n.start_byte());
             diagnostics.push(self.diagnostic(
                 source,
@@ -56,4 +63,47 @@ impl Cop for NextWithoutAccumulator {
             ));
         });
     }
+}
+
+fn next_has_value(source: &SourceFile, node: Node<'_>) -> bool {
+    // Ignore nested token `next` child when counting value children.
+    let mut cur = node.walk();
+    if node
+        .named_children(&mut cur)
+        .any(|c| c.kind() != "next" && c.kind() != "comment")
+    {
+        return true;
+    }
+    let (line, _) = source.offset_to_line_col(node.start_byte());
+    let Some(text) = source.line_text(line) else {
+        return false;
+    };
+    let line_start = source.line_start(line).unwrap_or(0);
+    let byte_col = node.start_byte().saturating_sub(line_start);
+    let rest = text.get(byte_col..).unwrap_or(text);
+    let after = rest.strip_prefix("next").unwrap_or("");
+    let before_mod = after
+        .split_once(" if ")
+        .or_else(|| after.split_once("\tif "))
+        .or_else(|| after.split_once(" unless "))
+        .map(|(a, _)| a)
+        .unwrap_or(after);
+    before_mod.chars().any(|c| !c.is_whitespace())
+}
+
+fn parent_block(node: Node<'_>) -> Option<Node<'_>> {
+    let mut p = node.parent();
+    while let Some(n) = p {
+        if matches!(n.kind(), "block" | "do_block") {
+            return Some(n);
+        }
+        p = n.parent();
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(NextWithoutAccumulator, "cops/lint/next_without_accumulator");
 }

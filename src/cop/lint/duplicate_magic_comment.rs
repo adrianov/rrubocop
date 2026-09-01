@@ -13,15 +13,31 @@ fn magic_kind(line: &str) -> Option<&'static str> {
     if !t.starts_with('#') {
         return None;
     }
-    let lower = t.to_ascii_lowercase();
-    if lower.contains("frozen_string_literal") {
+    // After `#`, require a real magic key — skip `# # frozen_string_literal: …`
+    // (commented-out magic comments are not active).
+    let after_hash = t[1..].trim_start();
+    if after_hash.starts_with('#') {
+        return None;
+    }
+    let lower = after_hash.to_ascii_lowercase();
+    if lower.starts_with("frozen_string_literal:") || lower.starts_with("frozen-string-literal:") {
         Some("frozen_string_literal")
-    } else if lower.contains("encoding:") || lower.contains("coding:") || lower.contains("encoding =")
-    {
+    } else if is_encoding_magic(&lower) {
         Some("encoding")
+    } else if lower.starts_with("shareable_constant_value:") {
+        Some("shareable_constant_value")
     } else {
         None
     }
+}
+
+/// True encoding magic comments only — not prose mentioning `Encoding::…`.
+fn is_encoding_magic(lower_after_hash: &str) -> bool {
+    let s = lower_after_hash.trim_start_matches(|c: char| c == '-' || c == '*' || c == ' ');
+    s.starts_with("encoding:")
+        || s.starts_with("coding:")
+        || s.starts_with("encoding =")
+        || (s.contains("-*-") && (s.contains("encoding:") || s.contains("coding:")))
 }
 
 fn line_span(offset: usize, line: &[u8], total: usize) -> (usize, usize) {
@@ -125,4 +141,10 @@ impl Cop for DuplicateMagicComment {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(DuplicateMagicComment, "cops/lint/duplicate_magic_comment");
 }

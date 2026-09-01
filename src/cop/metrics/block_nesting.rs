@@ -9,16 +9,10 @@ use crate::parse::source::SourceFile;
 
 pub struct BlockNesting;
 
-const NESTING: &[&str] = &[
-    "if",
-    "unless",
-    "case",
-    "while",
-    "until",
-    "for",
-    "begin",
-    "rescue",
-];
+/// RuboCop `NESTING_BLOCKS`: case/if/while/until/for/`resbody` — not `begin`.
+/// Tree-sitter has no `resbody`; `rescue` is the resbody equivalent. Counting
+/// `begin` double-counts `begin/rescue` (and else-wrapped begin) vs RuboCop.
+const NESTING: &[&str] = &["if", "unless", "case", "while", "until", "for", "rescue"];
 
 impl Cop for BlockNesting {
     fn name(&self) -> &'static str {
@@ -60,7 +54,7 @@ fn visit(
     cop: &BlockNesting,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let next = if is_nest(node.kind(), count_blocks, count_modifiers) {
+    let next = if node.is_named() && is_nest(node.kind(), count_blocks, count_modifiers) {
         let new_depth = depth + 1;
         if new_depth > max {
             let (line, column) = source.offset_to_line_col(node.start_byte());
@@ -70,6 +64,8 @@ fn visit(
                 column,
                 format!("Avoid more than {max} levels of block nesting. [{new_depth}/{max}]"),
             ));
+            // RuboCop ignore_node: don't report nested overflows under this one.
+            return;
         }
         new_depth
     } else {
@@ -89,4 +85,10 @@ fn is_nest(kind: &str, count_blocks: bool, count_modifiers: bool) -> bool {
                 kind,
                 "if_modifier" | "unless_modifier" | "while_modifier" | "until_modifier"
             ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(BlockNesting, "cops/metrics/block_nesting");
 }

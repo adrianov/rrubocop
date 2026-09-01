@@ -60,6 +60,9 @@ impl Cop for ReadWriteAttribute {
         let Some((repl, method)) = attribute_rewrite(source, node) else {
             return;
         };
+        if within_shadowing_method(source, node) {
+            return;
+        }
         let (line, col) = source.offset_to_line_col(node.start_byte());
         let mut diag = self.diagnostic(
             source,
@@ -78,4 +81,45 @@ impl Cop for ReadWriteAttribute {
         }
         diagnostics.push(diag);
     }
+}
+
+fn within_shadowing_method(source: &SourceFile, node: Node<'_>) -> bool {
+    let args = argument_nodes(node);
+    let Some(first) = args.first() else {
+        return false;
+    };
+    let Some(attr) = sym_arg(source, *first) else {
+        return false;
+    };
+    let Some(method) = enclosing_method(node) else {
+        return false;
+    };
+    let Some(name) = method
+        .child_by_field_name("name")
+        .map(|n| node_text(source, n))
+    else {
+        return false;
+    };
+    let shadow = if call_method_name(source, node) == Some(b"write_attribute") {
+        format!("{attr}=")
+    } else {
+        attr
+    };
+    name == shadow
+}
+
+fn sym_arg(source: &SourceFile, node: Node<'_>) -> Option<String> {
+    let t = node_text(source, node);
+    Some(t.trim_start_matches(':').to_string())
+}
+
+fn enclosing_method(node: Node<'_>) -> Option<Node<'_>> {
+    let mut p = node.parent();
+    while let Some(n) = p {
+        if matches!(n.kind(), "method" | "singleton_method") {
+            return Some(n);
+        }
+        p = n.parent();
+    }
+    None
 }

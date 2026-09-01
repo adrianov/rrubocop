@@ -24,16 +24,79 @@ fn line_indent(line: &[u8]) -> Option<usize> {
 }
 
 fn ends_with_open_delim(line: &[u8]) -> bool {
-    let mut i = line.len();
+    if line_has_unclosed_open(line) {
+        return true;
+    }
+    let code = strip_line_comment(line);
+    let mut i = code.len();
     while i > 0 {
         i -= 1;
-        match line[i] {
+        match code[i] {
             b' ' | b'\t' | b'\r' => continue,
             b'(' | b'[' | b'{' => return true,
             _ => return false,
         }
     }
     false
+}
+
+fn line_has_unclosed_open(line: &[u8]) -> bool {
+    let code = strip_line_comment(line);
+    let mut depth = 0i32;
+    for &b in code {
+        match b {
+            b'{' | b'(' | b'[' => depth += 1,
+            b'}' | b')' | b']' => depth -= 1,
+            _ => {}
+        }
+    }
+    depth > 0
+}
+
+fn strip_line_comment(line: &[u8]) -> &[u8] {
+    match crate::parse::comment_hash::first_comment_hash(line) {
+        Some(i) => &line[..i],
+        None => line,
+    }
+}
+
+fn ends_with_continuation(line: &[u8]) -> bool {
+    let code = strip_line_comment(line);
+    let t = trim_ascii_end(code);
+    if t.is_empty() {
+        return false;
+    }
+    if matches!(t[t.len() - 1], b',' | b'\\' | b'(' | b'[' | b'{') {
+        return true;
+    }
+    if t.ends_with(b"->") || t.ends_with(b"=>") {
+        return true;
+    }
+    trailing_if_kw(t)
+}
+
+fn trim_ascii_end(code: &[u8]) -> &[u8] {
+    let mut end = code.len();
+    while end > 0 && matches!(code[end - 1], b' ' | b'\t' | b'\r') {
+        end -= 1;
+    }
+    &code[..end]
+}
+
+fn trailing_if_kw(t: &[u8]) -> bool {
+    let Ok(s) = std::str::from_utf8(t) else {
+        return false;
+    };
+    let s = s.trim_end();
+    if s.ends_with("then") || s.ends_with("end") {
+        return false;
+    }
+    let st = s.trim_start();
+    s.contains(" if ")
+        || s.contains(" unless ")
+        || st.starts_with("if ")
+        || st.starts_with("unless ")
+        || st.starts_with("else")
 }
 
 fn expected_indent(indent: usize, prev: usize, width: usize) -> usize {
@@ -80,18 +143,33 @@ impl Cop for IndentationWidth {
         let width = config.get_usize("Width", 2);
         let mut prev_indent: Option<usize> = None;
         let mut prev_line: &[u8] = b"";
+        let mut cont_base: Option<usize> = None;
         for (i, line) in source.lines().enumerate() {
             let Some(indent) = line_indent(line) else { continue; };
+            let off = source.line_start(i + 1).unwrap_or(0);
             if let Some(prev) = prev_indent {
-                // RuboCop IndentationWidth is AST-based; aligned content after `(`/`[`/`{`
-                // is not a Width step (e.g. `params: (\n               …`).
-                let aligned_after_open = indent > prev && ends_with_open_delim(prev_line);
-                if !aligned_after_open && bad_step(indent, prev, width) {
+                let start_aligned = indent > prev
+                    && (ends_with_open_delim(prev_line) || ends_with_continuation(prev_line));
+                let in_aligned = cont_base.is_some_and(|b| indent >= b.saturating_sub(1));
+                if start_aligned || in_aligned {
+                    if cont_base.is_none() {
+                        cont_base = Some(prev);
+                    }
+                    prev_line = line;
+                    continue;
+                }
+                cont_base = None;
+                if bad_step(indent, prev, width) {
                     report_width(
                         self, source, code_map, i + 1, indent, prev, width,
                         diagnostics, &mut corrections,
                     );
                 }
+            }
+            // Don't use string/heredoc/comment content as indentation baseline.
+            if code_map.covers(off + indent) {
+                prev_line = line;
+                continue;
             }
             prev_indent = Some(indent);
             prev_line = line;

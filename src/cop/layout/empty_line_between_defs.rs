@@ -78,6 +78,29 @@ fn gap_blanks(source: &SourceFile, a: Node<'_>, b: Node<'_>) -> (usize, usize, u
     (a_end, b_start, blanks)
 }
 
+/// RuboCop `multiple_blank_lines_groups?` — extra blanks OK when comments separate groups.
+fn multiple_blank_groups(source: &SourceFile, a_end: usize, b_start: usize) -> bool {
+    if b_start <= a_end + 1 {
+        return false;
+    }
+    let mut blank_idxs = Vec::new();
+    let mut non_blank_idxs = Vec::new();
+    for line in (a_end + 1)..b_start {
+        if is_blank_line(source, line) {
+            blank_idxs.push(line);
+        } else {
+            non_blank_idxs.push(line);
+        }
+    }
+    let Some(&blank_start) = blank_idxs.iter().max() else {
+        return false;
+    };
+    let Some(&non_blank_end) = non_blank_idxs.iter().min() else {
+        return false;
+    };
+    blank_start > non_blank_end
+}
+
 fn one_line_def(source: &SourceFile, n: Node<'_>) -> bool {
     shared::node_line(source, n) == source.offset_to_line_col(n.end_byte().saturating_sub(1)).0
 }
@@ -124,6 +147,9 @@ fn check_pair(
     }
     let (a_end, b_start, blanks) = gap_blanks(source, a, b);
     if blanks == number {
+        return;
+    }
+    if multiple_blank_groups(source, a_end, b_start) {
         return;
     }
     if allow_adjacent_one_line && one_line_def(source, a) && one_line_def(source, b) {
@@ -191,7 +217,7 @@ impl Cop for EmptyLineBetweenDefs {
         let number = config.get_usize("NumberOfEmptyLines", 1);
         let allow_adjacent = config.get_bool("AllowAdjacentOneLineDefs", true);
         shared::for_each_descendant(tree.root_node(), |n| {
-            if matches!(n.kind(), "body_statement" | "begin") {
+            if matches!(n.kind(), "body_statement" | "begin" | "program") {
                 check_body(
                     self,
                     source,
@@ -204,4 +230,10 @@ impl Cop for EmptyLineBetweenDefs {
             }
         });
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(EmptyLineBetweenDefs, "cops/layout/empty_line_between_defs");
 }

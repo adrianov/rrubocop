@@ -48,3 +48,7 @@ Class.new do
   def secret
   end
 end
+
+# Method call named `private` is not an access modifier
+x = obj.reload.private
+it { expect(x.private).to be_truthy }

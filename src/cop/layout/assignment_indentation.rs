@@ -11,6 +11,21 @@ use crate::parse::source::SourceFile;
 
 pub struct AssignmentIndentation;
 
+fn assignment_eq_line(
+    source: &SourceFile,
+    node: Node<'_>,
+    left: Node<'_>,
+    right: Node<'_>,
+) -> usize {
+    let search_from = left.end_byte();
+    let search_to = right.start_byte();
+    let bytes = source.as_bytes();
+    if let Some(rel) = bytes[search_from..search_to].iter().position(|&b| b == b'=') {
+        return source.offset_to_line_col(search_from + rel).0;
+    }
+    shared::node_line(source, node)
+}
+
 impl Cop for AssignmentIndentation {
     fn name(&self) -> &'static str { "Layout/AssignmentIndentation" }
     fn supports_autocorrect(&self) -> bool { true }
@@ -23,7 +38,11 @@ impl Cop for AssignmentIndentation {
         let width = config.get_usize("IndentationWidth", 2);
         let Some(left) = node.child_by_field_name("left") else { return; };
         let Some(right) = node.child_by_field_name("right") else { return; };
-        if shared::node_line(source, right) <= shared::node_line(source, left) { return; }
+        // RuboCop keys off the `=` line — mass-assign `a,\n b = x` keeps `=` with last LHS.
+        let eq_line = assignment_eq_line(source, node, left, right);
+        if shared::node_line(source, right) <= eq_line {
+            return;
+        }
         let expected = shared::line_indent(source, left.start_byte()) + width;
         let actual = shared::line_indent(source, right.start_byte());
         if actual == expected { return; }
