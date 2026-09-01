@@ -14,9 +14,6 @@ impl Cop for DeletePrefix {
         "Performance/DeletePrefix"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "string", "command"]
-    }
 
     fn check_node(
         &self,

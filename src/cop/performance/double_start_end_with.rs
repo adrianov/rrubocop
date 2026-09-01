@@ -14,9 +14,6 @@ impl Cop for DoubleStartEndWith {
         "Performance/DoubleStartEndWith"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "binary", "command"]
-    }
 
     fn check_node(
         &self,

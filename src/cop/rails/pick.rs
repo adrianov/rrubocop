@@ -14,9 +14,6 @@ impl Cop for Pick {
         "Rails/Pick"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "command"]
-    }
 
     fn check_node(
         &self,

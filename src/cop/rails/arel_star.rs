@@ -13,9 +13,6 @@ impl Cop for ArelStar {
         "Rails/ArelStar"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "scope_resolution", "constant", "string", "command"]
-    }
 
     fn check_node(
         &self,

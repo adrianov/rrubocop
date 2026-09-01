@@ -23,6 +23,10 @@ impl Cop for Attr {
         &["call", "command"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"attr"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

@@ -18,9 +18,6 @@ impl Cop for ExpectChange {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["block", "call", "scope_resolution", "constant", "instance_variable", "identifier", "body_statement", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

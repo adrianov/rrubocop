@@ -23,6 +23,10 @@ impl Cop for Proc {
         &["call"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"new"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

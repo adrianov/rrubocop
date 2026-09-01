@@ -22,9 +22,6 @@ impl Cop for BeforeAfterAll {
         &["**/spec/spec_helper.rb", "**/spec/rails_helper.rb", "**/spec/support/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

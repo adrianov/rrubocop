@@ -18,9 +18,6 @@ impl Cop for RedundantAllowNil {
         &["**/app/models/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "call", "false", "hash", "symbol", "true", "command"]
-    }
 
     fn check_node(
         &self,

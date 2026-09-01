@@ -18,9 +18,6 @@ impl Cop for Delegate {
         &["**/app/controllers/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "scope_resolution", "constant", "method", "instance_variable", "identifier", "body_statement", "command"]
-    }
 
     fn check_node(
         &self,

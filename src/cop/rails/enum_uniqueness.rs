@@ -22,9 +22,6 @@ impl Cop for EnumUniqueness {
         &["**/app/models/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "call", "hash", "command"]
-    }
 
     fn check_node(
         &self,

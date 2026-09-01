@@ -18,9 +18,6 @@ impl Cop for RepeatedExampleGroupBody {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["begin", "call", "class", "method", "lambda", "module", "program", "command"]
-    }
 
     fn check_node(
         &self,

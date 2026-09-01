@@ -18,9 +18,6 @@ impl Cop for RepeatedIncludeExample {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["block", "call", "instance_variable", "string", "identifier", "body_statement", "command"]
-    }
 
     fn check_node(
         &self,

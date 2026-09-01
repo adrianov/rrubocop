@@ -18,9 +18,6 @@ impl Cop for HasAndBelongsToMany {
         &["**/app/models/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "command"]
-    }
 
     fn check_node(
         &self,

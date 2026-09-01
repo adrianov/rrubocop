@@ -14,9 +14,6 @@ impl Cop for RedundantBlockCall {
         "Performance/RedundantBlockCall"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "command"]
-    }
 
     fn check_node(
         &self,

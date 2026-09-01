@@ -14,9 +14,6 @@ impl Cop for Presence {
         "Rails/Presence"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "if", "rescue", "unless", "while", "command"]
-    }
 
     fn check_node(
         &self,

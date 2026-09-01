@@ -14,9 +14,6 @@ impl Cop for LinkToBlank {
         "Rails/LinkToBlank"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "call", "hash", "string", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

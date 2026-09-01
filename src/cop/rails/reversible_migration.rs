@@ -18,9 +18,6 @@ impl Cop for ReversibleMigration {
         &["db/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "block", "call", "class", "method", "hash", "body_statement", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

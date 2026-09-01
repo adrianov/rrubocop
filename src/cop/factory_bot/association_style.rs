@@ -159,6 +159,10 @@ impl Cop for AssociationStyle {
         &["call", "command"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"factory", b"trait"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

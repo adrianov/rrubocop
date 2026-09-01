@@ -18,9 +18,6 @@ impl Cop for AroundBlock {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["begin", "block", "call", "if", "identifier", "body_statement", "yield", "command"]
-    }
 
     fn check_node(
         &self,

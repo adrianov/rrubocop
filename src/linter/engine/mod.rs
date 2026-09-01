@@ -14,7 +14,6 @@ use crate::cop::{Cop, CopConfig};
 use crate::correction::{Correction, CorrectionSet};
 use crate::diagnostic::Diagnostic;
 use crate::parse;
-use crate::parse::codemap::CodeMap;
 use crate::parse::directives;
 use crate::parse::source::SourceFile;
 
@@ -91,9 +90,8 @@ fn run_phases(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) {
-    let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
     source_phase::run_line_phase(source, active, mode, diagnostics, corrections);
-    source_phase::run_source_phase(source, tree, &code_map, active, mode, diagnostics, corrections);
+    source_phase::run_source_phase(source, tree, active, mode, diagnostics, corrections);
     node_phase::run_node_phase(source, tree, active, registry, mode, diagnostics, corrections);
 }
 

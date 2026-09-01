@@ -28,14 +28,13 @@ pub(super) fn run_line_phase(
 pub(super) fn run_source_phase(
     source: &SourceFile,
     tree: &tree_sitter::Tree,
-    code_map: &CodeMap,
     active: &[ActiveCop<'_>],
     mode: AutocorrectMode,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) {
     run_file_model_cops(source, tree, active, mode, diagnostics, corrections);
-    run_plain_source_cops(source, tree, code_map, active, mode, diagnostics, corrections);
+    run_plain_source_cops(source, tree, active, mode, diagnostics, corrections);
 }
 
 fn run_file_model_cops(
@@ -78,19 +77,38 @@ fn one_file_model_cop(
 fn run_plain_source_cops(
     source: &SourceFile,
     tree: &tree_sitter::Tree,
-    code_map: &CodeMap,
     active: &[ActiveCop<'_>],
     mode: AutocorrectMode,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) {
-    for (cop, cfg, idx) in active
+    let plain: Vec<_> = active
         .iter()
         .filter(|(c, _, _)| c.uses_source_phase() && !c.needs_file_model())
-    {
-        let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
-        let before = diagnostics.len();
-        cop.check_source(source, tree, code_map, cfg, diagnostics, corr_buf.as_mut());
-        finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, *idx, corrections);
+        .collect();
+    if plain.is_empty() {
+        return;
     }
+    // Build CodeMap once, only when plain source cops need it.
+    let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
+    for (cop, cfg, idx) in plain {
+        one_plain_source_cop(source, tree, &code_map, *cop, cfg, *idx, mode, diagnostics, corrections);
+    }
+}
+
+fn one_plain_source_cop(
+    source: &SourceFile,
+    tree: &tree_sitter::Tree,
+    code_map: &CodeMap,
+    cop: &dyn crate::cop::Cop,
+    cfg: &crate::cop::CopConfig,
+    idx: usize,
+    mode: AutocorrectMode,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
+    let mut corr_buf = allow_corr(mode, cop).then(Vec::new);
+    let before = diagnostics.len();
+    cop.check_source(source, tree, code_map, cfg, diagnostics, corr_buf.as_mut());
+    finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, idx, corrections);
 }

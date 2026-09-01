@@ -14,9 +14,6 @@ impl Cop for RangeInclude {
         "Performance/RangeInclude"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "body_statement", "command"]
-    }
 
     fn check_node(
         &self,

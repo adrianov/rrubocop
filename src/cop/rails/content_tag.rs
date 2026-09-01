@@ -18,9 +18,6 @@ impl Cop for ContentTag {
         &["**/app/models/**/*.rb", "**/config/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "string", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

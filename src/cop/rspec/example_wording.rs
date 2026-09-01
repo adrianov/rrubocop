@@ -18,9 +18,6 @@ impl Cop for ExampleWording {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "string", "hash", "command"]
-    }
 
     fn check_node(
         &self,

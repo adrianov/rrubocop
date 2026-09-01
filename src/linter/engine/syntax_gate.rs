@@ -20,7 +20,8 @@ pub(crate) fn run(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) -> bool {
-    let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
+    // Lint/Syntax ignores CodeMap; skip the tree walk (real map built in source phase).
+    let code_map = CodeMap::default();
     match active.iter().find(|(c, _, _)| c.name() == "Lint/Syntax") {
         Some((cop, cfg, idx)) => {
             registered(source, tree, &code_map, *cop, cfg, *idx, mode, diagnostics, corrections)

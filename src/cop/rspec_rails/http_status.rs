@@ -31,7 +31,11 @@ impl Cop for HttpStatus {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "integer", "string", "symbol", "command"]
+        &["call", "command"]
+    }
+
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"have_http_status"]
     }
 
     fn check_node(

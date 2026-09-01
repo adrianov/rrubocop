@@ -18,9 +18,6 @@ impl Cop for PredicateMatcher {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "false", "true", "command"]
-    }
 
     fn check_node(
         &self,

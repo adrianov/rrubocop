@@ -18,9 +18,6 @@ impl Cop for ChangeByZero {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["block", "call", "integer", "body_statement", "command"]
-    }
 
     fn check_node(
         &self,

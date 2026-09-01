@@ -14,9 +14,6 @@ impl Cop for CompareWithBlock {
         "Performance/CompareWithBlock"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["block", "call", "identifier", "body_statement", "command"]
-    }
 
     fn check_node(
         &self,

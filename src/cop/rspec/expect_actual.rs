@@ -22,9 +22,6 @@ impl Cop for ExpectActual {
         &["**/spec/routing/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["array", "pair", "call", "false", "hash", "integer", "nil", "string", "symbol", "true", "command"]
-    }
 
     fn check_node(
         &self,

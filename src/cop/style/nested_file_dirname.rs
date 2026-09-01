@@ -18,6 +18,10 @@ impl Cop for NestedFileDirname {
         &["call"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"dirname"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

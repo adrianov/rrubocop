@@ -18,9 +18,6 @@ impl Cop for EnumHash {
         &["**/app/models/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["array", "pair", "call", "hash", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

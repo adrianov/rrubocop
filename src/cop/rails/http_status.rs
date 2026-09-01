@@ -14,9 +14,6 @@ impl Cop for HttpStatus {
         "Rails/HttpStatus"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "integer", "string", "symbol", "command"]
-    }
 
     fn check_node(
         &self,
