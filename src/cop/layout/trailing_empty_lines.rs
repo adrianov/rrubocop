@@ -101,6 +101,10 @@ impl Cop for TrailingEmptyLines {
         true
     }
 
+    fn uses_line_phase(&self) -> bool {
+        true
+    }
+
     fn check_lines(
         &self,
         source: &SourceFile,

@@ -85,7 +85,6 @@ pub(super) fn lint_pipeline(
     })
 }
 
-#[allow(clippy::too_many_arguments)]
 fn run_discover_lint(
     prep: &RunPrep,
     paths: &[PathBuf],
@@ -137,7 +136,6 @@ fn discover_paths(
     result
 }
 
-#[allow(clippy::too_many_arguments)]
 fn run_workers(
     rx: &Mutex<Receiver<PathBuf>>,
     prep: &RunPrep,
@@ -262,7 +260,6 @@ fn lint_path_job(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 fn lint_file(
     path: &Path,
     config: &ResolvedConfig,

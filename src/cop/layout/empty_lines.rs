@@ -44,6 +44,10 @@ impl Cop for EmptyLines {
     fn name(&self) -> &'static str { "Layout/EmptyLines" }
     fn supports_autocorrect(&self) -> bool { true }
 
+    fn uses_line_phase(&self) -> bool {
+        true
+    }
+
     fn check_lines(
         &self, source: &SourceFile, _config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,

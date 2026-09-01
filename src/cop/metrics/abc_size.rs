@@ -3,8 +3,6 @@
 use crate::abc;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
-use crate::model;
-use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
 
 pub struct AbcSize;
@@ -18,18 +16,20 @@ impl Cop for AbcSize {
         Severity::Convention
     }
 
-    fn check_source(
+    fn needs_file_model(&self) -> bool {
+        true
+    }
+
+    fn check_file_model(
         &self,
         source: &SourceFile,
-        tree: &tree_sitter::Tree,
-        _code_map: &CodeMap,
+        file_model: &crate::model::FileModel<'_>,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
         let max = config.get_f64("Max", 17.0);
-        let fm = model::build(source.as_bytes(), tree.clone());
-        for offense in abc::all_scores(&fm) {
+        for offense in abc::all_scores(file_model) {
             if offense.score > max {
                 let msg = format!(
                     "Assignment Branch Condition size for `{}` is too high. [{} {}/{}]",

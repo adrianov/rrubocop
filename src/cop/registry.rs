@@ -16,7 +16,6 @@ pub struct CopRegistry {
 }
 
 impl CopRegistry {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             cops: Vec::new(),

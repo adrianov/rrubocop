@@ -26,6 +26,10 @@ impl Cop for OrderedDependencies {
         &["**/*.gemspec"]
     }
 
+    fn uses_line_phase(&self) -> bool {
+        true
+    }
+
     fn check_lines(
         &self,
         source: &SourceFile,
@@ -67,7 +71,6 @@ impl Cop for OrderedDependencies {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn handle_line(
     cop: &OrderedDependencies,
     source: &SourceFile,

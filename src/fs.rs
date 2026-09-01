@@ -70,7 +70,6 @@ pub fn discover_emitting(
     Ok(count)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn collect_emitting(
     path: &Path,
     filters: &CopFilterSet,

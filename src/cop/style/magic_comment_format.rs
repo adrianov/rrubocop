@@ -11,6 +11,10 @@ impl Cop for MagicCommentFormat {
         "Style/MagicCommentFormat"
     }
 
+    fn uses_line_phase(&self) -> bool {
+        true
+    }
+
     fn check_lines(
         &self,
         source: &SourceFile,

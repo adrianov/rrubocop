@@ -1,7 +1,6 @@
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
-use crate::model::{self, IntroKind, ScopeKind};
-use crate::parse::codemap::CodeMap;
+use crate::model::{IntroKind, ScopeKind};
 use crate::parse::source::SourceFile;
 use tree_sitter::Node;
 
@@ -54,22 +53,24 @@ impl Cop for UnusedBlockArgument {
         Severity::Warning
     }
 
-    fn check_source(
+    fn needs_file_model(&self) -> bool {
+        true
+    }
+
+    fn check_file_model(
         &self,
         source: &SourceFile,
-        tree: &tree_sitter::Tree,
-        _code_map: &CodeMap,
+        file_model: &crate::model::FileModel<'_>,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
         let ignore_empty = config.get_bool("IgnoreEmptyBlocks", true);
-        let fm = model::build(source.as_bytes(), tree.clone());
-        for scope in &fm.scopes {
+        for scope in &file_model.scopes {
             if scope.kind != ScopeKind::Block {
                 continue;
             }
-            if ignore_empty && block_body_empty(tree, scope.entered_at) {
+            if ignore_empty && block_body_empty(&file_model.tree, scope.entered_at) {
                 continue;
             }
             for (name, entry) in &scope.entries {
@@ -82,7 +83,7 @@ impl Cop for UnusedBlockArgument {
                 if !entry.reads.is_empty() {
                     continue;
                 }
-                let (line, col) = fm.line_col(entry.intro_byte);
+                let (line, col) = file_model.line_col(entry.intro_byte);
                 diagnostics.push(self.diagnostic(
                     source,
                     line,

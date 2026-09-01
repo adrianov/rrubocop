@@ -81,6 +81,10 @@ impl Cop for EmptyLinesAroundExceptionHandlingKeywords {
     fn name(&self) -> &'static str { "Layout/EmptyLinesAroundExceptionHandlingKeywords" }
     fn supports_autocorrect(&self) -> bool { true }
 
+    fn uses_source_phase(&self) -> bool {
+        true
+    }
+
     fn check_source(
         &self, source: &SourceFile, tree: &Tree, code_map: &CodeMap,
         config: &CopConfig, diagnostics: &mut Vec<Diagnostic>,

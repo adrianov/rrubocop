@@ -22,7 +22,6 @@ impl Severity {
         }
     }
 
-    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Severity> {
         match s.to_lowercase().as_str() {
             "convention" | "c" => Some(Severity::Convention),

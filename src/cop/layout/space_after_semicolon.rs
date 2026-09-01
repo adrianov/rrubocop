@@ -24,6 +24,10 @@ impl Cop for SpaceAfterSemicolon {
     fn name(&self) -> &'static str { "Layout/SpaceAfterSemicolon" }
     fn supports_autocorrect(&self) -> bool { true }
 
+    fn uses_source_phase(&self) -> bool {
+        true
+    }
+
     fn check_source(
         &self, source: &SourceFile, _tree: &Tree, code_map: &CodeMap,
         _config: &CopConfig, diagnostics: &mut Vec<Diagnostic>,
