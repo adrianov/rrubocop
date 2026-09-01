@@ -189,20 +189,19 @@ fn scan_file_indents(
             }
             // After a misaligned `end`, the next method/class at a "normal" indent
             // shouldn't be judged against that closer's column.
-            if !is_end_like(prev_line) {
-                check_step_from_prev(
-                    cop,
-                    source,
-                    code_map,
-                    i + 1,
-                    indent,
-                    prev,
-                    width,
-                    line,
-                    diagnostics,
-                    corrections,
-                );
-            }
+            check_unless_after_end(
+                cop,
+                source,
+                code_map,
+                i + 1,
+                indent,
+                prev,
+                width,
+                line,
+                prev_line,
+                diagnostics,
+                corrections,
+            );
         }
         if code_map.covers(off + indent) {
             prev_line = line;
@@ -211,6 +210,36 @@ fn scan_file_indents(
         prev_indent = Some(indent);
         prev_line = line;
     }
+}
+
+fn check_unless_after_end(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    code_map: &CodeMap,
+    line_no: usize,
+    indent: usize,
+    prev: usize,
+    width: usize,
+    line: &[u8],
+    prev_line: &[u8],
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    if is_end_like(prev_line) {
+        return;
+    }
+    check_step_from_prev(
+        cop,
+        source,
+        code_map,
+        line_no,
+        indent,
+        prev,
+        width,
+        line,
+        diagnostics,
+        corrections,
+    );
 }
 
 impl Cop for IndentationWidth {

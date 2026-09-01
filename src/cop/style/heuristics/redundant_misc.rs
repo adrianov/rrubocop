@@ -1,7 +1,7 @@
 //! Heuristic matchers for breadth-first Style cops.
 use tree_sitter::Node;
 use crate::cop::CopConfig;
-use crate::cop::style::heuristics::percent::double_quotes_required;
+use crate::cop::style::heuristics::double_quotes_required;
 use crate::parse::source::SourceFile;
 
 pub fn matches_redundant_capital_w(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
@@ -41,19 +41,32 @@ pub fn matches_redundant_percent_q(source: &SourceFile, node: Node<'_>, _config:
         return false;
     }
     let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
-    let is_q = b.starts_with(b"%q") && !b.starts_with(b"%Q");
-    let is_cap_q = b.starts_with(b"%Q");
-    if !is_q && !is_cap_q {
+    let Some(kind) = percent_q_kind(b) else {
         return false;
-    }
+    };
     // Both `'` and `"` appear in the literal → keep percent form.
     if b.contains(&b'\'') && b.contains(&b'"') {
         return false;
     }
-    if is_q {
-        return !acceptable_q(b);
+    match kind {
+        PercentQKind::Lower => !acceptable_q(b),
+        PercentQKind::Upper => !acceptable_capital_q(node, b),
     }
-    !acceptable_capital_q(node, b)
+}
+
+enum PercentQKind {
+    Lower,
+    Upper,
+}
+
+fn percent_q_kind(b: &[u8]) -> Option<PercentQKind> {
+    if b.starts_with(b"%Q") {
+        Some(PercentQKind::Upper)
+    } else if b.starts_with(b"%q") {
+        Some(PercentQKind::Lower)
+    } else {
+        None
+    }
 }
 
 fn has_interpolation_text(src: &[u8]) -> bool {

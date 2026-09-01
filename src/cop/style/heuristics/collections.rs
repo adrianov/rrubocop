@@ -68,11 +68,7 @@ fn pair_key_is_symbol(source: &SourceFile, node: Node<'_>) -> bool {
 }
 
 fn acceptable_19_symbol(bytes: &[u8]) -> bool {
-    let name = if bytes.starts_with(b":") {
-        &bytes[1..]
-    } else {
-        bytes
-    };
+    let name = strip_leading_colon(bytes);
     // Setter symbols and non-word forms cannot use `key:` label syntax.
     if name.ends_with(b"=") || name.starts_with(b"@") || name.starts_with(b"$") {
         return false;
@@ -80,10 +76,22 @@ fn acceptable_19_symbol(bytes: &[u8]) -> bool {
     if name.starts_with(b"'") || name.starts_with(b"\"") {
         return true;
     }
+    word_symbol_name(name)
+}
+
+fn strip_leading_colon(bytes: &[u8]) -> &[u8] {
+    if bytes.starts_with(b":") {
+        &bytes[1..]
+    } else {
+        bytes
+    }
+}
+
+/// RuboCop `/\A[_a-z]\w*[?!]?\z/i` on a symbol name (no leading `:`).
+fn word_symbol_name(name: &[u8]) -> bool {
     let Ok(s) = std::str::from_utf8(name) else {
         return false;
     };
-    // /\A[_a-z]\w*[?!]?\z/i
     let mut chars = s.chars();
     let Some(first) = chars.next() else {
         return false;
@@ -95,6 +103,10 @@ fn acceptable_19_symbol(bytes: &[u8]) -> bool {
     if rest.is_empty() {
         return true;
     }
+    word_symbol_rest(&rest)
+}
+
+fn word_symbol_rest(rest: &str) -> bool {
     let (body, last) = rest.split_at(rest.len() - 1);
     let last_ch = last.chars().next().unwrap();
     if last_ch == '?' || last_ch == '!' {

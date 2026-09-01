@@ -19,7 +19,10 @@ mod percent;
 pub use percent::matches_bare_percent_literals;
 pub use percent::matches_command_literal;
 pub use percent::matches_percent_q_literals;
-pub use percent::matches_string_literals;
+
+mod string_literals;
+pub use string_literals::matches_string_literals;
+pub(crate) use string_literals::double_quotes_required;
 
 mod redundant_misc;
 pub use redundant_misc::matches_redundant_capital_w;

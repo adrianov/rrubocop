@@ -32,12 +32,7 @@ pub fn run_cop_full_internal(
     let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
     let mut diagnostics = Vec::new();
     cop.check_lines(&source, &config, &mut diagnostics, None);
-    if cop.needs_file_model() {
-        let file_model = model::build(source.as_bytes(), tree.clone());
-        cop.check_file_model(&source, &file_model, &config, &mut diagnostics, None);
-    } else {
-        cop.check_source(&source, &tree, &code_map, &config, &mut diagnostics, None);
-    }
+    run_model_or_source(cop, &source, &tree, &code_map, &config, &mut diagnostics);
     BatchedWalker::new(vec![cop], vec![&config]).walk(
         &source,
         tree.root_node(),
@@ -45,4 +40,20 @@ pub fn run_cop_full_internal(
         None,
     );
     diagnostics
+}
+
+fn run_model_or_source(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    tree: &tree_sitter::Tree,
+    code_map: &CodeMap,
+    config: &CopConfig,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if cop.needs_file_model() {
+        let file_model = model::build(source.as_bytes(), tree.clone());
+        cop.check_file_model(source, &file_model, config, diagnostics, None);
+    } else {
+        cop.check_source(source, tree, code_map, config, diagnostics, None);
+    }
 }

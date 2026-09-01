@@ -26,26 +26,29 @@ fn named_elements(node: Node<'_>) -> Vec<Node<'_>> {
 /// RuboCop `all_elements_aligned?`: every element's start column is the same
 /// (for a leading hash, compare its pair keys instead).
 fn all_elements_aligned(source: &SourceFile, elements: &[Node<'_>]) -> bool {
-    let Some(first) = elements.first() else {
-        return true;
-    };
-    let cols: Vec<usize> = if first.kind() == "hash" {
-        let mut cur = first.walk();
-        first
-            .named_children(&mut cur)
-            .filter(|n| n.kind() == "pair")
-            .map(|n| shared::node_col(source, n))
-            .collect()
-    } else {
-        elements
-            .iter()
-            .map(|n| shared::node_col(source, *n))
-            .collect()
-    };
+    let cols = element_start_cols(source, elements);
     let Some(c0) = cols.first() else {
         return true;
     };
     cols.iter().all(|c| c == c0)
+}
+
+fn element_start_cols(source: &SourceFile, elements: &[Node<'_>]) -> Vec<usize> {
+    let Some(first) = elements.first() else {
+        return Vec::new();
+    };
+    if first.kind() == "hash" {
+        let mut cur = first.walk();
+        return first
+            .named_children(&mut cur)
+            .filter(|n| n.kind() == "pair")
+            .map(|n| shared::node_col(source, n))
+            .collect();
+    }
+    elements
+        .iter()
+        .map(|n| shared::node_col(source, *n))
+        .collect()
 }
 
 /// RuboCop `expected_column` for a hanging `)`.
