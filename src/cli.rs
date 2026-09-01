@@ -65,7 +65,7 @@ pub struct Args {
     #[arg(long, value_name = "PATH")]
     pub stdin: Option<PathBuf>,
 
-    /// Use result caching (`true`) or don't (`false`); same as RuboCop `-C`/`--cache`
+    /// Read cached results (`true`) or lint every file (`false`); writes still update the cache
     #[arg(
         short = 'C',
         long,
@@ -141,8 +141,8 @@ impl Args {
         }
     }
 
-    /// Whether the on-disk result cache is enabled (`--cache true|false`).
-    pub fn cache_enabled(&self) -> bool {
+    /// Whether lint runs may read from the on-disk result cache (`--cache true|false`).
+    pub fn cache_read_enabled(&self) -> bool {
         self.cache != "false"
     }
 
@@ -250,10 +250,10 @@ mod tests {
     #[test]
     fn cache_flag_defaults_on_and_accepts_false() {
         let on = Args::parse_from(["rr"]);
-        assert!(on.cache_enabled());
+        assert!(on.cache_read_enabled());
         let off = Args::parse_from(["rr", "--cache", "false"]);
-        assert!(!off.cache_enabled());
+        assert!(!off.cache_read_enabled());
         let short = Args::parse_from(["rr", "-C", "false"]);
-        assert!(!short.cache_enabled());
+        assert!(!short.cache_read_enabled());
     }
 }

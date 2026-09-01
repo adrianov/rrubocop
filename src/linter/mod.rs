@@ -28,6 +28,8 @@ pub(crate) struct RunPrep {
     pub(crate) except: Vec<String>,
     pub(crate) mode: AutocorrectMode,
     pub(crate) cache: Option<Cache>,
+    /// When false (`--cache false`), skip cache reads but still write results.
+    pub(crate) cache_read: bool,
     pub(crate) config_fp: Vec<u8>,
     pub(crate) only_key: String,
     pub(crate) except_key: String,
@@ -76,7 +78,8 @@ fn prepare_run(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> 
     let mode = args.autocorrect_mode();
     let only_key = only.as_ref().map(|v| v.join(",")).unwrap_or_default();
     RunPrep {
-        cache: open_result_cache(mode, args.cache_enabled()),
+        cache: open_result_cache(mode),
+        cache_read: args.cache_read_enabled(),
         config_fp: config.cache_fingerprint(),
         except_key: except.join(","),
         only_key,
@@ -96,11 +99,11 @@ fn optional_cop_list(list: &[String], registry: &CopRegistry) -> Option<Vec<Stri
     (!list.is_empty()).then(|| expand_cop_list(list, registry))
 }
 
-fn open_result_cache(mode: AutocorrectMode, cache_enabled: bool) -> Option<Cache> {
+fn open_result_cache(mode: AutocorrectMode) -> Option<Cache> {
     if mode != AutocorrectMode::Off {
         return None;
     }
-    let cache = Cache::open(!cache_enabled)?;
+    let cache = Cache::open()?;
     cache.prune();
     Some(cache)
 }

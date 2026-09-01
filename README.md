@@ -49,7 +49,7 @@ rrubocop [OPTIONS] [PATH]...
 - **Output** — `progress` (marks stream as files finish), `text`, `json`, `github`, `quiet`, `files`, … (TTY color like RuboCop; `--color` / `--no-color`)
 - **Directives** — `# rubocop:disable` / `enable`
 - **Parser** — tree-sitter-ruby (no Prism / no CRuby)
-- **Cache** — content-addressed `cache.redb` under `$RRUBOCOP_CACHE_DIR` or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop` (same style as abcop); `--cache false` disables (RuboCop-compatible)
+- **Cache** — content-addressed `cache.redb` under `$RRUBOCOP_CACHE_DIR` or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop` (same style as abcop); `--cache false` skips reads but still writes
 
 Reference implementations: [nitrocop](https://github.com/6/nitrocop) (architecture & fixtures), upstream [RuboCop](https://github.com/rubocop/rubocop).
 
@@ -91,7 +91,7 @@ Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
 
 ## Caching
 
-Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop`). Keys cover contents, version, rule revision, `--only`/`--except`, config fingerprint, and path. Auto-pruned to 20 000 entries; `--cache false` disables. Autocorrect runs bypass the cache. Nothing is written inside the project.
+Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop`). Keys cover contents, version, rule revision, `--only`/`--except`, config fingerprint, and path. Auto-pruned to 20 000 entries; `--cache false` skips reads but still writes. Autocorrect runs bypass the cache. Nothing is written inside the project.
 
 ## Benchmarks
 

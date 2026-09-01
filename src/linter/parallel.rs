@@ -248,6 +248,7 @@ fn lint_path_job(
         prep.mode,
         prep.ignore_disable,
         prep.cache.as_ref(),
+        prep.cache_read,
         settings,
     )?;
     bump_fail_fast(
@@ -270,10 +271,11 @@ fn lint_file(
     mode: AutocorrectMode,
     ignore_disable: bool,
     cache: Option<&Cache>,
+    cache_read: bool,
     settings: CacheSettings<'_>,
 ) -> Result<Vec<Diagnostic>> {
     let source = SourceFile::from_path(path)?;
-    if let Some(hit) = cache_get(cache, path, &source, settings) {
+    if let Some(hit) = cache_get(cache, cache_read, path, &source, settings) {
         return Ok(hit);
     }
     let diags = lint_source(
@@ -293,10 +295,14 @@ fn lint_file(
 
 fn cache_get(
     cache: Option<&Cache>,
+    cache_read: bool,
     path: &Path,
     source: &SourceFile,
     settings: CacheSettings<'_>,
 ) -> Option<Vec<Diagnostic>> {
+    if !cache_read {
+        return None;
+    }
     let cache = cache?;
     cache.get(&cache.file_key(path, source.as_bytes(), settings))
 }
@@ -312,4 +318,41 @@ fn cache_put(
         return;
     };
     cache.store(&cache.file_key(path, source.as_bytes(), settings), diags);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+    use crate::cache::Cache;
+
+    #[test]
+    fn cache_get_skips_reads_when_cache_false() {
+        let dir = std::env::temp_dir().join(format!(
+            "rrubocop-lint-cache-test-{}-read_off",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        let cache = Cache::open_at(&dir).expect("cache opens");
+        let path = Path::new("a.rb");
+        let source = SourceFile::from_bytes(path, b"x = 1\n".to_vec());
+        let settings = CacheSettings {
+            only: "",
+            except: "",
+            ignore_disable: false,
+            force_default_config: false,
+            config_fingerprint: &[0; 32],
+        };
+        let key = cache.file_key(path, source.as_bytes(), settings);
+        cache.store(&key, &[]);
+        assert!(
+            cache_get(Some(&cache), false, path, &source, settings).is_none(),
+            "--cache false must not read"
+        );
+        assert!(
+            cache_get(Some(&cache), true, path, &source, settings).is_some(),
+            "reads enabled after write"
+        );
+    }
 }

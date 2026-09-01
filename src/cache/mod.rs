@@ -42,10 +42,7 @@ impl Cache {
     /// user-wide XDG cache dir (`$XDG_CACHE_HOME/rrubocop`, falling back
     /// to `~/.cache/rrubocop`). Keys hash the full file path, so entries
     /// from different projects never collide.
-    pub fn open(disabled: bool) -> Option<Cache> {
-        if disabled {
-            return None;
-        }
+    pub fn open() -> Option<Cache> {
         let base = cache_base()?;
         Self::open_at(&base)
     }
