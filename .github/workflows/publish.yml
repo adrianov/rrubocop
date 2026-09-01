@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
@@ -50,7 +50,7 @@ jobs:
   deb:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
@@ -69,7 +69,7 @@ jobs:
           man -w rrubocop
           dpkg -L rrubocop | grep -E '/usr/bin/rrubocop|/usr/share/man/man1/rrubocop\.1'
       - name: Upload .deb artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: rrubocop-deb
           path: target/debian/*.deb
@@ -84,7 +84,7 @@ jobs:
           - aarch64-apple-darwin
           - x86_64-apple-darwin
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
@@ -105,7 +105,7 @@ jobs:
           mkdir -p dist
           mv "${stage}.tar.gz" dist/
       - name: Upload .tar.gz artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: rrubocop-tarball-${{ matrix.target }}
           path: dist/*.tar.gz
@@ -114,11 +114,11 @@ jobs:
     needs: [deb, tarball]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag || github.ref }}
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: dist
           pattern: rrubocop-*
