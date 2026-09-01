@@ -31,11 +31,44 @@ fn skip_stmt(kind: &str) -> bool {
     )
 }
 
-pub(crate) fn stmt_kids<'a>(n: Node<'a>) -> Vec<Node<'a>> {
+pub(crate) fn stmt_kids<'a>(source: &SourceFile, n: Node<'a>) -> Vec<Node<'a>> {
     let mut cur = n.walk();
-    n.named_children(&mut cur)
+    let kids: Vec<_> = n
+        .named_children(&mut cur)
         .filter(|k| !skip_stmt(k.kind()))
+        .collect();
+    let mut seen_match = false;
+    kids.into_iter()
+        .filter(|k| {
+            if k.kind() == "match_pattern" {
+                seen_match = true;
+                return true;
+            }
+            !(seen_match && pattern_key_recovery(source, *k))
+        })
         .collect()
+}
+
+/// Tree-sitter often folds later `key:,` lines (and following stmts) into one
+/// recovered `assignment` after `expr => first_key:`.
+fn pattern_key_recovery(source: &SourceFile, node: Node<'_>) -> bool {
+    matches!(node.kind(), "keyword_pattern" | "hash_key_symbol")
+        || source.as_bytes().get(node.end_byte()) == Some(&b':')
+        || starts_with_pattern_key(source, node)
+}
+
+fn starts_with_pattern_key(source: &SourceFile, node: Node<'_>) -> bool {
+    let Ok(s) = std::str::from_utf8(shared::node_bytes(source, node)) else {
+        return false;
+    };
+    let Some((name, rest)) = s.trim_start().split_once(':') else {
+        return false;
+    };
+    ident_name(name.trim()) && rest.starts_with(',')
+}
+
+fn ident_name(s: &str) -> bool {
+    !s.is_empty() && s.chars().all(|c| c.is_alphanumeric() || c == '_')
 }
 
 pub(crate) fn is_bare_access_modifier(source: &SourceFile, node: Node<'_>) -> bool {

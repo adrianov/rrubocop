@@ -45,35 +45,35 @@ fn ancestor_align_node(node: Node<'_>) -> Option<Node<'_>> {
 /// non-whitespace on the ancestor's starting line (RuboCop parity).
 fn alignment_col(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Option<usize> {
     let ancestor = ancestor_align_node(node)?;
+    if matches!(ancestor.kind(), "do_block" | "block") {
+        return block_expression_col(source, ancestor);
+    }
     if begin_end_start_of_line(config) {
         return Some(shared::line_indent(source, ancestor.start_byte()));
     }
-    if matches!(ancestor.kind(), "do_block" | "block") {
-        return block_align_col(source, ancestor);
-    }
     Some(kw_col(source, ancestor, align_kw(ancestor.kind())?))
+}
+
+/// Parser `block` nodes start at the send; tree-sitter `do_block` starts at `do`.
+fn block_expression_col(source: &SourceFile, ancestor: Node<'_>) -> Option<usize> {
+    let send = block_send_node(ancestor)?;
+    Some(shared::line_indent(source, outermost_send(send).start_byte()))
+}
+
+fn outermost_send(mut send: Node<'_>) -> Node<'_> {
+    while let Some(parent) = send.parent() {
+        if matches!(parent.kind(), "call" | "command") {
+            send = parent;
+        } else {
+            break;
+        }
+    }
+    send
 }
 
 fn begin_end_start_of_line(config: &CopConfig) -> bool {
     config.get_bool("BeginEndAlignmentEnabled", true)
         && config.get_str("BeginEndAlignmentStyle", "begin") == "start_of_line"
-}
-
-fn block_align_col(source: &SourceFile, ancestor: Node<'_>) -> Option<usize> {
-    let send = block_send_node(ancestor)?;
-    let last_line_start = source
-        .line_start(shared::node_line(source, send) + line_span(source, send) - 1)
-        .unwrap_or(send.start_byte());
-    Some(shared::line_indent(
-        source,
-        last_line_start.max(send.start_byte()),
-    ))
-}
-
-fn line_span(source: &SourceFile, node: Node<'_>) -> usize {
-    let start = shared::node_line(source, node);
-    let end = source.offset_to_line_col(node.end_byte().saturating_sub(1)).0;
-    (end.saturating_sub(start)).saturating_add(1)
 }
 
 fn block_send_node(block: Node<'_>) -> Option<Node<'_>> {
@@ -133,4 +133,10 @@ impl Cop for RescueEnsureAlignment {
             base_col,
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(RescueEnsureAlignment, "cops/layout/rescue_ensure_alignment");
 }

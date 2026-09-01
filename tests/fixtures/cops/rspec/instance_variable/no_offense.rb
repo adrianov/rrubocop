@@ -30,6 +30,15 @@ Class.new do
   end
 end
 
+# Operator assignment is ivasgn, not ivar (RuboCop searches reads only)
+RSpec.describe CatalogKindable do
+  controller(ApplicationController) do
+    def shop
+      @shop ||= double('Shop', pickup: true)
+    end
+  end
+end
+
 # Custom matcher blocks are exempt
 RSpec::Matchers.define :have_attr do
   match do |actual|

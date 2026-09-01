@@ -44,17 +44,43 @@ pub(super) fn endless_eq_offset(source: &SourceFile, node: Node<'_>) -> Option<u
 fn unicode_symbol_error(source: &SourceFile, node: Node<'_>) -> bool {
     let bytes = source.as_bytes();
     let start = node.start_byte();
-    if bytes.get(start) != Some(&b':') {
-        return false;
+    if bytes.get(start) == Some(&b':') {
+        return unicode_ident_after_colon(&bytes[start + 1..]);
     }
-    let Ok(s) = std::str::from_utf8(&bytes[start + 1..]) else {
+    // Tree-sitter may emit ERROR on leftover letters after a truncated `:Н…`.
+    unicode_symbol_continuation(bytes, start)
+}
+
+fn unicode_ident_after_colon(after: &[u8]) -> bool {
+    let Ok(s) = std::str::from_utf8(after) else {
         return false;
     };
     let Some(first) = s.chars().next() else {
         return false;
     };
-    // ASCII symbols parse fine; non-ASCII identifier start is truncated by tree-sitter.
     !first.is_ascii() && (first.is_alphanumeric() || first == '_')
+}
+
+fn unicode_symbol_continuation(bytes: &[u8], start: usize) -> bool {
+    let Ok(s) = std::str::from_utf8(&bytes[..start]) else {
+        return false;
+    };
+    let mut chars = s.chars().rev();
+    let Some(prev) = chars.next() else {
+        return false;
+    };
+    if !(prev.is_alphanumeric() || prev == '_') || prev.is_ascii() {
+        return false;
+    }
+    for c in chars {
+        if c == ':' {
+            return true;
+        }
+        if !(c.is_alphanumeric() || c == '_') {
+            return false;
+        }
+    }
+    false
 }
 
 /// Endless method RHS that tree-sitter misparses (`= raise`, `= logger.info '…'`).

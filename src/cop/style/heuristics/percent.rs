@@ -12,7 +12,8 @@ pub fn matches_bare_percent_literals(source: &SourceFile, node: Node<'_>, config
 
 fn percent_style_mismatch(b: &[u8], style: &str) -> bool {
     let is_bare = is_bare_percent(b);
-    let is_q = b.starts_with(b"%q") || b.starts_with(b"%Q");
+    // RuboCop only treats `%Q` as the opposite of bare `%()` — not `%q`.
+    let is_q = b.starts_with(b"%Q");
     match style {
         "bare_percent" => is_q,
         "percent_q" => is_bare,

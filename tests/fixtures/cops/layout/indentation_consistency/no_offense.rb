@@ -159,6 +159,24 @@ class AllMailInterceptor
   end
 end
 
+def discover(cart_item)
+  last_price_and_discount(cart_item) =>
+    last_price:,
+    discount:,
+    apihub_discount:,
+    price_type:,
+    superprice:,
+    badge_details: badges_details
+
+  cart_item[:price] = last_price
+  cart_item[:discount] = discount
+  cart_item[:apihub_discount] = apihub_discount
+  cart_item[:price_type] = price_type
+  cart_item[:superprice] = superprice
+  cart_item[:badges] = badges_details
+end
+
+
 class Rack::Session::Redis
   def set_session(env, session_id, new_session, options)
     with_lock(env, false) do

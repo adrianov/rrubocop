@@ -97,11 +97,21 @@ impl Cop for SpaceInsidePercentLiteralDelimiters {
         let sp_a = matches!(bytes.get(inner_s), Some(b' ') | Some(b'\t'));
         let sp_b = matches!(bytes.get(inner_e - 1), Some(b' ') | Some(b'\t'));
         let inner = &bytes[inner_s..inner_e];
-        if inner.first() == Some(&b'\n') || inner.last() == Some(&b'\n') {
+        // RuboCop `add_offenses_for_unnecessary_spaces` only runs on single-line literals.
+        if inner.contains(&b'\n') {
             return;
         }
         if sp_a || sp_b {
             report_spaces(self, source, bytes, node, inner_s, inner_e, sp_a, sp_b, diagnostics, &mut corrections);
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(
+        SpaceInsidePercentLiteralDelimiters,
+        "cops/layout/space_inside_percent_literal_delimiters"
+    );
 }

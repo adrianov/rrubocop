@@ -23,7 +23,7 @@ fn string_new_ok(node: Node<'_>) -> bool {
     }
 }
 
-fn is_unfreeze(source: &SourceFile, node: Node<'_>) -> bool {
+fn is_unfreeze(source: &SourceFile, node: Node<'_>, ruby_ver: f64) -> bool {
     let Some(method) = call_method_name(source, node) else {
         return false;
     };
@@ -33,7 +33,8 @@ fn is_unfreeze(source: &SourceFile, node: Node<'_>) -> bool {
     match method {
         b"new" => is_const_named(source, recv, b"String") && string_new_ok(node),
         b"to_s" | b"to_str" => is_const_named(source, recv, b"String"),
-        b"dup" | b"clone" => empty_string_literal(source, recv),
+        // RuboCop-performance skips `.dup` when TargetRubyVersion > 3.2.
+        b"dup" | b"clone" => ruby_ver <= 3.2 && empty_string_literal(source, recv),
         _ => false,
     }
 }
@@ -51,11 +52,11 @@ impl Cop for UnfreezeString {
         &self,
         source: &SourceFile,
         node: Node<'_>,
-        _config: &CopConfig,
+        config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        if !is_unfreeze(source, node) {
+        if !is_unfreeze(source, node, config.get_f64("TargetRubyVersion", 2.7)) {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
@@ -71,5 +72,24 @@ impl Cop for UnfreezeString {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cop::CopConfig;
+    use std::collections::HashMap;
+
     crate::cop_fixture_tests!(UnfreezeString, "cops/performance/unfreeze_string");
+
+    #[test]
+    fn dup_ok_on_ruby_34() {
+        let config = CopConfig {
+            options: HashMap::from([(
+                "TargetRubyVersion".into(),
+                serde_yml::Value::Number(serde_yml::Number::from(3.4)),
+            )]),
+            ..CopConfig::default()
+        };
+        crate::testutil::assert_cop_no_offenses_full_with_config(
+            &UnfreezeString,
+            b"result = ''.dup\n",
+            config,
+        );
+    }
 }

@@ -8,7 +8,8 @@ use crate::cop::CopConfig;
 use crate::parse::source::SourceFile;
 
 use super::context::{
-    assignment_context, assignment_from_ancestors, keyword_context, AssignmentContext,
+    argument_in_method_call, assignment_context, assignment_from_ancestors, keyword_context,
+    AssignmentContext,
 };
 use super::line_scan::KeywordContext;
 
@@ -64,9 +65,11 @@ fn should_align_op(
     style: &str,
     keyword_ctx: Option<KeywordContext>,
     assignment_ctx: Option<AssignmentContext>,
+    in_call_arg: bool,
 ) -> bool {
     assignment_ctx.is_some_and(|c| c.rhs_begins_line)
-        || (style == "aligned" && (keyword_ctx.is_some() || assignment_ctx.is_some()))
+        || (style == "aligned"
+            && (keyword_ctx.is_some() || assignment_ctx.is_some() || in_call_arg))
 }
 
 fn operation_expected_col(
@@ -81,7 +84,7 @@ fn operation_expected_col(
     let keyword_ctx = keyword_context(source, node, left_line, left_col);
     let assignment_ctx = assignment_from_ancestors(source, node)
         .or_else(|| assignment_context(source, left_line, left_col));
-    if should_align_op(style, keyword_ctx, assignment_ctx) {
+    if should_align_op(style, keyword_ctx, assignment_ctx, argument_in_method_call(node)) {
         (left_col, true)
     } else {
         (

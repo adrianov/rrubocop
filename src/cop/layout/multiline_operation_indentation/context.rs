@@ -143,6 +143,44 @@ fn ancestor_disqualifies(node: Node<'_>, anc: Node<'_>) -> bool {
         || (is_unaligned_rhs_type(anc.kind()) && !within_condition(node, anc))
 }
 
+/// RuboCop `argument_in_method_call(..., :with_or_without_parentheses)`.
+/// Includes `memoize def ...` (the `def` is the argument) and kwargs (`foo(bar: a || b)`).
+pub(super) fn argument_in_method_call(node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(anc) = p {
+        if matches!(anc.kind(), "do_block" | "block") {
+            return false;
+        }
+        if matches!(anc.kind(), "call" | "command" | "command_call") && node_in_call_args(node, anc)
+        {
+            return true;
+        }
+        if matches!(anc.kind(), "program" | "class" | "module") {
+            break;
+        }
+        p = anc.parent();
+    }
+    false
+}
+
+fn node_in_call_args(node: Node<'_>, call: Node<'_>) -> bool {
+    call.child_by_field_name("arguments")
+        .map(|args| within_node(node, args))
+        .unwrap_or_else(|| positional_arg_contains(node, call))
+}
+
+fn positional_arg_contains(node: Node<'_>, call: Node<'_>) -> bool {
+    let skip = [
+        call.child_by_field_name("receiver").map(|n| n.id()),
+        call.child_by_field_name("method")
+            .or_else(|| call.child_by_field_name("name"))
+            .map(|n| n.id()),
+    ];
+    let mut cur = call.walk();
+    call.named_children(&mut cur)
+        .any(|c| !skip.contains(&Some(c.id())) && within_node(node, c))
+}
+
 fn assignment_at_ancestor(
     source: &SourceFile,
     node: Node<'_>,

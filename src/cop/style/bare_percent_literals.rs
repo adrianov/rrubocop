@@ -38,3 +38,9 @@ impl Cop for BarePercentLiterals {
         ));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(BarePercentLiterals, "cops/style/bare_percent_literals");
+}

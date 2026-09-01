@@ -1,4 +1,4 @@
-//! Style/NilComparison — prefer nil? over == nil / != nil.
+//! Style/NilComparison — prefer nil? over == nil / === nil.
 
 use tree_sitter::Node;
 
@@ -31,41 +31,32 @@ impl Cop for NilComparison {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let Some((op, left, right, kids)) = detect(source, node) else {
+        let Some(kids) = detect(source, node) else {
             return;
         };
-        report(self, source, node, op, left, right, &kids, diagnostics, &mut corrections);
+        report(self, source, node, &kids, diagnostics, &mut corrections);
     }
 }
 
-fn detect<'a>(
-    source: &'a SourceFile,
-    node: Node<'a>,
-) -> Option<(&'a [u8], &'a [u8], &'a [u8], Vec<Node<'a>>)> {
+/// RuboCop `nil_comparison?` is `(send _ {:== :===} nil)` — not `!=` or `nil == x`.
+fn detect<'a>(source: &'a SourceFile, node: Node<'a>) -> Option<Vec<Node<'a>>> {
     let mut cur = node.walk();
     let kids: Vec<_> = node.children(&mut cur).collect();
     if kids.len() < 3 {
         return None;
     }
     let op = node_bytes(source, kids[1]);
-    if op != b"==" && op != b"!=" {
-        return None;
+    if (op == b"==" || op == b"===") && node_bytes(source, kids[2]) == b"nil" {
+        Some(kids)
+    } else {
+        None
     }
-    let left = node_bytes(source, kids[0]);
-    let right = node_bytes(source, kids[2]);
-    if left != b"nil" && right != b"nil" {
-        return None;
-    }
-    Some((op, left, right, kids))
 }
 
 fn report(
     cop: &NilComparison,
     source: &SourceFile,
     node: Node<'_>,
-    op: &[u8],
-    left: &[u8],
-    right: &[u8],
     kids: &[Node<'_>],
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
@@ -78,11 +69,10 @@ fn report(
         "Prefer the use of the `nil?` predicate.".to_string(),
     );
     if let Some(corr) = corrections {
-        let (start, end, replacement) = correction(node, op, left, right, kids);
         corr.push(Correction {
-            start,
-            end,
-            replacement,
+            start: kids[0].end_byte(),
+            end: node.end_byte(),
+            replacement: ".nil?".to_string(),
             cop_name: cop.name(),
             cop_index: 0,
         });
@@ -91,25 +81,8 @@ fn report(
     diagnostics.push(diag);
 }
 
-fn correction(
-    node: Node<'_>,
-    op: &[u8],
-    left: &[u8],
-    right: &[u8],
-    kids: &[Node<'_>],
-) -> (usize, usize, String) {
-    if right == b"nil" && op == b"==" {
-        return (kids[0].end_byte(), node.end_byte(), ".nil?".to_string());
-    }
-    let other = if right == b"nil" {
-        String::from_utf8_lossy(left).into_owned()
-    } else {
-        String::from_utf8_lossy(right).into_owned()
-    };
-    let replacement = if op == b"!=" {
-        format!("!{other}.nil?")
-    } else {
-        format!("{other}.nil?")
-    };
-    (node.start_byte(), node.end_byte(), replacement)
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(NilComparison, "cops/style/nil_comparison");
 }

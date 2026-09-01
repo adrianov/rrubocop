@@ -20,3 +20,29 @@ def db_setup_namespaced
    rails "db:migrate"
  end
 end
+
+def process_orders
+  OnlineOrder.where(status: :holded)
+             .limit(10)
+             .find_each(batch_size: 10) do |order|
+               update_order(order)
+             end
+end
+
+def update_scopes
+  ProductCategory.actual
+                 .roots
+                 .find_each do |parent|
+    use(parent)
+  end
+end
+
+def summaries
+  ProductReview.annotate('x')
+               .group(:id)
+               .pluck(:id)
+               .to_h do |id|
+                 [id, 1]
+               end
+end
+

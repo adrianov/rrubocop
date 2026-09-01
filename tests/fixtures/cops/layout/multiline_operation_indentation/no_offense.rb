@@ -12,3 +12,15 @@ if a &&
    b
   c
 end
+
+# good: method body that is an argument (`memoize def`) — RuboCop aligns
+memoize def need_notice?
+  shop.present? &&
+  kind == 'online' &&
+  shop.deleted_at.present?
+end
+
+# good: operation inside kwargs is aligned with the first operand
+f.input :style, selected: obj.values ||
+                          WidgetStyle.default.values
+

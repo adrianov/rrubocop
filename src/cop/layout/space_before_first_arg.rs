@@ -68,6 +68,10 @@ fn offense(source: &SourceFile, node: Node<'_>, allow_align: bool) -> Option<(us
 fn unparen_call_gap(source: &SourceFile, node: Node<'_>) -> Option<(usize, usize)> {
     let bytes = source.as_bytes();
     let method = method_node(node)?;
+    // `discount:` in a hash/pattern is a label, not `discount` + argument `:`.
+    if bytes.get(method.end_byte()) == Some(&b':') {
+        return None;
+    }
     let args = node.child_by_field_name("arguments")?;
     if bytes.get(args.start_byte()) == Some(&b'(') {
         return None;

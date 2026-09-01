@@ -99,6 +99,21 @@ fn trailing_if_kw(t: &[u8]) -> bool {
         || st.starts_with("else")
 }
 
+/// Indent of `.find_each do |x|` / `.map do` when the next line is the body.
+pub(super) fn deeper_dot_block(line: &[u8], next_indent: Option<usize>) -> Option<usize> {
+    let indent = line.iter().take_while(|&&b| b == b' ' || b == b'\t').count();
+    let rest = &line[indent..];
+    if !(rest.starts_with(b".") || rest.starts_with(b"&.")) {
+        return None;
+    }
+    let t = trim_ascii_end(rest);
+    if !(t.ends_with(b" do") || t.ends_with(b"|")) {
+        return None;
+    }
+    next_indent.filter(|n| *n > indent)?;
+    Some(indent)
+}
+
 pub(super) fn aligned_continuation(
     indent: usize,
     prev: usize,

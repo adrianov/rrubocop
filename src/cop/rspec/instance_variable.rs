@@ -17,13 +17,13 @@ fn is_assign_lhs(node: Node<'_>) -> bool {
     let Some(parent) = node.parent() else {
         return false;
     };
-    // RuboCop searches `ivar` (reads), not `ivasgn` (assignments).
-    if parent.kind() == "assignment" {
-        return parent
-            .child_by_field_name("left")
-            .is_some_and(|l| l.id() == node.id());
+    // RuboCop searches `ivar` (reads), not `ivasgn` / `or_asgn` (assignments).
+    if !matches!(parent.kind(), "assignment" | "operator_assignment") {
+        return false;
     }
-    false
+    parent
+        .child_by_field_name("left")
+        .is_some_and(|l| l.id() == node.id())
 }
 
 /// RuboCop `valid_usage?` — `Class.new { ... }` and custom matcher blocks.

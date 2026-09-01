@@ -50,10 +50,24 @@ fn body_indents(body: &[u8]) -> Vec<usize> {
         .collect()
 }
 
-fn has_offense(indents: &[usize], width: usize, needs_squiggly: bool) -> bool {
+fn opener_info(source: &SourceFile, node: Node<'_>) -> (Option<(usize, usize, bool)>, bool, usize) {
+    let opener = find_opener(source, node);
+    let needs_squiggly = opener.is_some_and(|(_, _, s)| !s);
+    let indent = opener
+        .map(|(start, _, _)| shared::line_indent(source, start))
+        .unwrap_or(0);
+    (opener, needs_squiggly, indent)
+}
+
+fn has_offense(indents: &[usize], width: usize, needs_squiggly: bool, opener_indent: usize) -> bool {
     let Some(&min_i) = indents.iter().min() else { return false; };
-    (needs_squiggly && min_i == 0)
-        || indents.iter().any(|&ind| ind != min_i && ind < min_i + width)
+    if needs_squiggly {
+        min_i == 0
+    } else {
+        // `<<~`: only the least-indented body line vs opener + width (extra
+        // indent inside the content is allowed).
+        min_i != opener_indent + width
+    }
 }
 
 fn fix_to_squiggly(cop: &dyn Cop, bytes: &[u8], start: usize, end: usize, corr: &mut Vec<Correction>) {
@@ -135,12 +149,17 @@ impl Cop for HeredocIndentation {
         let lines: Vec<&[u8]> = body.split(|&b| b == b'\n').collect();
         if lines.len() < 2 { return; }
         let indents = body_indents(body);
-        let opener = find_opener(source, node);
-        let needs_squiggly = opener.is_some_and(|(_, _, s)| !s);
-        if !has_offense(&indents, width, needs_squiggly) { return; }
+        let (opener, needs_squiggly, opener_indent) = opener_info(source, node);
+        if !has_offense(&indents, width, needs_squiggly, opener_indent) { return; }
         maybe_report(
             self, source, node, &lines, &indents, opener, width, needs_squiggly,
             diagnostics, &mut corrections,
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(HeredocIndentation, "cops/layout/heredoc_indentation");
 }

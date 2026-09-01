@@ -137,7 +137,7 @@ pub fn check_list(
     if !util::is_stmt_list(n.kind()) {
         return;
     }
-    let kids = util::stmt_kids(n);
+    let kids = util::stmt_kids(source, n);
     if indented {
         if kids.len() < 2 {
             return;

@@ -174,42 +174,104 @@ fn scan_file_indents(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let mut prev_indent: Option<usize> = None;
-    let mut prev_line: &[u8] = b"";
-    let mut cont_base: Option<usize> = None;
+    let mut state = ScanState::default();
     for (i, line) in source.lines().enumerate() {
-        let Some(indent) = line_indent(line) else {
-            continue;
-        };
-        let off = source.line_start(i + 1).unwrap_or(0);
-        if let Some(prev) = prev_indent {
-            if cont::aligned_continuation(indent, prev, prev_line, &mut cont_base) {
-                prev_line = line;
-                continue;
-            }
-            // After a misaligned `end`, the next method/class at a "normal" indent
-            // shouldn't be judged against that closer's column.
-            check_unless_after_end(
-                cop,
-                source,
-                code_map,
-                i + 1,
-                indent,
-                prev,
-                width,
-                line,
-                prev_line,
-                diagnostics,
-                corrections,
-            );
-        }
-        if code_map.covers(off + indent) {
-            prev_line = line;
-            continue;
-        }
-        prev_indent = Some(indent);
-        prev_line = line;
+        scan_line(
+            cop,
+            source,
+            code_map,
+            width,
+            i,
+            line,
+            &mut state,
+            diagnostics,
+            corrections,
+        );
     }
+}
+
+struct ScanState<'a> {
+    prev_indent: Option<usize>,
+    prev_line: &'a [u8],
+    cont_base: Option<usize>,
+}
+
+impl<'a> Default for ScanState<'a> {
+    fn default() -> Self {
+        Self {
+            prev_indent: None,
+            prev_line: b"",
+            cont_base: None,
+        }
+    }
+}
+
+fn next_code_indent(source: &SourceFile, after: usize) -> Option<usize> {
+    source.lines().skip(after + 1).find_map(|line| {
+        if line.iter().all(|&b| matches!(b, b' ' | b'\t' | b'\r')) {
+            return None;
+        }
+        let indent = line.iter().take_while(|&&b| b == b' ' || b == b'\t').count();
+        (!line[indent..].starts_with(b"#")).then_some(indent)
+    })
+}
+
+fn scan_line<'a>(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    code_map: &CodeMap,
+    width: usize,
+    i: usize,
+    line: &'a [u8],
+    state: &mut ScanState<'a>,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    if let Some(indent) = cont::deeper_dot_block(line, next_code_indent(source, i)) {
+        state.prev_indent = Some(indent);
+        state.prev_line = line;
+        return;
+    }
+    let Some(indent) = line_indent(line) else {
+        return;
+    };
+    if continue_or_check(
+        cop, source, code_map, width, i, line, indent, state, diagnostics, corrections,
+    ) {
+        return;
+    }
+    if code_map.covers(source.line_start(i + 1).unwrap_or(0) + indent) {
+        state.prev_line = line;
+        return;
+    }
+    state.prev_indent = Some(indent);
+    state.prev_line = line;
+}
+
+fn continue_or_check<'a>(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    code_map: &CodeMap,
+    width: usize,
+    i: usize,
+    line: &'a [u8],
+    indent: usize,
+    state: &mut ScanState<'a>,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) -> bool {
+    let Some(prev) = state.prev_indent else {
+        return false;
+    };
+    if cont::aligned_continuation(indent, prev, state.prev_line, &mut state.cont_base) {
+        state.prev_line = line;
+        return true;
+    }
+    check_unless_after_end(
+        cop, source, code_map, i + 1, indent, prev, width, line, state.prev_line, diagnostics,
+        corrections,
+    );
+    false
 }
 
 fn check_unless_after_end(

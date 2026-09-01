@@ -10,19 +10,16 @@ use crate::parse::source::SourceFile;
 pub struct LiteralInInterpolation;
 
 fn is_basic_literal(node: Node<'_>) -> bool {
-    matches!(
-        node.kind(),
-        "integer"
-            | "float"
-            | "simple_symbol"
-            | "true"
-            | "false"
-            | "nil"
-            | "string"
-            | "hash"
-            | "array"
-            | "regex"
-    )
+    match node.kind() {
+        "integer" | "float" | "simple_symbol" | "true" | "false" | "nil" | "string" | "regex" => {
+            true
+        }
+        "array" | "hash" | "pair" | "range" => {
+            let mut cur = node.walk();
+            node.named_children(&mut cur).all(is_basic_literal)
+        }
+        _ => false,
+    }
 }
 
 fn literal_replacement(source: &SourceFile, lit: Node<'_>) -> Option<String> {
@@ -92,4 +89,10 @@ impl Cop for LiteralInInterpolation {
         }
         diagnostics.push(diag);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(LiteralInInterpolation, "cops/lint/literal_in_interpolation");
 }

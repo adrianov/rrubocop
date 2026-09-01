@@ -10,10 +10,30 @@ use crate::parse::source::SourceFile;
 
 pub struct DotPosition;
 
-fn find_dot(bytes: &[u8], recv: Node<'_>, method: Node<'_>) -> Option<usize> {
+fn find_dot(bytes: &[u8], node: Node<'_>, recv: Node<'_>, method: Node<'_>) -> Option<usize> {
+    if let Some(op) = node.child_by_field_name("operator") {
+        return Some(op.start_byte());
+    }
     let search = &bytes[recv.end_byte()..method.start_byte()];
-    let rel = search.iter().position(|&b| b == b'.')?;
-    Some(recv.end_byte() + rel)
+    // Skip `.` inside comments between receiver and method (RuboCop `line_between?`).
+    let mut offset = recv.end_byte();
+    for line in search.split(|&b| b == b'\n') {
+        if !is_comment_line(line) {
+            if let Some(rel) = line.iter().position(|&b| b == b'.') {
+                return Some(offset + rel);
+            }
+        }
+        offset += line.len() + 1;
+    }
+    None
+}
+
+fn is_comment_line(line: &[u8]) -> bool {
+    let mut i = 0;
+    while i < line.len() && matches!(line[i], b' ' | b'\t') {
+        i += 1;
+    }
+    line.get(i) == Some(&b'#')
 }
 
 fn fix_leading(cop: &dyn Cop, dot: usize, method: Node<'_>, corr: &mut Vec<Correction>) {
@@ -64,7 +84,7 @@ impl Cop for DotPosition {
         let Some(recv) = node.child_by_field_name("receiver") else { return; };
         let Some(method) = node.child_by_field_name("method") else { return; };
         if shared::node_line(source, recv) == shared::node_line(source, method) { return; }
-        let Some(dot) = find_dot(source.as_bytes(), recv, method) else { return; };
+        let Some(dot) = find_dot(source.as_bytes(), node, recv, method) else { return; };
         let leading = source.offset_to_line_col(dot).0 == shared::node_line(source, method);
         if want_leading && !leading {
             report_leading(self, source, dot, method, diagnostics, &mut corrections);
@@ -72,4 +92,10 @@ impl Cop for DotPosition {
             report_trailing(self, source, dot, diagnostics);
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(DotPosition, "cops/layout/dot_position");
 }

@@ -20,18 +20,21 @@ fn expected_col(source: &SourceFile, node: Node<'_>, recv: Node<'_>, style: &str
     match style {
         "indented_relative_to_receiver" => shared::line_indent(source, recv.start_byte()) + width,
         "indented" => shared::line_indent(source, chain::chain_root(source, node).start_byte()) + width,
-        "aligned" | _ => aligned_expected(source, node, recv, width),
+        "aligned" | _ => aligned_expected(source, node, width),
     }
 }
 
-fn aligned_expected(source: &SourceFile, node: Node<'_>, recv: Node<'_>, width: usize) -> usize {
+fn aligned_expected(source: &SourceFile, node: Node<'_>, width: usize) -> usize {
     if let Some(col) = dot_col::dot_aligned_above(source, node) {
         return col;
     }
     if let Some(col) = dot_col::first_same_line_dot_col(source, node) {
         return col;
     }
-    multiline_operation_indentation::aligned_method_call_col(source, node, recv, width)
+    // RuboCop falls back to `indentation(chain) + width` when there is no
+    // same-line first dot (`allow(...)\n  .to\n  .and_call_original`).
+    let root = chain::chain_root(source, node);
+    multiline_operation_indentation::aligned_method_call_col(source, node, root, width)
 }
 
 fn inside_paren_arg_list(node: Node<'_>) -> bool {

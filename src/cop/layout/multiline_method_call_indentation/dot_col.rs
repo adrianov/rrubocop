@@ -12,13 +12,25 @@ fn call_dot_line_col(source: &SourceFile, call: Node<'_>) -> Option<(usize, usiz
         return None;
     }
     let method = call.child_by_field_name("method")?;
-    let bytes = source.as_bytes();
-    let from = call.start_byte();
-    let to = method.start_byte().min(bytes.len());
+    let off = operator_start(source.as_bytes(), call.start_byte(), method.start_byte())?;
+    Some(source.offset_to_line_col(off))
+}
+
+fn operator_start(bytes: &[u8], from: usize, method_start: usize) -> Option<usize> {
+    let to = method_start.min(bytes.len());
     let rel = bytes[from..to]
         .iter()
         .rposition(|&b| b == b'.' || b == b'&')?;
-    Some(source.offset_to_line_col(from + rel))
+    Some(safe_nav_start(bytes, from, from + rel))
+}
+
+/// RuboCop `loc.dot` for `&.` starts at `&`.
+fn safe_nav_start(bytes: &[u8], from: usize, at: usize) -> usize {
+    if bytes.get(at) == Some(&b'.') && at > from && bytes[at - 1] == b'&' {
+        at - 1
+    } else {
+        at
+    }
 }
 
 fn is_comment_line(line: &[u8]) -> bool {
@@ -30,6 +42,7 @@ fn is_comment_line(line: &[u8]) -> bool {
 
 fn dot_at_col(line: &[u8], col: usize) -> bool {
     line.get(col) == Some(&b'.')
+        || (line.get(col) == Some(&b'&') && line.get(col + 1) == Some(&b'.'))
         || (col > 0 && line.get(col - 1) == Some(&b'&') && line.get(col) == Some(&b'.'))
 }
 
