@@ -8,7 +8,7 @@ license = "GPL-3.0-or-later"
 repository = "https://github.com/adrianov/rrubocop"
 homepage = "https://github.com/adrianov/rrubocop"
 documentation = "https://github.com/adrianov/rrubocop"
-description = "10x faster RuboCop drop-in. Same output format and configs, without maintaining RuboCop gems or a Ruby environment."
+description = "10x faster RuboCop drop-in. Same output format and configs, without maintaining RuboCop gems."
 readme = "README.md"
 keywords = ["ruby", "linter", "rubocop", "static-analysis"]
 categories = ["command-line-utilities", "development-tools"]
@@ -57,7 +57,7 @@ maintainer = "Peter M Adrianov <peter.adrianov@gmail.com>"
 copyright = "Peter M Adrianov"
 license-file = ["LICENSE", "0"]
 extended-description = """10x faster RuboCop drop-in written in Rust.
-Same CLI, configs, and output format — no gems or Ruby environment to maintain.
+Same CLI, configs, and output format — no RuboCop gems to maintain.
 Built for Ubuntu 22.04+ and Debian bookworm+ (amd64)."""
 depends = "$auto"
 assets = [

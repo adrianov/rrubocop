@@ -6,9 +6,13 @@ rrubocop \- 10x faster RuboCop drop-in
 [\fIOPTIONS\fR] [\fIPATH\fR]...
 .SH DESCRIPTION
 rrubocop is a 10x faster RuboCop drop-in. Same CLI, configs, and output
-format, without maintaining RuboCop gems or a Ruby environment. It
-parses with tree-sitter and does not require a Ruby runtime for
-linting. It reads
+format, without maintaining RuboCop gems. It parses with tree-sitter
+and does not require a Ruby runtime for linting or simple ERB.
+Unsupported ERB still needs
+.B ruby
+(or
+.B bundle exec ruby
+). It reads
 .B .rubocop.yml
 and emits RuboCop-compatible diagnostics.
 Parity targets rubocop 1.84.2 with rubocop-rails 2.34.3,
