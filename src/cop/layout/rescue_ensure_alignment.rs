@@ -43,9 +43,14 @@ fn ancestor_align_node(node: Node<'_>) -> Option<Node<'_>> {
 
 /// When Layout/BeginEndAlignment uses `start_of_line`, align to the first
 /// non-whitespace on the ancestor's starting line (RuboCop parity).
+/// `None` skips the check (no ancestor, or line-break method alignment).
 fn alignment_col(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Option<usize> {
     let ancestor = ancestor_align_node(node)?;
     if matches!(ancestor.kind(), "do_block" | "block") {
+        // RuboCop `aligned_with_line_break_method?` → no offense.
+        if aligned_with_line_break_method(source, ancestor, node) {
+            return None;
+        }
         return block_expression_col(source, ancestor);
     }
     if begin_end_start_of_line(config) {
@@ -58,6 +63,36 @@ fn alignment_col(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Opt
 fn block_expression_col(source: &SourceFile, ancestor: Node<'_>) -> Option<usize> {
     let send = block_send_node(ancestor)?;
     Some(shared::line_indent(source, outermost_send(send).start_byte()))
+}
+
+/// Accept rescue/ensure aligned with `.` / `&.` or the method on the `do` line.
+fn aligned_with_line_break_method(source: &SourceFile, block: Node<'_>, node: Node<'_>) -> bool {
+    let Some(send) = block_send_node(block) else {
+        return false;
+    };
+    let Some(do_kw) = do_keyword(block) else {
+        return false;
+    };
+    let do_line = shared::node_line(source, do_kw);
+    let kw_col = shared::node_col(source, node);
+    call_dot_op(source, send).is_some_and(|op| at_line_col(source, op, do_line, kw_col))
+        || shared::method_node(send).is_some_and(|m| at_line_col(source, m, do_line, kw_col))
+}
+
+fn do_keyword(block: Node<'_>) -> Option<Node<'_>> {
+    let mut cur = block.walk();
+    block
+        .children(&mut cur)
+        .find(|c| !c.is_named() && c.kind() == "do")
+}
+
+fn at_line_col(source: &SourceFile, n: Node<'_>, line: usize, col: usize) -> bool {
+    shared::node_line(source, n) == line && shared::node_col(source, n) == col
+}
+
+fn call_dot_op<'a>(source: &SourceFile, send: Node<'a>) -> Option<Node<'a>> {
+    let op = send.child_by_field_name("operator")?;
+    matches!(shared::node_bytes(source, op), b"." | b"&.").then_some(op)
 }
 
 fn outermost_send(mut send: Node<'_>) -> Node<'_> {
