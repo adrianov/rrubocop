@@ -19,7 +19,6 @@ use crate::parse::source::SourceFile;
 
 type ActiveCop<'a> = syntax_gate::ActiveCop<'a>;
 
-#[allow(clippy::too_many_arguments)]
 pub fn lint_source(
     source: &SourceFile,
     config: &ResolvedConfig,

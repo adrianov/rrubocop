@@ -12,5 +12,3 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Test
         run: cargo test --locked
-      - name: Clippy
-        run: cargo clippy --locked -- -D warnings

@@ -71,7 +71,6 @@ impl Cop for OrderedDependencies {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn handle_line(
     cop: &OrderedDependencies,
     source: &SourceFile,
