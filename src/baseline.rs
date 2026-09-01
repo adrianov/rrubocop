@@ -15,8 +15,8 @@ pub const GEMS: &[(&str, &str)] = &[
 
 /// Shown at the top of `--help`.
 pub const ABOUT: &str = concat!(
-    "Fast RuboCop-compatible Ruby linter (tree-sitter)\n",
-    "Corresponds to rubocop 1.84.2 with rubocop-rails 2.34.3, rubocop-performance 1.26.1, ",
+    env!("CARGO_PKG_DESCRIPTION"),
+    "\nCorresponds to rubocop 1.84.2 with rubocop-rails 2.34.3, rubocop-performance 1.26.1, ",
     "rubocop-rspec 3.9.0, rubocop-rspec_rails 2.32.0, rubocop-factory_bot 2.28.0"
 );
 

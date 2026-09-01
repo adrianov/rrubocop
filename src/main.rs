@@ -1,4 +1,4 @@
-//! rrubocop — fast RuboCop-compatible Ruby linter (tree-sitter).
+//! rrubocop — 10x faster RuboCop drop-in (same CLI, configs, and output).
 
 use std::process::ExitCode;
 

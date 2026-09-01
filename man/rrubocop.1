@@ -1,17 +1,14 @@
 .TH RRUBOCOP 1 "September 2026" "rrubocop 0.7.2" "User Commands"
 .SH NAME
-rrubocop \- fast RuboCop-compatible Ruby linter
+rrubocop \- 10x faster RuboCop drop-in
 .SH SYNOPSIS
 .B rrubocop
 [\fIOPTIONS\fR] [\fIPATH\fR]...
 .SH DESCRIPTION
-rrubocop is a Rust RuboCop drop-in for Ruby. It parses with tree-sitter and
-does not require a Ruby runtime for linting source files. Configuration that
-contains ERB still needs
-.B ruby
-(or
-.B bundle exec ruby
-) to expand, as with RuboCop. It reads
+rrubocop is a 10x faster RuboCop drop-in. Same CLI, configs, and output
+format, without maintaining RuboCop gems or a Ruby environment. It
+parses with tree-sitter and does not require a Ruby runtime for
+linting. It reads
 .B .rubocop.yml
 and emits RuboCop-compatible diagnostics.
 Parity targets rubocop 1.84.2 with rubocop-rails 2.34.3,

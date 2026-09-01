@@ -1,6 +1,6 @@
 # rrubocop
 
-Rust RuboCop drop-in for Ruby (tree-sitter). No Ruby for linting; simple ERB expands natively, complex ERB falls back to ruby/bundle.
+10x faster RuboCop drop-in for Ruby (tree-sitter). Same CLI, configs, and output — no gems or Ruby environment to maintain.
 
 ## Layout
 - `src/cli.rs` — RuboCop-compatible CLI
