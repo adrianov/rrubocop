@@ -28,6 +28,11 @@ fn pick_locked_version(gem_name: &str, locked: &str, available: &[String]) -> St
     if available.iter().any(|v| v == locked) {
         return locked.to_string();
     }
+    if let Some(alias) = gem_configs::same_as(gem_name, locked) {
+        if available.iter().any(|v| v == alias) {
+            return alias.to_string();
+        }
+    }
     let nearest = nearest_version(locked, available).expect("available non-empty");
     eprintln!("warning: Gemfile.lock has {gem_name} {locked}, using vendored config {nearest}");
     nearest
@@ -170,6 +175,27 @@ mod tests {
         assert_eq!(
             nearest_version("2.30.0", &avail).as_deref(),
             Some("2.32.0")
+        );
+    }
+
+    #[test]
+    fn pick_locked_prefers_same_as() {
+        let avail = vec![
+            "1.77.0".into(),
+            "1.79.0".into(),
+            "1.84.2".into(),
+        ];
+        assert_eq!(
+            pick_locked_version("rubocop", "1.79.2", &avail),
+            "1.79.0"
+        );
+        assert_eq!(
+            pick_locked_version("rubocop", "1.80.2", &avail),
+            "1.79.0"
+        );
+        assert_eq!(
+            pick_locked_version("rubocop", "1.79.0", &avail),
+            "1.79.0"
         );
     }
 }

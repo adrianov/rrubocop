@@ -2,7 +2,9 @@
 """Download RuboCop gem config YAML from GitHub into src/resources/gem_configs/.
 
 Reads src/resources/gem_configs_manifest.json and fetches each listed file
-at each version tag (vX.Y.Z). Re-run after editing the manifest.
+at each version tag (vX.Y.Z). Optional per-gem `same_as` maps lockfile
+versions to a vendored twin with identical YAML (no fetch of the alias;
+verified byte-equal to the twin). Re-run after editing the manifest.
 """
 
 from __future__ import annotations
@@ -58,12 +60,69 @@ def download_all(manifest: Path, out: Path) -> tuple[int, int]:
     return ok, fail
 
 
+def fail_same_as(gem: str, alias: str, target: str, detail: str) -> None:
+    print(f"FAIL {gem} same_as {alias}->{target}: {detail}", file=sys.stderr)
+
+
+def fetch_alias_body(gem: str, repo: str, alias: str, rel: str) -> bytes | None:
+    url = f"https://raw.githubusercontent.com/{repo}/v{alias}/{rel}"
+    try:
+        return fetch(url)
+    except Exception as e:  # noqa: BLE001
+        fail_msg(gem, alias, rel, e)
+        return None
+
+
+def bodies_match(
+    gem: str, repo: str, alias: str, target: str, rel: str, expected: bytes
+) -> bool:
+    body = fetch_alias_body(gem, repo, alias, rel)
+    if body is None:
+        return False
+    if body == expected:
+        print(f"ok   {gem} same_as {alias} == {target} ({rel})")
+        return True
+    fail_same_as(gem, alias, target, f"{rel} not byte-identical")
+    return False
+
+
+def check_same_as_file(
+    out: Path, gem: str, repo: str, alias: str, target: str, rel: str
+) -> bool:
+    target_path = out / gem / target / rel
+    if not target_path.is_file():
+        fail_same_as(gem, alias, target, f"missing {target_path}")
+        return False
+    return bodies_match(gem, repo, alias, target, rel, target_path.read_bytes())
+
+
+def verify_alias(out: Path, gem: str, meta: dict, alias: str, target: str) -> int:
+    if target not in meta["versions"]:
+        fail_same_as(gem, alias, target, "target not in versions")
+        return 1
+    fail = 0
+    for rel in meta["files"]:
+        if not check_same_as_file(out, gem, meta["repo"], alias, target, rel):
+            fail += 1
+    return fail
+
+
+def verify_same_as(manifest: Path, out: Path) -> int:
+    """Ensure each same_as alias target is vendored and YAML matches on GitHub."""
+    data = json.loads(manifest.read_text())
+    fail = 0
+    for gem, meta in data["gems"].items():
+        for alias, target in (meta.get("same_as") or {}).items():
+            fail += verify_alias(out, gem, meta, alias, target)
+    return fail
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
-    ok, fail = download_all(
-        root / "src/resources/gem_configs_manifest.json",
-        root / "src/resources/gem_configs",
-    )
+    manifest = root / "src/resources/gem_configs_manifest.json"
+    out = root / "src/resources/gem_configs"
+    ok, fail = download_all(manifest, out)
+    fail += verify_same_as(manifest, out)
     print(f"\n{ok} fetched, {fail} failed")
     return 1 if fail else 0
 
