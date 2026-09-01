@@ -2,7 +2,7 @@
 
 **Rust RuboCop drop-in replacement** — same CLI, config, and offense output, rewritten in Rust for speed. Point it at an existing Ruby project and use it like RuboCop.
 
-One binary — runs even without Ruby on the system, and the same way regardless of rbenv, rvm, or system Ruby. Uses [tree-sitter](https://tree-sitter.github.io/tree-sitter/); **no Ruby runtime required** for linting. Config files with ERB (`<% … %>`) still need `ruby` / `bundle exec ruby` to expand, matching RuboCop.
+One binary — runs even without Ruby on the system, and the same way regardless of rbenv, rvm, or system Ruby. Uses [tree-sitter](https://tree-sitter.github.io/tree-sitter/); **no Ruby runtime required** for linting. Simple ERB in configs (literals, `<% var = … %>` / `<%= var %>`, `ENV[…]` / `ENV.fetch(…)`) expands natively without Ruby; unsupported ERB falls back to `ruby` / `bundle exec ruby`, matching RuboCop.
 
 Drop-in parity: reads your existing `.rubocop.yml`, emits RuboCop-like text/JSON, supports `-a`/`-A` autocorrect, and grows cop coverage over time.
 
@@ -20,7 +20,7 @@ rrubocop [OPTIONS] [PATH]...
 
 ## Features
 
-- **Config** — RuboCop-compatible resolution: walk-up discovery, `inherit_from` / `inherit_gem` / `require`/`plugins`, `inherit_mode` (merge/override), nested `.rubocop.yml` overrides, `DisabledByDefault`, `NewCops` / `Enabled: pending`, plus per-cop `Enabled` / `Exclude` / `Include` / options; ERB in YAML is expanded via Ruby when present
+- **Config** — RuboCop-compatible resolution: walk-up discovery, `inherit_from` / `inherit_gem` / `require`/`plugins`, `inherit_mode` (merge/override), nested `.rubocop.yml` overrides, `DisabledByDefault`, `NewCops` / `Enabled: pending`, plus per-cop `Enabled` / `Exclude` / `Include` / options; simple ERB in YAML expands natively (Ruby only for unsupported tags)
 - **Autocorrect** — `-a` (safe) / `-A` (all)
 - **Output** — `progress` (marks stream as files finish), `text`, `json`, `github`, `quiet`, `files`, … (TTY color like RuboCop; `--color` / `--no-color`)
 - **Directives** — `# rubocop:disable` / `enable`
