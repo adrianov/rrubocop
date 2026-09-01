@@ -13,9 +13,18 @@ Merge **every** ready pull request automatically — do not wait for a human to 
 
 1. Open the PR as **ready for review** (not draft), unless the user explicitly asks for a draft.
 2. Do **not** merge before `ci` is green. This repo has no required status checks, so `gh pr merge --auto` can land immediately and skip CI — avoid that.
-3. Default path: leave the ready PR open; `.github/workflows/auto-merge.yml` squash-merges it after the `ci` workflow succeeds and deletes the branch.
+3. Default path: leave the ready PR open; `.github/workflows/auto-merge.yml` squash-merges it after the `ci` workflow succeeds and deletes the head branch.
 4. If you must merge yourself (Action unavailable): wait until the PR’s `ci` checks are success, then run `gh pr merge <pr> --squash --delete-branch` (no `--auto` unless branch protection requires those checks).
 5. Do **not** skip merge “because cloud agents usually leave drafts” or “unless the user asks” — this rule is the user asking for every ready PR.
+
+## Delete merged branches (required)
+
+After every squash-merge, delete the PR head branch on the remote.
+
+1. Always pass `--delete-branch` to `gh pr merge`.
+2. If the branch still exists afterward, delete it: `git push origin --delete <head>` or `gh api -X DELETE repos/<owner>/<repo>/git/refs/heads/<head>`.
+3. Never leave merged feature branches on `origin` (including after manual UI merges).
+4. Repo setting “Automatically delete head branches” is preferred when an admin can enable it; the Action/rule still delete explicitly because that setting may be off.
 
 ## Squash commit
 
@@ -26,3 +35,4 @@ Merge **every** ready pull request automatically — do not wait for a human to 
 
 - One commit per PR keeps `main` history linear, readable, and easy to revert or bisect.
 - Auto-merge after CI keeps finished work on `main` without a manual merge step and without bypassing tests.
+- Deleting merged heads keeps the remote branch list to live work only.
