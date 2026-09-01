@@ -76,6 +76,7 @@ fn void_msg(
     match stmt.kind() {
         "self" => Some("`self` used in void context.".to_string()),
         "constant" => Some(void_named_msg("Constant", source, stmt)),
+        "scope_resolution" => Some(void_named_msg("Constant", source, stmt)),
         k if is_var_kind(k) => Some(void_named_msg("Variable", source, stmt)),
         "identifier" => void_ident_msg(source, stmts, idx, stmt),
         "binary" => void_binary_msg(source, stmt),
