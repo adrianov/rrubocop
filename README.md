@@ -71,14 +71,17 @@ Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rruboco
 
 ## Benchmarks
 
-Cold lint (cache off) on a large Rails codebase (~3.8k Ruby files), same host, both clean (0 offenses):
+Cold lint (cache off) on a large Rails codebase (~3.8k Ruby files), same host:
 
-| Tool | Wall clock | Notes |
-|---|---|---|
-| `bundle exec rubocop --cache false` | **2m 37s** (`2:36.64`) | ~99% CPU (mostly single-core) |
-| `rrubocop --no-cache` | **7.0s** (`7.005`) | ~1040% CPU (parallel) |
+| Tool | Wall clock | Result | Notes |
+|---|---|---|---|
+| `bundle exec rubocop --cache false` | **2m 37s** (`2:36.64`) | 0 offenses | ~99% CPU (mostly single-core) |
+| `rrubocop --no-cache` | **7.0s** (`7.005`) | 0 offenses | ~1040% CPU (parallel) |
+| `nitrocop --no-cache` | **8.9s** (`8.906`) | ~21k offenses | ~1000% CPU; not a fair parity run (see below) |
 
-≈ **22×** faster wall clock (`156.6s / 7.0s`). RuboCop user time was 155s; rrubocop used 71s of CPU across cores.
+rrubocop is ≈ **22×** faster wall clock than RuboCop (`156.6s / 7.0s`) on the same clean result. RuboCop user time was 155s; rrubocop used 71s of CPU across cores.
+
+**nitrocop caveat:** out of the box it did not honor the same disabled cops / custom rules / gem configs as `bundle exec rubocop` (e.g. failed `inherit_gem` load, skipped/unimplemented cops), so it reported ~21k false positives vs RuboCop/rrubocop’s clean run. Matching that baseline needs extra setup (`--migrate`, plugin/config wiring). Treat the 8.9s figure as raw throughput only, not drop-in parity.
 
 ## Cross-test vs nitrocop
 
