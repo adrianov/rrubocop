@@ -32,7 +32,7 @@ impl ResolvedConfig {
             name_to_index: name_index_map(registry),
             config_dir: self.config_dir.clone(),
             base_dir: self.base_dir.clone(),
-            scan_root: None,
+            scan_root: self.scan_root.clone(),
             sub_config_dirs: self.sub_config_dirs(),
             universal_cop_indices,
             pattern_cop_indices,
@@ -52,7 +52,7 @@ impl ResolvedConfig {
             name_to_index: HashMap::new(),
             config_dir: self.config_dir.clone(),
             base_dir: self.base_dir.clone(),
-            scan_root: None,
+            scan_root: self.scan_root.clone(),
             sub_config_dirs: self.sub_config_dirs(),
             universal_cop_indices: Vec::new(),
             pattern_cop_indices: Vec::new(),
@@ -91,17 +91,16 @@ impl ResolvedConfig {
     }
 
     fn sub_config_dirs(&self) -> Vec<std::path::PathBuf> {
-        if self.dir_overrides.is_empty() {
-            self.config_dir
-                .as_ref()
-                .map(|cd| discover_sub_config_dirs(cd))
-                .unwrap_or_default()
-        } else {
-            self.dir_overrides
+        if !self.dir_overrides.is_empty() {
+            return self
+                .dir_overrides
                 .iter()
                 .map(|(dir, _)| dir.clone())
-                .collect()
+                .collect();
         }
+        self.nested_search_root()
+            .map(|root| discover_sub_config_dirs(&root))
+            .unwrap_or_default()
     }
 
     fn filter_for_cop(

@@ -61,6 +61,7 @@ pub(crate) fn empty_resolved_no_config(config_dir: PathBuf) -> ResolvedConfig {
     let rack_version = lockfile_gem_version(&base_dir, "rack");
     ResolvedConfig {
         config_dir: Some(config_dir.clone()),
+        scan_root: Some(config_dir.clone()),
         dir_overrides: load_dir_overrides(&config_dir),
         base_dir: Some(base_dir),
         global_excludes: defaults.global_excludes,

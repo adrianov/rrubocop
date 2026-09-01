@@ -9,8 +9,8 @@ use super::discover::load_dir_overrides;
 use super::load_defaults::try_load_rubocop_defaults;
 use super::load_resolve::{
     apply_disabled_by_default, build_resolved, empty_resolved_no_config, load_project_layer,
-    project_enabled_depts, resolve_config_path, resolve_lockfile_meta, resolve_path_base_dir,
-    resolve_start_dir, resolve_target_ruby_version, ResolvedParts,
+    project_enabled_depts, resolve_config_load, resolve_lockfile_meta, resolve_path_base_dir,
+    resolve_start_dir, resolve_target_ruby_version, ConfigLoadPath, ResolvedParts,
 };
 use super::merge::merge_layer_into;
 use super::resolved::ResolvedConfig;
@@ -41,17 +41,18 @@ fn config_parent(config_path: &Path) -> PathBuf {
     }
 }
 
-fn dir_overrides_for(explicit: bool, config_dir: &Path) -> Vec<(PathBuf, super::types::ConfigLayer)> {
+fn dir_overrides_for(explicit: bool, scan_root: &Path) -> Vec<(PathBuf, super::types::ConfigLayer)> {
     if explicit {
         Vec::new()
     } else {
-        load_dir_overrides(config_dir)
+        load_dir_overrides(scan_root)
     }
 }
 
 fn assemble_resolved(
     explicit_config_path: bool,
     config_path: PathBuf,
+    scan_root: PathBuf,
     gem_cache: Option<&HashMap<String, PathBuf>>,
 ) -> Result<ResolvedConfig> {
     let config_dir = config_parent(&config_path);
@@ -62,9 +63,10 @@ fn assemble_resolved(
     Ok(build_resolved(ResolvedParts {
         target_ruby_version: resolve_target_ruby_version(&base, &config_dir),
         lock: resolve_lockfile_meta(&base, &base_dir),
-        dir_overrides: dir_overrides_for(explicit_config_path, &config_dir),
+        dir_overrides: dir_overrides_for(explicit_config_path, &scan_root),
         base,
         config_dir,
+        scan_root: Some(scan_root),
         base_dir,
         rubocop_known_cops,
         project_mentioned_cops,
@@ -78,16 +80,12 @@ pub fn load_config(
     target_dir: Option<&Path>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
 ) -> Result<ResolvedConfig> {
-    let explicit_config_path = path.is_some();
-    let start_dir = resolve_start_dir(target_dir);
-    if path.is_some() && resolve_config_path(path, start_dir.as_ref()).is_none() {
-        return Ok(ResolvedConfig::empty());
+    match resolve_config_load(path, resolve_start_dir(target_dir)) {
+        ConfigLoadPath::Empty => Ok(ResolvedConfig::empty()),
+        ConfigLoadPath::NoConfig(dir) => Ok(empty_resolved_no_config(dir)),
+        ConfigLoadPath::Resolved {
+            config_path,
+            scan_root,
+        } => assemble_resolved(path.is_some(), config_path, scan_root, gem_cache),
     }
-    let Some(config_path) = resolve_config_path(path, start_dir.as_ref()) else {
-        let Some(config_dir) = start_dir else {
-            return Ok(ResolvedConfig::empty());
-        };
-        return Ok(empty_resolved_no_config(config_dir));
-    };
-    assemble_resolved(explicit_config_path, config_path, gem_cache)
 }

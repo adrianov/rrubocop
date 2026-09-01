@@ -5,6 +5,7 @@ use std::path::Path;
 
 use crate::cop::EnabledState;
 
+use super::filter_path::path_under_dir;
 use super::merge::merge_layer_into;
 use super::types::{ConfigLayer, NewCopsPolicy};
 use super::ResolvedConfig;
@@ -47,7 +48,7 @@ impl ResolvedConfig {
             return None;
         }
         for (dir, layer) in &self.dir_overrides {
-            if file_path.starts_with(dir) {
+            if path_under_dir(file_path, dir) {
                 return Some(layer);
             }
         }
@@ -55,14 +56,25 @@ impl ResolvedConfig {
     }
 
     fn find_dir_layer_relativized(&self, file_path: &Path) -> Option<&ConfigLayer> {
-        let config_dir = self.config_dir.as_ref()?;
-        // Absolute file under config_dir, or already-relative path from scan root.
-        let rel_path = file_path
-            .strip_prefix(config_dir)
-            .unwrap_or(file_path);
+        if let Some(layer) = self.find_dir_layer_relativized_under(file_path, self.scan_root.as_deref()) {
+            return Some(layer);
+        }
+        if self.scan_root.as_deref() == self.config_dir.as_deref() {
+            return None;
+        }
+        self.find_dir_layer_relativized_under(file_path, self.config_dir.as_deref())
+    }
+
+    fn find_dir_layer_relativized_under(
+        &self,
+        file_path: &Path,
+        base: Option<&Path>,
+    ) -> Option<&ConfigLayer> {
+        let base = base?;
+        let rel_path = file_path.strip_prefix(base).unwrap_or(file_path);
         for (dir, layer) in &self.dir_overrides {
-            let rel_dir = dir.strip_prefix(config_dir).unwrap_or(dir.as_path());
-            if rel_path.starts_with(rel_dir) {
+            let rel_dir = dir.strip_prefix(base).unwrap_or(dir.as_path());
+            if rel_path.starts_with(rel_dir) || path_under_dir(rel_path, rel_dir) {
                 return Some(layer);
             }
         }

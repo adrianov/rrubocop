@@ -40,6 +40,29 @@ pub(crate) fn resolve_config_path(path: Option<&Path>, start_dir: Option<&PathBu
     }
 }
 
+pub(crate) enum ConfigLoadPath {
+    Empty,
+    NoConfig(PathBuf),
+    Resolved { config_path: PathBuf, scan_root: PathBuf },
+}
+
+pub(crate) fn resolve_config_load(path: Option<&Path>, start_dir: Option<PathBuf>) -> ConfigLoadPath {
+    let config_path = resolve_config_path(path, start_dir.as_ref());
+    if path.is_some() && config_path.is_none() {
+        return ConfigLoadPath::Empty;
+    }
+    let Some(config_path) = config_path else {
+        return match start_dir {
+            Some(dir) => ConfigLoadPath::NoConfig(dir),
+            None => ConfigLoadPath::Empty,
+        };
+    };
+    ConfigLoadPath::Resolved {
+        config_path,
+        scan_root: start_dir.unwrap_or_else(|| PathBuf::from(".")),
+    }
+}
+
 pub(crate) fn resolve_path_base_dir(config_path: &Path, config_dir: &Path) -> PathBuf {
     let is_rubocop_dotfile = config_path
         .file_name()
@@ -134,6 +157,7 @@ pub(crate) fn resolve_target_ruby_version(base: &ConfigLayer, config_dir: &Path)
 pub(crate) struct ResolvedParts {
     pub base: ConfigLayer,
     pub config_dir: PathBuf,
+    pub scan_root: Option<PathBuf>,
     pub base_dir: PathBuf,
     pub rubocop_known_cops: HashSet<String>,
     pub project_mentioned_cops: HashSet<String>,
@@ -155,6 +179,7 @@ pub(crate) fn build_resolved(parts: ResolvedParts) -> ResolvedConfig {
         department_configs: parts.base.department_configs,
         global_excludes: parts.base.global_excludes,
         config_dir: Some(parts.config_dir),
+        scan_root: parts.scan_root,
         new_cops,
         disabled_by_default,
         require_known_cops: parts.base.require_known_cops,

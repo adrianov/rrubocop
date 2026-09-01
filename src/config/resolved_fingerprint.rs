@@ -1,6 +1,6 @@
 //! Cache fingerprint for ResolvedConfig.
 
-use crate::cop::EnabledState;
+use crate::cop::{CopConfig, EnabledState};
 
 use super::types::NewCopsPolicy;
 use super::ResolvedConfig;
@@ -51,6 +51,9 @@ impl ResolvedConfig {
         if let Some(ref d) = self.config_dir {
             h.update(d.display().to_string().as_bytes());
         }
+        if let Some(ref d) = self.scan_root {
+            h.update(d.display().to_string().as_bytes());
+        }
         if let Some(ref d) = self.base_dir {
             h.update(d.display().to_string().as_bytes());
         }
@@ -72,9 +75,7 @@ impl ResolvedConfig {
         names.sort();
         for name in names {
             h.update(name.as_bytes());
-            if let Ok(bytes) = serde_json::to_vec(&self.cop_configs[&name]) {
-                h.update(&bytes);
-            }
+            hash_cop_config(h, &self.cop_configs[&name]);
         }
     }
 
@@ -103,6 +104,47 @@ impl ResolvedConfig {
         mentioned.sort();
         for n in mentioned {
             h.update(n.as_bytes());
+        }
+    }
+}
+
+fn hash_cop_config(h: &mut sha2::Sha256, cfg: &CopConfig) {
+    use sha2::Digest;
+    h.update([enabled_byte(cfg.enabled)]);
+    if let Some(sev) = cfg.severity {
+        h.update([sev as u8]);
+    }
+    hash_pattern_list(h, &cfg.exclude);
+    hash_pattern_list(h, &cfg.include);
+    hash_option_map(h, &cfg.options);
+}
+
+fn enabled_byte(state: EnabledState) -> u8 {
+    match state {
+        EnabledState::True => 1,
+        EnabledState::False => 2,
+        EnabledState::Pending => 3,
+        EnabledState::Unset => 0,
+    }
+}
+
+fn hash_pattern_list(h: &mut sha2::Sha256, patterns: &[String]) {
+    use sha2::Digest;
+    for p in patterns {
+        h.update(p.as_bytes());
+        h.update([0]);
+    }
+}
+
+fn hash_option_map(h: &mut sha2::Sha256, options: &std::collections::HashMap<String, serde_yml::Value>) {
+    use sha2::Digest;
+    let mut keys: Vec<_> = options.keys().cloned().collect();
+    keys.sort();
+    for key in keys {
+        h.update(key.as_bytes());
+        h.update([0]);
+        if let Ok(bytes) = serde_json::to_vec(&options[&key]) {
+            h.update(&bytes);
         }
     }
 }

@@ -303,6 +303,48 @@ mod tests {
         assert_nested_cop_state(&config, dir.path());
     }
 
+    fn parent_config_nested_fixture() -> (tempfile::TempDir, PathBuf) {
+        let home = tempfile::tempdir().unwrap();
+        let project = home.path().join("project");
+        fs::create_dir_all(&project).unwrap();
+        write_config(home.path(), "Style/Foo:\n  Enabled: true\n");
+        write_yaml(
+            &project,
+            "spec/.rubocop.yml",
+            "Style/Foo:\n  Enabled: false\n",
+        );
+        write_yaml(
+            home.path(),
+            "sibling/.rubocop.yml",
+            "Style/Foo:\n  Enabled: false\n",
+        );
+        (home, project)
+    }
+
+    fn assert_nested_overrides_scoped_to_scan_root(config: &ResolvedConfig) {
+        assert!(config
+            .dir_overrides
+            .iter()
+            .any(|(d, _)| d.ends_with("spec")));
+        assert!(!config
+            .dir_overrides
+            .iter()
+            .any(|(d, _)| d.ends_with("sibling")));
+        assert_eq!(
+            config
+                .cop_config_for_file("Style/Foo", Path::new("spec/a.rb"))
+                .enabled,
+            EnabledState::False
+        );
+    }
+
+    #[test]
+    fn nested_overrides_scoped_to_scan_root_not_config_dir() {
+        let (_home, project) = parent_config_nested_fixture();
+        let config = load_config(None, Some(&project), None).unwrap();
+        assert_nested_overrides_scoped_to_scan_root(&config);
+    }
+
     #[test]
     fn cache_fingerprint_changes_with_config() {
         let dir = tempfile::tempdir().unwrap();
@@ -310,6 +352,36 @@ mod tests {
         let cfg_a = load_config(Some(&a), None, None).unwrap();
         let b = write_config(dir.path(), "Style/Foo:\n  Enabled: false\n");
         let cfg_b = load_config(Some(&b), None, None).unwrap();
+        assert_ne!(cfg_a.cache_fingerprint(), cfg_b.cache_fingerprint());
+    }
+
+    #[test]
+    fn cache_fingerprint_stable_across_config_reloads() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_config(
+            dir.path(),
+            "Metrics/MethodLength:\n  Max: 10\n  CountAsOne: array\n",
+        );
+        let a = load_config(Some(&path), None, None).unwrap();
+        let b = load_config(Some(&path), None, None).unwrap();
+        assert_eq!(a.cache_fingerprint(), b.cache_fingerprint());
+    }
+
+    #[test]
+    fn cache_fingerprint_differs_by_scan_root() {
+        let home = tempfile::tempdir().unwrap();
+        let project_a = home.path().join("a");
+        let project_b = home.path().join("b");
+        fs::create_dir_all(&project_a).unwrap();
+        fs::create_dir_all(&project_b).unwrap();
+        write_config(home.path(), "Style/Foo:\n  Enabled: true\n");
+        write_yaml(
+            &project_a,
+            "spec/.rubocop.yml",
+            "Style/Foo:\n  Enabled: false\n",
+        );
+        let cfg_a = load_config(None, Some(&project_a), None).unwrap();
+        let cfg_b = load_config(None, Some(&project_b), None).unwrap();
         assert_ne!(cfg_a.cache_fingerprint(), cfg_b.cache_fingerprint());
     }
 

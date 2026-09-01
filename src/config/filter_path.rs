@@ -1,6 +1,6 @@
 //! Path-form helpers for Include/Exclude matching.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use globset::GlobSet;
 use regex::RegexSet;
@@ -134,4 +134,30 @@ pub(crate) fn exclude_re_matches_forms(
     exclude_re
         .as_ref()
         .is_some_and(|re| re_matches_forms(re, path, rel_path, rel_to_base))
+}
+
+pub(crate) fn path_under_dir(file: &Path, dir: &Path) -> bool {
+    for f in path_prefix_variants(file) {
+        for d in path_prefix_variants(dir) {
+            if f.starts_with(&d) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn path_prefix_variants(path: &Path) -> [PathBuf; 2] {
+    let primary = path.to_path_buf();
+    let Some(text) = path.to_str() else {
+        return [primary.clone(), primary];
+    };
+    let alt = if let Some(rest) = text.strip_prefix("/private") {
+        PathBuf::from(rest)
+    } else if text.starts_with("/var/") || text.starts_with("/tmp/") {
+        PathBuf::from(format!("/private{text}"))
+    } else {
+        primary.clone()
+    };
+    [primary, alt]
 }

@@ -17,6 +17,9 @@ pub struct ResolvedConfig {
     pub(crate) global_excludes: Vec<String>,
     /// Directory containing the resolved config file (for relative path resolution).
     pub(crate) config_dir: Option<PathBuf>,
+    /// Directory being linted; nested `.rubocop.yml` discovery is scoped here,
+    /// not under `config_dir` when config was found via walk-up (e.g. `~/.rubocop.yml`).
+    pub(crate) scan_root: Option<PathBuf>,
     /// How to handle `Enabled: pending` cops.
     pub(crate) new_cops: NewCopsPolicy,
     /// When true, cops without explicit `Enabled: true` are disabled.
@@ -97,6 +100,7 @@ impl ResolvedConfig {
             department_configs: HashMap::new(),
             global_excludes: Vec::new(),
             config_dir: None,
+            scan_root: None,
             new_cops: NewCopsPolicy::Disable,
             disabled_by_default: false,
             require_known_cops: HashSet::new(),
@@ -169,6 +173,10 @@ impl ResolvedConfig {
     /// Falls back to `config_dir` if not set.
     pub fn base_dir(&self) -> Option<&Path> {
         self.base_dir.as_deref().or(self.config_dir.as_deref())
+    }
+
+    pub(crate) fn nested_search_root(&self) -> Option<PathBuf> {
+        self.scan_root.clone().or_else(|| self.config_dir.clone())
     }
 
     /// Return all cop names from the config that would be enabled given
