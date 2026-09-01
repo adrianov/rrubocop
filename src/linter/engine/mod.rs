@@ -274,8 +274,6 @@ fn run_source_phase(
             let before = diagnostics.len();
             cop.check_file_model(
                 source,
-                tree,
-                code_map,
                 &file_model,
                 cfg,
                 diagnostics,

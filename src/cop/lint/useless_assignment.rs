@@ -3,7 +3,6 @@
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::model::IntroKind;
-use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
 
 pub struct UselessAssignment;
@@ -28,8 +27,6 @@ impl Cop for UselessAssignment {
     fn check_file_model(
         &self,
         source: &SourceFile,
-        _tree: &tree_sitter::Tree,
-        _code_map: &CodeMap,
         file_model: &crate::model::FileModel<'_>,
         _config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,

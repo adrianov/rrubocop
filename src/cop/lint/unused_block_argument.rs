@@ -1,7 +1,6 @@
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::model::{IntroKind, ScopeKind};
-use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
 use tree_sitter::Node;
 
@@ -61,8 +60,6 @@ impl Cop for UnusedBlockArgument {
     fn check_file_model(
         &self,
         source: &SourceFile,
-        tree: &tree_sitter::Tree,
-        _code_map: &CodeMap,
         file_model: &crate::model::FileModel<'_>,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
@@ -73,7 +70,7 @@ impl Cop for UnusedBlockArgument {
             if scope.kind != ScopeKind::Block {
                 continue;
             }
-            if ignore_empty && block_body_empty(tree, scope.entered_at) {
+            if ignore_empty && block_body_empty(&file_model.tree, scope.entered_at) {
                 continue;
             }
             for (name, entry) in &scope.entries {

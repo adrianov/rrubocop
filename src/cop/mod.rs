@@ -178,13 +178,11 @@ pub trait Cop: Send + Sync {
     }
 
     /// Shared FileModel pass — used by variable/metrics cops that would
-    /// otherwise each rebuild the model.
+    /// otherwise each rebuild the model. Tree is available as `file_model.tree`.
     #[allow(unused_variables)]
     fn check_file_model(
         &self,
         source: &SourceFile,
-        tree: &tree_sitter::Tree,
-        code_map: &CodeMap,
         file_model: &crate::model::FileModel<'_>,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
