@@ -28,22 +28,30 @@ impl Directives {
 
     fn line_disabled(&self, name: &str, line: usize) -> bool {
         self.line_disables
-            .get(name)
-            .is_some_and(|s| s.contains(&line))
+            .iter()
+            .any(|(k, s)| k.eq_ignore_ascii_case(name) && s.contains(&line))
     }
 
     fn range_disabled(&self, name: &str, line: usize) -> bool {
-        self.range_disables
-            .get(name)
-            .is_some_and(|ranges| ranges.iter().any(|&(a, b)| a <= line && line <= b))
+        self.range_disables.iter().any(|(k, ranges)| {
+            k.eq_ignore_ascii_case(name) && ranges.iter().any(|&(a, b)| a <= line && line <= b)
+        })
     }
 }
 
 fn apply_enable(d: &mut Directives, rest: &str, line_no: usize) {
     for name in cop_names(rest.trim_start_matches([' ', ':'])) {
-        if let Some(start) = d.open_blocks.remove(&name) {
+        let Some(key) = d
+            .open_blocks
+            .keys()
+            .find(|k| k.eq_ignore_ascii_case(&name))
+            .cloned()
+        else {
+            continue;
+        };
+        if let Some(start) = d.open_blocks.remove(&key) {
             d.range_disables
-                .entry(name)
+                .entry(key)
                 .or_default()
                 .push((start, line_no));
         }
@@ -58,10 +66,7 @@ fn apply_disable(d: &mut Directives, rest: &str, line: &str, line_no: usize) {
     let trailing = !line.trim_start().starts_with('#');
     for name in names {
         if trailing {
-            d.line_disables
-                .entry(name)
-                .or_default()
-                .insert(line_no);
+            d.line_disables.entry(name).or_default().insert(line_no);
         } else {
             d.open_blocks.entry(name).or_insert(line_no);
         }
@@ -133,9 +138,25 @@ mod tests {
 
     #[test]
     fn disable_after_other_hash_in_comment() {
-        let d = parse(
-            "x = 1 # priv: \"abc\" # rubocop:disable Lint/UnreachableCode\n",
-        );
+        let d = parse("x = 1 # priv: \"abc\" # rubocop:disable Lint/UnreachableCode\n");
         assert!(d.suppresses("Lint/UnreachableCode", 1));
+    }
+
+    #[test]
+    fn disable_cop_name_is_case_insensitive() {
+        let d = parse("it 'x' do end # rubocop:disable Rspec/ExampleLength\n");
+        assert!(d.suppresses("RSpec/ExampleLength", 1));
+    }
+
+    #[test]
+    fn disable_department_is_case_insensitive() {
+        let d = parse("# rubocop:disable Rspec\nx = 1\n");
+        assert!(d.suppresses("RSpec/LetSetup", 2));
+    }
+
+    #[test]
+    fn disable_after_escaped_single_quote() {
+        let d = parse("it 'doesn\\'t twice' do # rubocop:disable RSpec/MultipleExpectations\n");
+        assert!(d.suppresses("RSpec/MultipleExpectations", 1));
     }
 }

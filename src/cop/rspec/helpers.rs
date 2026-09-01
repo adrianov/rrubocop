@@ -127,3 +127,51 @@ pub fn first_sym_arg<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<&'a [
         _ => None,
     }
 }
+
+fn is_spec_group_call(source: &SourceFile, node: Node<'_>) -> bool {
+    bare_rspec_call(source, node).is_some_and(is_group) && call_block(node).is_some()
+}
+
+fn named_code_children(node: Node<'_>) -> impl Iterator<Item = Node<'_>> {
+    (0..node.named_child_count() as u32)
+        .filter_map(move |i| node.named_child(i).filter(|c| c.kind() != "comment"))
+}
+
+fn collect_top_level_groups<'a>(source: &SourceFile, node: Node<'a>) -> Vec<Node<'a>> {
+    match node.kind() {
+        "module" | "class" => node
+            .child_by_field_name("body")
+            .into_iter()
+            .flat_map(named_code_children)
+            .flat_map(|child| collect_top_level_groups(source, child))
+            .collect(),
+        "call" | "command" if is_spec_group_call(source, node) => vec![node],
+        _ => Vec::new(),
+    }
+}
+
+fn top_level_groups<'a>(source: &SourceFile, program: Node<'a>) -> Vec<Node<'a>> {
+    let stmts: Vec<_> = named_code_children(program).collect();
+    match stmts.as_slice() {
+        [only] => collect_top_level_groups(source, *only),
+        _ => stmts
+            .into_iter()
+            .filter(|s| is_spec_group_call(source, *s))
+            .collect(),
+    }
+}
+
+/// RuboCop `TopLevelGroup`: example/shared groups at the file root.
+/// A sole top-level module/class is unwrapped; sibling statements are not.
+pub fn node_in_top_level_group(source: &SourceFile, node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(cur) = p {
+        if cur.kind() == "program" {
+            return top_level_groups(source, cur)
+                .iter()
+                .any(|g| node.start_byte() >= g.start_byte() && node.end_byte() <= g.end_byte());
+        }
+        p = cur.parent();
+    }
+    false
+}

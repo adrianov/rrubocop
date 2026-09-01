@@ -191,7 +191,8 @@ impl Cop for DescribedClass {
         let Some(method) = bare_rspec_call(source, node) else {
             return;
         };
-        if !matches!(method, b"describe" | b"xdescribe" | b"fdescribe") {
+        // RuboCop `described_constant` matches only `:describe`, not x/f variants.
+        if method != b"describe" {
             return;
         }
         let Some(const_name) = described_const(source, node) else {

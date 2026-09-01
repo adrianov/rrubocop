@@ -2,7 +2,8 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared::{call_method_name, call_receiver, node_bytes};
+use crate::cop::rspec::helpers::node_in_top_level_group;
+use crate::cop::shared::{argument_nodes, call_method_name, call_receiver, node_bytes};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -25,17 +26,13 @@ fn is_assign_lhs(node: Node<'_>) -> bool {
     false
 }
 
-/// RuboCop `valid_usage?` — only `Class.new { ... }` blocks are exempt.
-fn inside_class_new(source: &SourceFile, node: Node<'_>) -> bool {
+/// RuboCop `valid_usage?` — `Class.new { ... }` and custom matcher blocks.
+fn valid_usage(source: &SourceFile, node: Node<'_>) -> bool {
     let mut p = node.parent();
     while let Some(cur) = p {
         if matches!(cur.kind(), "do_block" | "block") {
             if let Some(call) = cur.parent() {
-                if matches!(call.kind(), "call" | "command")
-                    && call_method_name(source, call) == Some(b"new")
-                    && call_receiver(call)
-                        .is_some_and(|r| r.kind() == "constant" && node_bytes(source, r) == b"Class")
-                {
+                if is_class_new(source, call) || is_custom_matcher(source, call) {
                     return true;
                 }
             }
@@ -43,6 +40,41 @@ fn inside_class_new(source: &SourceFile, node: Node<'_>) -> bool {
         p = cur.parent();
     }
     false
+}
+
+fn is_class_new(source: &SourceFile, node: Node<'_>) -> bool {
+    matches!(node.kind(), "call" | "command")
+        && call_method_name(source, node) == Some(b"new")
+        && call_receiver(node)
+            .is_some_and(|r| r.kind() == "constant" && node_bytes(source, r) == b"Class")
+}
+
+fn first_arg_is_symbol(node: Node<'_>) -> bool {
+    argument_nodes(node)
+        .first()
+        .is_some_and(|a| matches!(a.kind(), "simple_symbol" | "symbol"))
+}
+
+fn is_rspec_matchers(source: &SourceFile, node: Node<'_>) -> bool {
+    node.kind() == "scope_resolution"
+        && node
+            .child_by_field_name("name")
+            .is_some_and(|n| node_bytes(source, n) == b"Matchers")
+        && node
+            .child_by_field_name("scope")
+            .is_some_and(|s| s.kind() == "constant" && node_bytes(source, s) == b"RSpec")
+}
+
+/// `matcher :name do` or `RSpec::Matchers.define :name do` (symbol arg required).
+fn is_custom_matcher(source: &SourceFile, node: Node<'_>) -> bool {
+    if !matches!(node.kind(), "call" | "command") || !first_arg_is_symbol(node) {
+        return false;
+    }
+    match call_method_name(source, node) {
+        Some(b"matcher") => call_receiver(node).is_none(),
+        Some(b"define") => call_receiver(node).is_some_and(|r| is_rspec_matchers(source, r)),
+        _ => false,
+    }
 }
 
 impl Cop for InstanceVariable {
@@ -66,7 +98,10 @@ impl Cop for InstanceVariable {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        if node.kind() != "instance_variable" || is_assign_lhs(node) || inside_class_new(source, node)
+        if node.kind() != "instance_variable"
+            || is_assign_lhs(node)
+            || !node_in_top_level_group(source, node)
+            || valid_usage(source, node)
         {
             return;
         }

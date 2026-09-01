@@ -20,16 +20,37 @@ fn skip_helper_name(name: &[u8]) -> bool {
     matches!(name, b"let" | b"let!" | b"subject" | b"subject!" | b"expect")
 }
 
+/// Ruby 3.1 `foo(bar:)` — RuboCop treats the implicit value as `(send nil? bar)`.
+fn shorthand_kwarg_name(source: &SourceFile, node: Node<'_>) -> Option<Vec<u8>> {
+    if node.kind() != "hash_key_symbol" {
+        return None;
+    }
+    let parent = node.parent()?;
+    if parent.kind() != "pair" || parent.child_by_field_name("value").is_some() {
+        return None;
+    }
+    let raw = node_bytes(source, node);
+    Some(raw.strip_suffix(b":").unwrap_or(raw).to_vec())
+}
+
+fn referenced_name(source: &SourceFile, node: Node<'_>) -> Option<Vec<u8>> {
+    if let Some(n) = shorthand_kwarg_name(source, node) {
+        return Some(n);
+    }
+    match node.kind() {
+        "call" | "command" if call_receiver(node).is_none() => {
+            call_method_name(source, node).map(|n| n.to_vec())
+        }
+        "identifier" => Some(node_bytes(source, node).to_vec()),
+        _ => None,
+    }
+}
+
 fn collect_used_names(source: &SourceFile, body: Node<'_>) -> HashSet<Vec<u8>> {
     let mut used = HashSet::new();
     for_each_descendant(body, |node| {
-        let name = match node.kind() {
-            "call" | "command" if call_receiver(node).is_none() => call_method_name(source, node),
-            "identifier" => Some(node_bytes(source, node)),
-            _ => None,
-        };
-        if let Some(n) = name.filter(|n| !skip_helper_name(n)) {
-            used.insert(n.to_vec());
+        if let Some(n) = referenced_name(source, node).filter(|n| !skip_helper_name(n)) {
+            used.insert(n);
         }
     });
     used
