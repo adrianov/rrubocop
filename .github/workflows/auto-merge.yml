@@ -47,6 +47,11 @@ jobs:
             echo "PR #${pr_number} is ${state}; skipping"
             exit 0
           fi
+          mergeable=$(gh pr view "$pr_number" --repo "$REPO" --json mergeable --jq .mergeable)
+          if [ "$mergeable" != "MERGEABLE" ]; then
+            echo "PR #${pr_number} mergeable=${mergeable}; skipping until clean"
+            exit 0
+          fi
           echo "Squash-merging PR #${pr_number}"
           gh pr merge "$pr_number" --repo "$REPO" --squash --delete-branch
           # Explicit fallback when --delete-branch is a no-op (setting off / race).
