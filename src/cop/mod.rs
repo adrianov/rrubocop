@@ -212,4 +212,28 @@ pub trait Cop: Send + Sync {
         corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
     }
+
+    /// Post-pass hook after all cops ran (before disable filtering).
+    #[allow(unused_variables)]
+    fn audit_after_cops(
+        &self,
+        source: &SourceFile,
+        offenses: &[Diagnostic],
+        active: &[(&dyn Cop, &CopConfig)],
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+    }
+
+    /// When false, `Lint/RedundantCopDisableDirective` skips this cop (parity gaps).
+    fn redundant_disable_audit(&self) -> bool {
+        true
+    }
+}
+
+/// True when the lint engine can invoke this cop (line, source, model, or AST phases).
+pub fn cop_ran_in_lint(c: &dyn Cop) -> bool {
+    c.uses_line_phase()
+        || c.uses_source_phase()
+        || c.needs_file_model()
+        || !c.interested_node_kinds().is_empty()
 }

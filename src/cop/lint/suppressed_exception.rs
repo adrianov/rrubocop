@@ -78,4 +78,8 @@ impl Cop for SuppressedException {
             "Do not suppress exceptions.".to_string(),
         ));
     }
+
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
 }

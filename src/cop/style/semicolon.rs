@@ -33,4 +33,8 @@ impl Cop for Semicolon {
             "Do not use semicolons to terminate expressions.".to_string(),
         ));
     }
+
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
 }

@@ -120,6 +120,10 @@ impl Cop for LetSetup {
         };
         check_group(self, source, body, diagnostics);
     }
+
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]

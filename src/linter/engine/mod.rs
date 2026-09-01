@@ -37,31 +37,70 @@ pub fn lint_source(
     let tree = parse::parse_ruby(source)?;
     let mut diagnostics = Vec::new();
     let mut corrections = corr_bucket(mode);
-    if !syntax_gate::run(
+    run_file_cops(
         source,
         &tree,
         config,
+        registry,
         &active,
         mode,
+        write_autocorrect,
         &mut diagnostics,
         &mut corrections,
-    ) {
-        run_non_syntax(
-            source,
-            &tree,
-            &active,
-            registry,
-            mode,
-            &mut diagnostics,
-            &mut corrections,
-        );
-        if write_autocorrect {
-            write_fixes(source, corrections)?;
+    )?;
+    apply_directives(
+        source,
+        config,
+        registry,
+        &active,
+        ignore_disable,
+        &mut diagnostics,
+    );
+    Ok(diagnostics)
+}
+
+fn run_file_cops(
+    source: &SourceFile,
+    tree: &tree_sitter::Tree,
+    config: &ResolvedConfig,
+    registry: &CopRegistry,
+    active: &[ActiveCop<'_>],
+    mode: AutocorrectMode,
+    write_autocorrect: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) -> Result<()> {
+    if syntax_gate::run(source, tree, config, active, mode, diagnostics, corrections) {
+        return Ok(());
+    }
+    run_non_syntax(source, tree, active, registry, mode, diagnostics, corrections);
+    if write_autocorrect {
+        write_fixes(source, corrections.take())?;
+    }
+    Ok(())
+}
+
+fn apply_directives(
+    source: &SourceFile,
+    config: &ResolvedConfig,
+    registry: &CopRegistry,
+    active: &[ActiveCop<'_>],
+    ignore_disable: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let pre_filter = diagnostics.clone();
+    filter_directives(source, ignore_disable, diagnostics);
+    if !ignore_disable {
+        let active_refs: Vec<(&dyn Cop, &CopConfig)> =
+            active.iter().map(|(c, cfg, _)| (*c, cfg)).collect();
+        for (cop, _, _) in active {
+            if cop.name() == "Lint/RedundantCopDisableDirective" {
+                cop.audit_after_cops(source, &pre_filter, &active_refs, diagnostics);
+                break;
+            }
         }
     }
-    filter_directives(source, ignore_disable, &mut diagnostics);
-    offense::finalize_offenses(source, config, registry, &mut diagnostics);
-    Ok(diagnostics)
+    offense::finalize_offenses(source, config, registry, diagnostics);
 }
 
 fn run_non_syntax(
