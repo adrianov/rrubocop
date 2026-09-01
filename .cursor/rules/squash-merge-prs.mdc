@@ -1,5 +1,5 @@
 ---
-description: Squash-merge every pull request into a single commit automatically
+description: Squash-merge every pull request into a single commit automatically after CI
 alwaysApply: true
 ---
 
@@ -9,15 +9,13 @@ Land every PR as **one squashed commit** on the base branch. Do not use merge co
 
 ## Auto-merge (required)
 
-Merge **every** pull request automatically once work is ready — do not wait for a human to click merge.
+Merge **every** ready pull request automatically — do not wait for a human to click merge.
 
 1. Open the PR as **ready for review** (not draft), unless the user explicitly asks for a draft.
-2. Right after the PR exists (and after any later push that updates it), enable auto-merge with squash:
-   - `gh pr merge <pr> --squash --auto --delete-branch`
-   - Or the GitHub UI equivalent (“Enable auto-merge” + Squash and merge).
-3. If checks are already green and the PR is mergeable, merge immediately the same way (`--squash --delete-branch`; `--auto` is fine too).
-4. Prefer the repo’s `auto-merge` GitHub Action when `gh` cannot write: it squash-merges non-draft PRs after `ci` succeeds. Still mark PRs ready so that Action can land them.
-5. Do **not** skip merge “because cloud agents usually leave drafts” or “unless the user asks” — this rule is the user asking for every PR.
+2. Do **not** merge before `ci` is green. This repo has no required status checks, so `gh pr merge --auto` can land immediately and skip CI — avoid that.
+3. Default path: leave the ready PR open; `.github/workflows/auto-merge.yml` squash-merges it after the `ci` workflow succeeds and deletes the branch.
+4. If you must merge yourself (Action unavailable): wait until the PR’s `ci` checks are success, then run `gh pr merge <pr> --squash --delete-branch` (no `--auto` unless branch protection requires those checks).
+5. Do **not** skip merge “because cloud agents usually leave drafts” or “unless the user asks” — this rule is the user asking for every ready PR.
 
 ## Squash commit
 
@@ -27,4 +25,4 @@ Merge **every** pull request automatically once work is ready — do not wait fo
 ## Why
 
 - One commit per PR keeps `main` history linear, readable, and easy to revert or bisect.
-- Auto-merge keeps finished work on `main` without a manual merge step.
+- Auto-merge after CI keeps finished work on `main` without a manual merge step and without bypassing tests.
