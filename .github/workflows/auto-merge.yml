@@ -1,0 +1,43 @@
+# Squash-merge non-draft PRs after the ci workflow succeeds.
+name: auto-merge
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  squash-merge:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Squash-merge pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          pr_json=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
+            -H "Accept: application/vnd.github.groot-preview+json")
+          pr_number=$(printf '%s' "$pr_json" | jq -r '.[0].number // empty')
+          if [ -z "$pr_number" ]; then
+            echo "No open PR for ${HEAD_SHA}; skipping"
+            exit 0
+          fi
+          draft=$(gh pr view "$pr_number" --repo "$REPO" --json isDraft --jq .isDraft)
+          if [ "$draft" = "true" ]; then
+            echo "PR #${pr_number} is draft; skipping"
+            exit 0
+          fi
+          state=$(gh pr view "$pr_number" --repo "$REPO" --json state --jq .state)
+          if [ "$state" != "OPEN" ]; then
+            echo "PR #${pr_number} is ${state}; skipping"
+            exit 0
+          fi
+          echo "Squash-merging PR #${pr_number}"
+          gh pr merge "$pr_number" --repo "$REPO" --squash --delete-branch
