@@ -101,6 +101,12 @@ Same host, cold no-cache, offense-set parity on **Active Support** and **Active 
 | `activesupport` (v8.1.3.1) | 10.729s (506 files) | 1.795s | ≈6.0× |
 | `activerecord` (v8.1.3.1) | 27.847s (1126 files) | 2.656s | ≈10.5× |
 
+Cold lint on a fresh **`rails new`** app (Rails 8.1.3.1, default `rubocop-rails-omakase` via `inherit_gem`, RuboCop 1.90.0 via `bundle exec`), plus scaffold/model/mailer/job generators (41 identical target files). Offense-set parity `fp=0`, `fn=0` (both clean). Two-run average:
+
+| Tool | Wall clock |
+|---|---|
+| `bundle exec rubocop --cache false` | **0.722s** |
+| `rrubocop --no-cache` | **0.593s** |
 
 ## Cross-test vs nitrocop
 
