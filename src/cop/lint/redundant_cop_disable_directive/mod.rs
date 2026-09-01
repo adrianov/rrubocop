@@ -1,58 +1,19 @@
 mod audit;
 mod directives;
-
-use std::collections::HashMap;
+mod removal;
 
 use crate::cop::{Cop, CopConfig};
+use crate::correction::Correction;
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
 
 use audit::audit_redundant_disables;
 use directives::{cop_names, disable_marker};
+use removal::scan_duplicate_cops;
 
 /// Lint/RedundantCopDisableDirective — disable comments that suppress no offenses.
 pub struct RedundantCopDisableDirective;
-
-fn dup_cop_column(line: &str, cop: &str, occurrence: usize) -> usize {
-    let lower = line.to_ascii_lowercase();
-    let needle = cop.to_ascii_lowercase();
-    let mut found = 0usize;
-    let mut start = 0usize;
-    while let Some(pos) = lower[start..].find(&needle) {
-        let col = start + pos;
-        found += 1;
-        if found == occurrence {
-            return col;
-        }
-        start = col + needle.len();
-    }
-    0
-}
-
-fn report_dups(
-    cop: &RedundantCopDisableDirective,
-    source: &SourceFile,
-    line_no: usize,
-    cops: &[String],
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let line = source.line_text(line_no).unwrap_or("");
-    let mut nth = HashMap::<&str, usize>::new();
-    for name in cops {
-        let n = nth.entry(name.as_str()).or_insert(0);
-        *n += 1;
-        if *n == 1 {
-            continue;
-        }
-        diagnostics.push(cop.diagnostic(
-            source,
-            line_no,
-            dup_cop_column(line, name, *n),
-            format!("Unnecessary disabling of `{name}`."),
-        ));
-    }
-}
 
 impl Cop for RedundantCopDisableDirective {
     fn name(&self) -> &'static str {
@@ -61,6 +22,10 @@ impl Cop for RedundantCopDisableDirective {
 
     fn default_severity(&self) -> Severity {
         Severity::Warning
+    }
+
+    fn supports_autocorrect(&self) -> bool {
+        true
     }
 
     fn uses_source_phase(&self) -> bool {
@@ -74,14 +39,21 @@ impl Cop for RedundantCopDisableDirective {
         _code_map: &CodeMap,
         _config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
-        _corrections: Option<&mut Vec<crate::correction::Correction>>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         for (i, line) in source.lines().enumerate() {
             let s = String::from_utf8_lossy(line);
             let Some((_, rest)) = disable_marker(&s) else {
                 continue;
             };
-            report_dups(self, source, i + 1, &cop_names(rest), diagnostics);
+            scan_duplicate_cops(
+                self,
+                source,
+                i + 1,
+                &cop_names(rest),
+                diagnostics,
+                &mut corrections,
+            );
         }
     }
 
@@ -91,8 +63,9 @@ impl Cop for RedundantCopDisableDirective {
         offenses: &[Diagnostic],
         active: &[(&dyn Cop, &CopConfig)],
         diagnostics: &mut Vec<Diagnostic>,
+        corrections: Option<&mut Vec<Correction>>,
     ) {
-        audit_redundant_disables(self, source, offenses, active, diagnostics);
+        audit_redundant_disables(self, source, offenses, active, diagnostics, corrections);
     }
 }
 
@@ -100,6 +73,7 @@ impl Cop for RedundantCopDisableDirective {
 mod tests {
     use super::*;
     use crate::diagnostic::{Location, Severity};
+    use crate::parse::source::byte_index_to_column;
 
     crate::cop_fixture_tests!(
         RedundantCopDisableDirective,
@@ -180,7 +154,7 @@ mod tests {
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output"]);
         let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &offenses, &active, &mut diags);
+        audit_redundant_disables(&cop, &source, &offenses, &active, &mut diags, None);
         assert!(diags.is_empty());
     }
 
@@ -195,7 +169,7 @@ mod tests {
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output"]);
         let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &[], &active, &mut diags);
+        audit_redundant_disables(&cop, &source, &[], &active, &mut diags, None);
         assert_eq!(diags.len(), 1);
     }
 
@@ -210,7 +184,7 @@ mod tests {
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
         let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &[], &active, &mut diags);
+        audit_redundant_disables(&cop, &source, &[], &active, &mut diags, None);
         assert_eq!(diags.len(), 2);
     }
 
@@ -225,7 +199,7 @@ mod tests {
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
         let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &[], &active, &mut diags);
+        audit_redundant_disables(&cop, &source, &[], &active, &mut diags, None);
         assert_eq!(diags.len(), 2);
         assert!(diags.iter().any(|d| d.message.contains("Rails/Output")));
         assert!(diags.iter().any(|d| d.message.contains("Layout/LineLength")));
@@ -242,9 +216,114 @@ mod tests {
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
         let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &[], &active, &mut diags);
+        audit_redundant_disables(&cop, &source, &[], &active, &mut diags, None);
         assert_eq!(diags.len(), 2);
         assert!(diags.iter().all(|d| d.location.line == 1));
+    }
+
+    #[test]
+    fn redundant_disable_column_on_multibyte_line() {
+        let line = "Rails.logger.debug { \"Начинаю обновление\" } # rubocop:disable Rails/Output";
+        let source = SourceFile::from_bytes("test.rb", format!("{line}\n").into_bytes());
+        let cop = RedundantCopDisableDirective;
+        let mut diags = Vec::new();
+        let (cops, cfgs) = active_cops(&["Rails/Output"]);
+        audit_redundant_disables(&cop, &source, &[], &active_refs(&cops, &cfgs), &mut diags, None);
+        assert_eq!(diags.len(), 1);
+        let col = byte_index_to_column(line, line.find("Rails/Output").unwrap());
+        assert_eq!(diags[0].location.column, col);
+        assert_eq!(diags[0].highlight_length, "Rails/Output".len());
+    }
+
+    #[test]
+    fn autocorrect_removes_inline_disable() {
+        let source = SourceFile::from_bytes(
+            "test.rb",
+            b"Rails.logger.debug 'x' # rubocop:disable Rails/Output\n".to_vec(),
+        );
+        let cop = RedundantCopDisableDirective;
+        let mut diags = Vec::new();
+        let mut corrs = Vec::new();
+        let (cops, cfgs) = active_cops(&["Rails/Output"]);
+        audit_redundant_disables(
+            &cop,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            Some(&mut corrs),
+        );
+        assert_eq!(diags.len(), 1);
+        assert!(diags[0].corrected);
+        assert_eq!(corrs.len(), 1);
+        let fixed = crate::correction::CorrectionSet::from_vec(corrs).apply(source.as_bytes());
+        assert_eq!(fixed, b"Rails.logger.debug 'x'\n");
+    }
+
+    #[test]
+    fn needed_disable_in_same_directive_not_reported() {
+        let source = SourceFile::from_bytes(
+            "test.rb",
+            b"x = 1 # rubocop:disable Rails/Output, Layout/LineLength\n".to_vec(),
+        );
+        let offenses = vec![offense("Layout/LineLength", 1)];
+        let cop = RedundantCopDisableDirective;
+        let mut diags = Vec::new();
+        let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
+        audit_redundant_disables(
+            &cop,
+            &source,
+            &offenses,
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            None,
+        );
+        assert_eq!(diags.len(), 1);
+        assert!(diags[0].message.contains("Rails/Output"));
+    }
+
+    #[test]
+    fn autocorrect_partial_multi_disable() {
+        let source = SourceFile::from_bytes(
+            "test.rb",
+            b"x = 1 # rubocop:disable Rails/Output, Layout/LineLength\n".to_vec(),
+        );
+        let mut corrs = Vec::new();
+        let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[offense("Layout/LineLength", 1)],
+            &active_refs(&cops, &cfgs),
+            &mut Vec::new(),
+            Some(&mut corrs),
+        );
+        let fixed = crate::correction::CorrectionSet::from_vec(corrs).apply(source.as_bytes());
+        assert_eq!(fixed, b"x = 1 # rubocop:disable Layout/LineLength\n");
+    }
+
+    #[test]
+    fn autocorrect_removes_comment_only_disable_line() {
+        let source = SourceFile::from_bytes(
+            "test.rb",
+            b"# rubocop:disable Rails/Output\nx = 1\n".to_vec(),
+        );
+        let cop = RedundantCopDisableDirective;
+        let mut diags = Vec::new();
+        let mut corrs = Vec::new();
+        let (cops, cfgs) = active_cops(&["Rails/Output"]);
+        audit_redundant_disables(
+            &cop,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            Some(&mut corrs),
+        );
+        assert_eq!(diags.len(), 1);
+        assert!(diags[0].corrected);
+        let fixed = crate::correction::CorrectionSet::from_vec(corrs).apply(source.as_bytes());
+        assert_eq!(fixed, b"x = 1\n");
     }
 
     #[test]
@@ -256,7 +335,7 @@ mod tests {
         );
         let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
-        audit_redundant_disables(&cop, &source, &[], &[], &mut diags);
+        audit_redundant_disables(&cop, &source, &[], &[], &mut diags, None);
         assert!(diags.is_empty());
     }
 }

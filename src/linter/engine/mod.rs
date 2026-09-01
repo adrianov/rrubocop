@@ -44,7 +44,6 @@ pub fn lint_source(
         registry,
         &active,
         mode,
-        write_autocorrect,
         &mut diagnostics,
         &mut corrections,
     )?;
@@ -53,9 +52,14 @@ pub fn lint_source(
         config,
         registry,
         &active,
+        mode,
         ignore_disable,
         &mut diagnostics,
+        &mut corrections,
     );
+    if write_autocorrect {
+        write_fixes(source, corrections.take())?;
+    }
     Ok(diagnostics)
 }
 
@@ -66,7 +70,6 @@ fn run_file_cops(
     registry: &CopRegistry,
     active: &[ActiveCop<'_>],
     mode: AutocorrectMode,
-    write_autocorrect: bool,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) -> Result<()> {
@@ -74,10 +77,43 @@ fn run_file_cops(
         return Ok(());
     }
     run_non_syntax(source, tree, active, registry, mode, diagnostics, corrections);
-    if write_autocorrect {
-        write_fixes(source, corrections.take())?;
-    }
     Ok(())
+}
+
+fn run_redundant_disable_audit(
+    source: &SourceFile,
+    config: &ResolvedConfig,
+    pre_filter: &[Diagnostic],
+    active: &[ActiveCop<'_>],
+    mode: AutocorrectMode,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
+    let active_refs: Vec<(&dyn Cop, &CopConfig)> =
+        active.iter().map(|(c, cfg, _)| (*c, cfg)).collect();
+    for (cop, _, idx) in active {
+        if cop.name() != "Lint/RedundantCopDisableDirective" {
+            continue;
+        }
+        let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
+        let before = diagnostics.len();
+        cop.audit_after_cops(
+            source,
+            pre_filter,
+            &active_refs,
+            diagnostics,
+            corr_buf.as_mut(),
+        );
+        finish_cop_pass(
+            diagnostics,
+            before,
+            &config.cop_config(cop.name()),
+            &mut corr_buf,
+            *idx,
+            corrections,
+        );
+        break;
+    }
 }
 
 fn apply_directives(
@@ -85,20 +121,23 @@ fn apply_directives(
     config: &ResolvedConfig,
     registry: &CopRegistry,
     active: &[ActiveCop<'_>],
+    mode: AutocorrectMode,
     ignore_disable: bool,
     diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
 ) {
     let pre_filter = diagnostics.clone();
     filter_directives(source, ignore_disable, diagnostics);
     if !ignore_disable {
-        let active_refs: Vec<(&dyn Cop, &CopConfig)> =
-            active.iter().map(|(c, cfg, _)| (*c, cfg)).collect();
-        for (cop, _, _) in active {
-            if cop.name() == "Lint/RedundantCopDisableDirective" {
-                cop.audit_after_cops(source, &pre_filter, &active_refs, diagnostics);
-                break;
-            }
-        }
+        run_redundant_disable_audit(
+            source,
+            config,
+            &pre_filter,
+            active,
+            mode,
+            diagnostics,
+            corrections,
+        );
     }
     offense::finalize_offenses(source, config, registry, diagnostics);
 }

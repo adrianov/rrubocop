@@ -50,8 +50,7 @@ impl SourceFile {
             Err(idx) => idx.saturating_sub(1),
         };
         let line_bytes = &self.content[self.line_starts[line_idx]..byte_offset];
-        let col = line_bytes.iter().filter(|&&b| (b & 0xC0) != 0x80).count();
-        (line_idx + 1, col)
+        (line_idx + 1, utf8_byte_index_to_column(line_bytes))
     }
 
     pub fn line_start(&self, line: usize) -> Option<usize> {
@@ -83,6 +82,16 @@ impl SourceFile {
         let (line, column) = self.offset_to_line_col(byte_offset);
         Location { line, column }
     }
+}
+
+/// UTF-8 prefix length → 0-based display column (matches `offset_to_line_col`).
+pub fn utf8_byte_index_to_column(prefix: &[u8]) -> usize {
+    prefix.iter().filter(|&&b| (b & 0xC0) != 0x80).count()
+}
+
+/// UTF-8 byte index within `s` → 0-based display column.
+pub fn byte_index_to_column(s: &str, byte_idx: usize) -> usize {
+    utf8_byte_index_to_column(s.as_bytes().get(..byte_idx.min(s.len())).unwrap_or(&[]))
 }
 
 fn trim_line_ending(mut slice: &[u8]) -> &[u8] {

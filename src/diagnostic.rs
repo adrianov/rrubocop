@@ -255,6 +255,15 @@ mod tests {
     }
 
     #[test]
+    fn clang_caret_multibyte_line() {
+        use crate::parse::source::byte_index_to_column;
+        let line = "Rails.logger.debug { \"Начинаю\" } # rubocop:disable Rails/Output";
+        let col = byte_index_to_column(line, line.find("Rails/Output").unwrap());
+        let caret = clang_caret(line, col, "Rails/Output".len());
+        assert_eq!(caret, format!("{}{}", " ".repeat(col), "^".repeat("Rails/Output".len())));
+    }
+
+    #[test]
     fn annotate_respects_display_cop_names() {
         let with = annotate_offense_message("msg", "Style/Foo", true, false, None, false, None);
         assert_eq!(with, "Style/Foo: msg");

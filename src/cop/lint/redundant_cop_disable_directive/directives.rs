@@ -1,6 +1,8 @@
+//! Parse `# rubocop:disable` directives and locate cop names in comment text.
+
 use std::collections::HashMap;
 
-use crate::parse::source::SourceFile;
+use crate::parse::source::{byte_index_to_column, SourceFile};
 
 #[derive(Clone, Debug)]
 pub(super) struct DisableDirective {
@@ -14,7 +16,7 @@ pub(super) fn disable_marker(line: &str) -> Option<(usize, &str)> {
     let lower = line.to_ascii_lowercase();
     let marker = "# rubocop:disable";
     let pos = lower.find(marker)?;
-    Some((pos, line[pos + marker.len()..].trim()))
+    Some((byte_index_to_column(line, pos), line[pos + marker.len()..].trim()))
 }
 
 fn enable_marker(line: &str) -> Option<&str> {
@@ -127,4 +129,62 @@ pub(super) fn collect_directives(source: &SourceFile) -> Vec<DisableDirective> {
     }
     flush_open_directives(open, source.line_count().max(1), &mut out);
     out
+}
+
+fn whole_token(line: &str, byte: usize, len: usize) -> bool {
+    let before = byte == 0 || !line.as_bytes()[byte - 1].is_ascii_alphanumeric();
+    let after_byte = byte + len;
+    let after = line
+        .get(after_byte..)
+        .map(|rest| {
+            rest.is_empty()
+                || !rest.as_bytes()[0].is_ascii_alphanumeric() && rest.as_bytes()[0] != b'_'
+        })
+        .unwrap_or(true);
+    before && after
+}
+
+pub(super) fn nth_cop_token(line: &str, cop: &str, occurrence: usize) -> Option<(usize, usize)> {
+    let lower = line.to_ascii_lowercase();
+    let needle = cop.to_ascii_lowercase();
+    let mut found = 0usize;
+    let mut search = 0usize;
+    while let Some(pos) = lower[search..].find(&needle) {
+        let byte = search + pos;
+        if whole_token(line, byte, needle.len()) {
+            found += 1;
+            if found == occurrence {
+                return Some((byte, byte + needle.len()));
+            }
+        }
+        search = byte + 1;
+    }
+    None
+}
+
+pub(super) fn cop_token_column(line: &str, cop: &str, occurrence: usize) -> usize {
+    nth_cop_token(line, cop, occurrence)
+        .map(|(byte, _)| byte_index_to_column(line, byte))
+        .unwrap_or(0)
+}
+
+pub(super) fn redundant_col(line: &str, name: &str, fallback: usize) -> usize {
+    nth_cop_token(line, name, 1)
+        .map(|(byte, _)| byte_index_to_column(line, byte))
+        .unwrap_or(fallback)
+}
+
+pub(super) fn cop_highlight(line: &str, col: usize, cop: &str) -> usize {
+    let rest = line
+        .char_indices()
+        .nth(col)
+        .map(|(i, _)| &line[i..])
+        .unwrap_or("");
+    rest.split(',')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .find(cop)
+        .map(|_| cop.len())
+        .unwrap_or(1)
 }

@@ -221,6 +221,7 @@ pub trait Cop: Send + Sync {
         offenses: &[Diagnostic],
         active: &[(&dyn Cop, &CopConfig)],
         diagnostics: &mut Vec<Diagnostic>,
+        corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
     }
 

@@ -1,8 +1,10 @@
-use std::collections::HashSet;
-
-use super::directives::{collect_directives, DisableDirective};
+use super::directives::{
+    collect_directives, cop_highlight, redundant_col, DisableDirective,
+};
+use super::removal::push_removal;
 use super::RedundantCopDisableDirective;
 use crate::cop::{cop_ran_in_lint, Cop, CopConfig};
+use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
@@ -54,38 +56,23 @@ fn cop_auditable(name: &str, active: &[(&dyn Cop, &CopConfig)]) -> bool {
     any_active_cop(active, |c| active_for_redundant_audit(c) && cop_in_department(c, name))
 }
 
-fn cop_highlight(line: &str, col: usize, cop: &str) -> usize {
-    line[col..]
-        .split(',')
-        .next()
-        .unwrap_or("")
-        .trim()
-        .find(cop)
-        .map(|_| cop.len())
-        .unwrap_or(1)
+fn cop_is_redundant(
+    name: &str,
+    dir: &DisableDirective,
+    offenses: &[Diagnostic],
+    active: &[(&dyn Cop, &CopConfig)],
+) -> bool {
+    cop_auditable(name, active) && !directive_needed(name, dir.range, offenses)
 }
 
-fn report_redundant_disable(
+fn redundant_offense(
     cop: &RedundantCopDisableDirective,
     source: &SourceFile,
     line: &str,
     dir: &DisableDirective,
     name: &str,
-    offenses: &[Diagnostic],
-    active: &[(&dyn Cop, &CopConfig)],
-    seen: &mut HashSet<String>,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if !cop_auditable(name, active)
-        || !seen.insert(name.to_string())
-        || directive_needed(name, dir.range, offenses)
-    {
-        return;
-    }
-    let col = line
-        .to_ascii_lowercase()
-        .find(&name.to_ascii_lowercase())
-        .unwrap_or(dir.column);
+) -> Diagnostic {
+    let col = redundant_col(line, name, dir.column);
     let mut diag = cop.diagnostic(
         source,
         dir.line,
@@ -93,7 +80,63 @@ fn report_redundant_disable(
         format!("Unnecessary disabling of `{name}`."),
     );
     diag.highlight_length = cop_highlight(line, col, name);
-    diagnostics.push(diag);
+    diag
+}
+
+fn apply_redundant_fix(
+    source: &SourceFile,
+    line_no: usize,
+    name: &str,
+    remove_entire: bool,
+    entire_fix: &mut bool,
+    corrections: Option<&mut Vec<Correction>>,
+    diag: &mut Diagnostic,
+) {
+    if remove_entire {
+        if !*entire_fix {
+            push_removal(source, line_no, name, None, corrections, diag);
+            *entire_fix = true;
+        } else if corrections.is_some() {
+            diag.corrected = true;
+        }
+        return;
+    }
+    push_removal(source, line_no, name, Some(1), corrections, diag);
+}
+
+fn report_directive_redundancies(
+    cop: &RedundantCopDisableDirective,
+    source: &SourceFile,
+    line: &str,
+    dir: &DisableDirective,
+    offenses: &[Diagnostic],
+    active: &[(&dyn Cop, &CopConfig)],
+    diagnostics: &mut Vec<Diagnostic>,
+    mut corrections: Option<&mut Vec<Correction>>,
+) {
+    let redundant: Vec<&String> = dir
+        .cops
+        .iter()
+        .filter(|name| cop_is_redundant(name, dir, offenses, active))
+        .collect();
+    if redundant.is_empty() {
+        return;
+    }
+    let remove_entire = redundant.len() == dir.cops.len();
+    let mut entire_fix = false;
+    for name in redundant {
+        let mut diag = redundant_offense(cop, source, line, dir, name);
+        apply_redundant_fix(
+            source,
+            dir.line,
+            name,
+            remove_entire,
+            &mut entire_fix,
+            corrections.as_deref_mut(),
+            &mut diag,
+        );
+        diagnostics.push(diag);
+    }
 }
 
 /// Post-pass: compare disable directives against offenses found before filtering.
@@ -103,22 +146,19 @@ pub fn audit_redundant_disables(
     offenses: &[Diagnostic],
     active: &[(&dyn Cop, &CopConfig)],
     diagnostics: &mut Vec<Diagnostic>,
+    mut corrections: Option<&mut Vec<Correction>>,
 ) {
     for dir in collect_directives(source) {
         let line = source.line_text(dir.line).unwrap_or("").to_string();
-        let mut seen = HashSet::new();
-        for name in &dir.cops {
-            report_redundant_disable(
-                cop,
-                source,
-                &line,
-                &dir,
-                name,
-                offenses,
-                active,
-                &mut seen,
-                diagnostics,
-            );
-        }
+        report_directive_redundancies(
+            cop,
+            source,
+            &line,
+            &dir,
+            offenses,
+            active,
+            diagnostics,
+            corrections.as_deref_mut(),
+        );
     }
 }
