@@ -43,6 +43,7 @@ fn check_empty(
         d.inner_s,
         d.inner_e,
         if want_e { " ".into() } else { String::new() },
+        None,
     );
 }
 

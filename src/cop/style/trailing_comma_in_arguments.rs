@@ -178,6 +178,10 @@ impl Cop for TrailingCommaInArguments {
         "Style/TrailingCommaInArguments"
     }
 
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["argument_list"]
     }

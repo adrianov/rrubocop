@@ -62,6 +62,10 @@ impl Cop for LeadingSubject {
         "RSpec/LeadingSubject"
     }
 
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         RSPEC_INCLUDE
     }

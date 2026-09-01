@@ -47,6 +47,7 @@ fn check_empty(
         d.inner_s,
         d.inner_e,
         if want_e { " ".into() } else { String::new() },
+        None,
     );
 }
 
@@ -67,11 +68,14 @@ fn check_nonempty(
             cop, source, d, d.inner_e, "Space missing inside }.".into(), diagnostics, corrections,
         );
     } else {
+        let mut correctable = true;
         space_delim::strip_space_after(
             cop, source, bytes, d, "Space detected inside {.".into(), diagnostics, corrections,
+            &mut correctable,
         );
         space_delim::strip_space_before(
             cop, source, bytes, d, "Space detected inside }.".into(), diagnostics, corrections,
+            &mut correctable,
         );
     }
 }

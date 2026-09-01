@@ -147,6 +147,10 @@ impl Cop for AssociationStyle {
         "FactoryBot/AssociationStyle"
     }
 
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         FB_INCLUDE
     }

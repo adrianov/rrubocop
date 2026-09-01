@@ -128,6 +128,14 @@ impl Cop for InferredSpecType {
         "RSpecRails/InferredSpecType"
     }
 
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+
+    fn safe_autocorrect(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &["**/*_spec.rb", "**/spec/**/*"]
     }

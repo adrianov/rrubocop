@@ -63,6 +63,14 @@ impl Cop for TimeZone {
         "Rails/TimeZone"
     }
 
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+
+    fn safe_autocorrect(&self) -> bool {
+        false
+    }
+
     fn default_exclude(&self) -> &'static [&'static str] {
         &["**/*.gemspec"]
     }

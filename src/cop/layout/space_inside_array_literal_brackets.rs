@@ -20,13 +20,13 @@ fn check_empty(
         space_delim::report_at(
             cop, source, d.inner_s.saturating_sub(1),
             "Use space inside empty array brackets.".into(),
-            diagnostics, corrections, d.inner_s, d.inner_e, " ".into(),
+            diagnostics, corrections, d.inner_s, d.inner_e, " ".into(), None,
         );
     } else if !want_empty && d.inner_e > d.inner_s {
         space_delim::report_at(
             cop, source, d.inner_s,
             "Do not use space inside empty array brackets.".into(),
-            diagnostics, corrections, d.inner_s, d.inner_e, String::new(),
+            diagnostics, corrections, d.inner_s, d.inner_e, String::new(), None,
         );
     }
 }
@@ -92,7 +92,10 @@ fn check_close_only(
     if want {
         space_delim::add_space_before(cop, source, d, d.inner_e, msg, diagnostics, corrections);
     } else {
-        space_delim::strip_space_before(cop, source, bytes, d, msg, diagnostics, corrections);
+        let mut correctable = true;
+        space_delim::strip_space_before(
+            cop, source, bytes, d, msg, diagnostics, corrections, &mut correctable,
+        );
     }
 }
 
@@ -100,4 +103,15 @@ fn check_close_only(
 mod tests {
     use super::*;
     crate::cop_fixture_tests!(SpaceInsideArrayLiteralBrackets, "cops/layout/space_inside_array_literal_brackets");
+
+    #[test]
+    fn only_first_side_autocorrectable() {
+        let diags = crate::testutil::run_cop_full(
+            &SpaceInsideArrayLiteralBrackets,
+            b"[ 1 ]\n",
+        );
+        assert_eq!(diags.len(), 2, "got: {diags:?}");
+        assert!(diags[0].correctable, "open side should be correctable");
+        assert!(!diags[1].correctable, "close side should not be correctable");
+    }
 }

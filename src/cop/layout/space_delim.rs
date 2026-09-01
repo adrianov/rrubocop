@@ -72,10 +72,14 @@ pub fn report_at(
     start: usize,
     end: usize,
     replacement: String,
+    correctable: Option<bool>,
 ) {
     let (line, col) = source.offset_to_line_col(off);
     let mut diag = cop.diagnostic(source, line, col, msg);
-    if push_corr(corrections, cop.name(), start, end, replacement) {
+    if let Some(c) = correctable {
+        diag.correctable = c;
+    }
+    if diag.correctable && push_corr(corrections, cop.name(), start, end, replacement) {
         diag.corrected = true;
     }
     diagnostics.push(diag);
@@ -103,6 +107,7 @@ pub fn add_space_after(
         d.inner_s,
         d.inner_s,
         " ".into(),
+        None,
     );
 }
 
@@ -128,6 +133,7 @@ pub fn add_space_before(
         d.inner_e,
         d.inner_e,
         " ".into(),
+        None,
     );
 }
 
@@ -139,6 +145,7 @@ pub fn strip_space_after(
     msg: String,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
+    correctable: &mut bool,
 ) {
     if !(d.sp_a && !d.nl_a) {
         return;
@@ -147,6 +154,7 @@ pub fn strip_space_after(
     while e < d.inner_e && matches!(bytes[e], b' ' | b'\t') {
         e += 1;
     }
+    let can = *correctable && cop.supports_autocorrect();
     report_at(
         cop,
         source,
@@ -157,7 +165,11 @@ pub fn strip_space_after(
         d.inner_s,
         e,
         String::new(),
+        Some(can),
     );
+    if can {
+        *correctable = false;
+    }
 }
 
 pub fn strip_space_before(
@@ -168,6 +180,7 @@ pub fn strip_space_before(
     msg: String,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
+    correctable: &mut bool,
 ) {
     if !(d.sp_b && !d.nl_b) {
         return;
@@ -180,6 +193,7 @@ pub fn strip_space_before(
     while s > d.inner_s && matches!(bytes[s - 1], b' ' | b'\t') {
         s -= 1;
     }
+    let can = *correctable && cop.supports_autocorrect();
     report_at(
         cop,
         source,
@@ -190,7 +204,11 @@ pub fn strip_space_before(
         s,
         d.inner_e,
         String::new(),
+        Some(can),
     );
+    if can {
+        *correctable = false;
+    }
 }
 
 fn delim_first_on_line(bytes: &[u8], pos: usize) -> bool {
@@ -204,6 +222,23 @@ fn delim_first_on_line(bytes: &[u8], pos: usize) -> bool {
         }
     }
     true
+}
+
+/// RuboCop `ignore_node`: only the first strip offense per delimiter is correctable.
+pub fn strip_spaces(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    bytes: &[u8],
+    d: &DelimSpace,
+    msg: String,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    let mut correctable = true;
+    strip_space_after(
+        cop, source, bytes, d, msg.clone(), diagnostics, corrections, &mut correctable,
+    );
+    strip_space_before(cop, source, bytes, d, msg, diagnostics, corrections, &mut correctable);
 }
 
 /// Enforce spaces; after-open reports at `open_off`, before-close at `close_off` when adding.
@@ -223,7 +258,6 @@ pub fn enforce_spaces(
         add_space_after(cop, source, d, open_off, msg.into(), diagnostics, corrections);
         add_space_before(cop, source, d, close_off, msg.into(), diagnostics, corrections);
     } else {
-        strip_space_after(cop, source, bytes, d, msg.into(), diagnostics, corrections);
-        strip_space_before(cop, source, bytes, d, msg.into(), diagnostics, corrections);
+        strip_spaces(cop, source, bytes, d, msg.into(), diagnostics, corrections);
     }
 }

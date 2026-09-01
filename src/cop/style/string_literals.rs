@@ -14,6 +14,10 @@ impl Cop for StringLiterals {
         "Style/StringLiterals"
     }
 
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["string", "string_content"]
     }

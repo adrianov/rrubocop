@@ -55,6 +55,7 @@ fn enforce_paren_spaces(
         "Space inside parentheses detected."
     };
     let close_off = node.end_byte() - 1;
+    let mut correctable = true;
     if !skip_open_space {
         if want {
             space_delim::add_space_after(
@@ -68,7 +69,7 @@ fn enforce_paren_spaces(
             );
         } else {
             space_delim::strip_space_after(
-                cop, source, bytes, d, msg.into(), diagnostics, corrections,
+                cop, source, bytes, d, msg.into(), diagnostics, corrections, &mut correctable,
             );
         }
     }
@@ -81,7 +82,7 @@ fn enforce_paren_spaces(
         );
     } else {
         space_delim::strip_space_before(
-            cop, source, bytes, d, msg.into(), diagnostics, corrections,
+            cop, source, bytes, d, msg.into(), diagnostics, corrections, &mut correctable,
         );
     }
 }

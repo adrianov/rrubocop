@@ -24,12 +24,15 @@ fn check_open(
     want: bool,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
+    correctable: &mut bool,
 ) {
     let msg = side_msg(want, "{");
     if want {
         space_delim::add_space_after(cop, source, d, open_off, msg, diagnostics, corrections);
     } else {
-        space_delim::strip_space_after(cop, source, bytes, d, msg, diagnostics, corrections);
+        space_delim::strip_space_after(
+            cop, source, bytes, d, msg, diagnostics, corrections, correctable,
+        );
     }
 }
 
@@ -41,12 +44,15 @@ fn check_close(
     want: bool,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
+    correctable: &mut bool,
 ) {
     let msg = side_msg(want, "}");
     if want {
         space_delim::add_space_before(cop, source, d, d.inner_e, msg, diagnostics, corrections);
     } else {
-        space_delim::strip_space_before(cop, source, bytes, d, msg, diagnostics, corrections);
+        space_delim::strip_space_before(
+            cop, source, bytes, d, msg, diagnostics, corrections, correctable,
+        );
     }
 }
 
@@ -84,10 +90,12 @@ impl Cop for SpaceInsideHashLiteralBraces {
             return;
         };
         let want = style != "no_space";
+        let mut correctable = true;
         check_open(
             self, source, bytes, &d, node.start_byte(), want, diagnostics, &mut corrections,
+            &mut correctable,
         );
-        check_close(self, source, bytes, &d, want, diagnostics, &mut corrections);
+        check_close(self, source, bytes, &d, want, diagnostics, &mut corrections, &mut correctable);
     }
 }
 

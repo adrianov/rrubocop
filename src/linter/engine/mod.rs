@@ -83,7 +83,9 @@ fn enrich_offense(
     d: &mut Diagnostic,
 ) {
     if let Some(cop) = registry.get(d.cop_name.as_str()) {
-        d.correctable = cop.supports_autocorrect();
+        if !cop.supports_autocorrect() {
+            d.correctable = false;
+        }
     }
     fill_source_highlight(source, d);
     let cop_cfg = config.cop_config(&d.cop_name);

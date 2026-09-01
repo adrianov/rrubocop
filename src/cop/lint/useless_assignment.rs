@@ -1,7 +1,7 @@
 //! Lint/UselessAssignment — write never read (uses model).
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::Diagnostic;
+use crate::diagnostic::{Diagnostic, Severity};
 use crate::model::{self, IntroKind};
 use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
@@ -11,6 +11,14 @@ pub struct UselessAssignment;
 impl Cop for UselessAssignment {
     fn name(&self) -> &'static str {
         "Lint/UselessAssignment"
+    }
+
+    fn default_severity(&self) -> Severity {
+        Severity::Warning
+    }
+
+    fn supports_autocorrect(&self) -> bool {
+        true
     }
 
     fn check_source(
