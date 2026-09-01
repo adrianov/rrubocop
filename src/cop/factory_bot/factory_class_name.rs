@@ -21,9 +21,6 @@ impl Cop for FactoryClassName {
         ]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "call", "scope_resolution", "constant", "hash", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

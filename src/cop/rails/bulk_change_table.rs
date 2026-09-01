@@ -18,9 +18,6 @@ impl Cop for BulkChangeTable {
         &["**/db/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "method", "command"]
-    }
 
     fn check_node(
         &self,

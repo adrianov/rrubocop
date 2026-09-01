@@ -14,9 +14,6 @@ impl Cop for RedundantForeignKey {
         "Rails/RedundantForeignKey"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "string", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

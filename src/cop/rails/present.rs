@@ -14,9 +14,6 @@ impl Cop for Present {
         "Rails/Present"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["binary", "call", "unless", "command"]
-    }
 
     fn check_node(
         &self,

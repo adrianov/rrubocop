@@ -22,9 +22,6 @@ impl Cop for SpecFilePathFormat {
         &["**/spec/routing/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "command"]
-    }
 
     fn check_node(
         &self,

@@ -18,9 +18,6 @@ impl Cop for StubbedMock {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["block", "call", "hash", "command"]
-    }
 
     fn check_node(
         &self,

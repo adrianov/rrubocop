@@ -22,9 +22,6 @@ impl Cop for DescribeClass {
         &["**/spec/features/**/*", "**/spec/requests/**/*", "**/spec/routing/**/*", "**/spec/system/**/*", "**/spec/views/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "call", "scope_resolution", "constant", "hash", "program", "string", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

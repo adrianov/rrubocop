@@ -18,9 +18,6 @@ impl Cop for ReceiveCounts {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "integer", "command"]
-    }
 
     fn check_node(
         &self,

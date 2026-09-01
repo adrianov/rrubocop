@@ -19,6 +19,10 @@ impl Cop for TimesMap {
         &["call", "command"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"map", b"collect"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

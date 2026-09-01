@@ -14,9 +14,6 @@ impl Cop for SkipsModelValidations {
         "Rails/SkipsModelValidations"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "call", "scope_resolution", "constant", "false", "hash", "symbol", "true", "command"]
-    }
 
     fn check_node(
         &self,

@@ -196,6 +196,12 @@ pub trait Cop: Send + Sync {
         &[]
     }
 
+    /// Method names that gate `call` / `command` / `command_call` dispatch.
+    /// Empty (default) = all such nodes. Non-empty = only matching method names.
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[]
+    }
+
     #[allow(unused_variables)]
     fn check_node(
         &self,

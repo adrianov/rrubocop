@@ -18,9 +18,6 @@ impl Cop for ScopeArgs {
         &["**/app/models/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "lambda", "command"]
-    }
 
     fn check_node(
         &self,

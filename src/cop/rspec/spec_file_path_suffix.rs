@@ -18,9 +18,6 @@ impl Cop for SpecFilePathSuffix {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "scope_resolution", "constant", "program", "command"]
-    }
 
     fn check_node(
         &self,

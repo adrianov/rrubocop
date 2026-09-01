@@ -23,6 +23,10 @@ impl Cop for RedundantFreeze {
         &["call"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"freeze"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

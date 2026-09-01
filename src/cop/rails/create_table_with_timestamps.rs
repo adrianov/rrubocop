@@ -22,9 +22,6 @@ impl Cop for CreateTableWithTimestamps {
         &["**/db/**/*_create_active_storage_tables.active_storage.rb", "**/db/**/*_create_active_storage_variant_records.active_storage.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "block", "call", "false", "hash", "string", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

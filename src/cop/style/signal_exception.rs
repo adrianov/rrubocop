@@ -23,6 +23,10 @@ impl Cop for SignalException {
         &["call", "command"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"raise", b"fail", b"signal_exception"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

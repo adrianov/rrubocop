@@ -14,9 +14,6 @@ impl Cop for SafeNavigation {
         "Rails/SafeNavigation"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

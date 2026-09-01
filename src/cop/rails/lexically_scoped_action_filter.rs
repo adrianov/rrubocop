@@ -18,9 +18,6 @@ impl Cop for LexicallyScopedActionFilter {
         &["**/app/controllers/**/*.rb", "**/app/mailers/**/*.rb"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["array", "pair", "class", "method", "hash", "module", "body_statement", "string", "symbol"]
-    }
 
     fn check_node(
         &self,

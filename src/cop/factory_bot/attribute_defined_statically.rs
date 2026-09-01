@@ -21,9 +21,6 @@ impl Cop for AttributeDefinedStatically {
         ]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["pair", "block", "call", "hash", "identifier", "body_statement", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

@@ -22,6 +22,10 @@ impl Cop for Open {
         &["call", "command", "command_call"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"open"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

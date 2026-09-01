@@ -47,7 +47,11 @@ impl Cop for BelongsTo {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "false", "true", "command"]
+        &["call", "command"]
+    }
+
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"belongs_to"]
     }
 
     fn check_node(

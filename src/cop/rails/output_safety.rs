@@ -14,9 +14,6 @@ impl Cop for OutputSafety {
         "Rails/OutputSafety"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "scope_resolution", "constant", "string", "command"]
-    }
 
     fn check_node(
         &self,

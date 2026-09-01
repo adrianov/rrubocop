@@ -18,9 +18,6 @@ impl Cop for RedundantAround {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["block", "call", "identifier", "body_statement", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

@@ -13,9 +13,6 @@ impl Cop for NonNilCheck {
         "Style/NonNilCheck"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "command"]
-    }
 
     fn check_node(
         &self,

@@ -71,6 +71,10 @@ impl Cop for RequireRelativeSelfPath {
         &["call"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"require_relative"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

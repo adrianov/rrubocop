@@ -14,9 +14,6 @@ impl Cop for SafeNavigationWithBlank {
         "Rails/SafeNavigationWithBlank"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "if", "unless", "command"]
-    }
 
     fn check_node(
         &self,

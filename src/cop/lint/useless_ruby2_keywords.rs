@@ -33,6 +33,10 @@ impl Cop for UselessRuby2Keywords {
         &["call"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"ruby2_keywords"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

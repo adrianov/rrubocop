@@ -33,6 +33,10 @@ impl Cop for DelegateAllowBlank {
         &["call", "command"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"delegate"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

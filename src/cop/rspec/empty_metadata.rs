@@ -18,9 +18,6 @@ impl Cop for EmptyMetadata {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "hash", "command"]
-    }
 
     fn check_node(
         &self,

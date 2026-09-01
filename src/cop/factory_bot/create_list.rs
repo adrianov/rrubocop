@@ -21,9 +21,6 @@ impl Cop for CreateList {
         ]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["array", "pair", "block", "call", "scope_resolution", "constant", "hash", "integer", "body_statement", "string", "symbol", "command"]
-    }
 
     fn check_node(
         &self,

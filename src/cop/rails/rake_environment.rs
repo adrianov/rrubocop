@@ -26,6 +26,10 @@ impl Cop for RakeEnvironment {
         &["call", "command", "command_call"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"task"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

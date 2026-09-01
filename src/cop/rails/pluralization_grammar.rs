@@ -14,9 +14,6 @@ impl Cop for PluralizationGrammar {
         "Rails/PluralizationGrammar"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "integer", "command"]
-    }
 
     fn check_node(
         &self,

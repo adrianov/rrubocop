@@ -14,9 +14,6 @@ impl Cop for StringReplacement {
         "Performance/StringReplacement"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "string", "command"]
-    }
 
     fn check_node(
         &self,

@@ -3,3 +3,4 @@
 .abcop_cache
 **/__pycache__/
 *.py[cod]
+*.deb

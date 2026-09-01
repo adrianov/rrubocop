@@ -23,6 +23,10 @@ impl Cop for LambdaCall {
         &["call"]
     }
 
+    fn interested_call_names(&self) -> &'static [&'static [u8]] {
+        &[b"call"]
+    }
+
     fn check_node(
         &self,
         source: &SourceFile,

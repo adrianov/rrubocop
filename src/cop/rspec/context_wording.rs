@@ -18,9 +18,6 @@ impl Cop for ContextWording {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "string", "command"]
-    }
 
     fn check_node(
         &self,

@@ -18,9 +18,6 @@ impl Cop for ReturnFromStub {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["array", "pair", "block", "call", "scope_resolution", "constant", "false", "hash", "integer", "string", "nil", "body_statement", "symbol", "true", "command"]
-    }
 
     fn check_node(
         &self,

@@ -14,9 +14,6 @@ impl Cop for FilePath {
         "Rails/FilePath"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "scope_resolution", "constant", "interpolation", "string", "identifier", "command"]
-    }
 
     fn check_node(
         &self,

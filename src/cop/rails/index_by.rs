@@ -14,9 +14,6 @@ impl Cop for IndexBy {
         "Rails/IndexBy"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["array", "block", "call", "hash", "identifier", "body_statement", "command"]
-    }
 
     fn check_node(
         &self,

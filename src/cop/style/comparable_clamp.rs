@@ -13,9 +13,6 @@ impl Cop for ComparableClamp {
         "Style/ComparableClamp"
     }
 
-    fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "command"]
-    }
 
     fn check_node(
         &self,
