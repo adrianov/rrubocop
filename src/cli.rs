@@ -73,9 +73,9 @@ pub struct Args {
     #[arg(long, value_name = "SEVERITY", default_value = "convention")]
     pub fail_level: String,
 
-    /// Stop after N offenses (default: 50). Bare `-F` means 1. `-F 0` disables.
+    /// Stop after N offenses (default: 0 = off). Bare `-F` means 1.
     /// With `-a`/`-A`, N counts only non-autocorrectable offenses.
-    #[arg(short = 'F', long, value_name = "N", default_value_t = 50)]
+    #[arg(short = 'F', long, value_name = "N", default_value_t = 0)]
     pub fail_fast: u32,
 
     /// Apply AllCops.Exclude to explicitly-passed files

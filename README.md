@@ -59,7 +59,7 @@ rrubocop -A .                    # all autocorrect
 rrubocop --only Metrics/AbcSize lib
 rrubocop --list-cops
 rrubocop -L                      # list target files
-rrubocop -F 10                   # stop after 10 offenses (default 50; `-F` = 1; `-F 0` off)
+rrubocop -F 10                   # stop after 10 offenses (off by default; `-F` = 1)
                                  # with `-a`/`-A`, N is non-autocorrectable offenses only
 ```
 
