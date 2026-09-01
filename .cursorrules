@@ -5,7 +5,7 @@ Rust RuboCop drop-in for Ruby (tree-sitter). No Ruby for linting; ERB configs ne
 ## Layout
 - `src/cli.rs` — RuboCop-compatible CLI
 - `src/baseline.rs` + `src/resources/baseline.json` — RuboCop/gem versions for `--help`/`--version`
-- `src/config/` — RuboCop-parity YAML (`mod.rs` re-exports; `gem_path`, `yaml_read` ERB, `types`, `globutil`, `filter`/`filter_match`/`filter_path`, `discover`, `standard`/`standard_convert`, `merge`/`merge_cop`, `parse`/`parse_{allcops,cop}`, `load`/`load_{defaults,require,gems,recursive,lockfile,resolve}`, `ruby_ver`, `resolved`/`resolved_{state,enabled,inject,cop_cfg,filters,effective,fingerprint}`)
+- `src/config/` — RuboCop-parity YAML (`mod.rs` re-exports; `gem_path`, `yaml_read` ERB (native simple-ERB: literals/vars/`ENV`; ruby fallback), `types`, `globutil`, `filter`/`filter_match`/`filter_path`, `discover`, `standard`/`standard_convert`, `merge`/`merge_cop`, `parse`/`parse_{allcops,cop}`, `load`/`load_{defaults,require,gems,recursive,lockfile,resolve}`, `ruby_ver`, `resolved`/`resolved_{state,enabled,inject,cop_cfg,filters,effective,fingerprint}`)
 - `src/cache/` — abcop-style redb result cache (`RRUBOCOP_CACHE_DIR` / XDG)
 - `src/cop/` — cops by department (`bundler`, `factory_bot`(+association_style), `gemspec`(+ordered_dependencies_group), `graphql`(+helpers/{args,kwargs,description,names_field,klass,names}; 26 cops), `layout` (90 Layout cops), `lint` (65 + UselessAssignment), `metrics`, `naming`, `performance`, `rails`, `rake`, `rspec`(+helpers), `rspec_rails`(+inferred_spec_type), `security`, `style` (143 Style cops + `heuristics/` + `trailing_comma_args`), `shared`, `walker`, `registry`)
 - `src/fs.rs` — file discover; `AllCops.Exclude` via CopFilterSet (RuboCop `-L`)
