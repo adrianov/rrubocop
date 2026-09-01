@@ -65,9 +65,15 @@ pub struct Args {
     #[arg(long, value_name = "PATH")]
     pub stdin: Option<PathBuf>,
 
-    /// Bypass result-cache reads/writes
-    #[arg(long)]
-    pub no_cache: bool,
+    /// Use result caching (`true`) or don't (`false`); same as RuboCop `-C`/`--cache`
+    #[arg(
+        short = 'C',
+        long,
+        value_name = "FLAG",
+        default_value = "true",
+        value_parser = ["true", "false"]
+    )]
+    pub cache: String,
 
     /// Minimum severity for a non-zero exit code
     #[arg(long, value_name = "SEVERITY", default_value = "convention")]
@@ -135,6 +141,11 @@ impl Args {
         }
     }
 
+    /// Whether the on-disk result cache is enabled (`--cache true|false`).
+    pub fn cache_enabled(&self) -> bool {
+        self.cache != "false"
+    }
+
     /// `Some(true/false)` when `--color` / `--no-color`; else auto (TTY).
     pub fn color_force(&self) -> Option<bool> {
         if self.color {
@@ -198,7 +209,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_fail_fast;
+    use super::{normalize_fail_fast, Args};
+    use clap::Parser;
     use std::ffi::OsString;
 
     fn os(args: &[&str]) -> Vec<OsString> {
@@ -233,5 +245,15 @@ mod tests {
             s(normalize_fail_fast(os(&["rr", "-F"]))),
             vec!["rr", "-F", "1"]
         );
+    }
+
+    #[test]
+    fn cache_flag_defaults_on_and_accepts_false() {
+        let on = Args::parse_from(["rr"]);
+        assert!(on.cache_enabled());
+        let off = Args::parse_from(["rr", "--cache", "false"]);
+        assert!(!off.cache_enabled());
+        let short = Args::parse_from(["rr", "-C", "false"]);
+        assert!(!short.cache_enabled());
     }
 }
