@@ -28,6 +28,7 @@ mod empty_output;
 mod eq;
 mod example_length;
 mod example_without_description;
+pub(crate) mod helpers;
 mod example_wording;
 mod excessive_docstring_spacing;
 mod expect_actual;

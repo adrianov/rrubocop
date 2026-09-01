@@ -1,5 +1,7 @@
 //! Pre-compiled CopFilterSet construction.
 
+use std::collections::HashMap;
+
 use globset::GlobSet;
 use regex::RegexSet;
 
@@ -34,6 +36,26 @@ impl ResolvedConfig {
             sub_config_dirs: self.sub_config_dirs(),
             universal_cop_indices,
             pattern_cop_indices,
+            migrated_schema_version: self.migrated_schema_version.clone(),
+        }
+    }
+
+    /// Filters for file discovery (`--list-target-files`): AllCops.Exclude only.
+    pub fn build_discover_filters(&self) -> CopFilterSet {
+        let (global_exclude, global_exclude_patterns, global_exclude_re) =
+            self.build_global_excludes();
+        CopFilterSet {
+            global_exclude,
+            global_exclude_patterns,
+            global_exclude_re,
+            filters: Vec::new(),
+            name_to_index: HashMap::new(),
+            config_dir: self.config_dir.clone(),
+            base_dir: self.base_dir.clone(),
+            scan_root: None,
+            sub_config_dirs: self.sub_config_dirs(),
+            universal_cop_indices: Vec::new(),
+            pattern_cop_indices: Vec::new(),
             migrated_schema_version: self.migrated_schema_version.clone(),
         }
     }

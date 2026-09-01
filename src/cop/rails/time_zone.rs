@@ -1,13 +1,62 @@
-//! Rails/TimeZone — breadth-first tree-sitter port.
+//! Rails/TimeZone — Time methods without zone (tree-sitter port).
+
+mod detect;
 
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
+
+use detect::{
+    attach_tz_string, build_message, chain_from, has_in_kwarg, method_name, not_danger_chain,
+    offset_provided, selector_off, string_to_time_needs_zone, time_receiver, DANGEROUS,
+};
 
 pub struct TimeZone;
 
+fn report_time_zone(
+    cop: &TimeZone,
+    source: &SourceFile,
+    node: Node<'_>,
+    msg: String,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let (line, col) = source.offset_to_line_col(selector_off(node));
+    diagnostics.push(cop.diagnostic(source, line, col, msg));
+}
+
+fn check_time_call(
+    cop: &TimeZone,
+    source: &SourceFile,
+    node: Node<'_>,
+    flexible: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if time_receiver(source, node).is_none() {
+        return;
+    }
+    let Some(method) = method_name(source, node) else {
+        return;
+    };
+    if !DANGEROUS.iter().any(|&d| d == method) {
+        return;
+    }
+    if attach_tz_string(source, node) || has_in_kwarg(source, node) || offset_provided(node, method)
+    {
+        return;
+    }
+    if not_danger_chain(&chain_from(source, node), flexible) {
+        return;
+    }
+    report_time_zone(
+        cop,
+        source,
+        node,
+        build_message(flexible, &String::from_utf8_lossy(method)),
+        diagnostics,
+    );
+}
 
 impl Cop for TimeZone {
     fn name(&self) -> &'static str {
@@ -26,11 +75,27 @@ impl Cop for TimeZone {
         &self,
         source: &SourceFile,
         node: Node<'_>,
-        _config: &CopConfig,
+        config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        // Breadth-first stub: not implemented — avoid method-name false positives.
-        let _ = (source, node, diagnostics);
+        let flexible = config.get_str("EnforcedStyle", "flexible") != "strict";
+        if string_to_time_needs_zone(source, node) {
+            report_time_zone(
+                self,
+                source,
+                node,
+                "Do not use `String#to_time` without zone. Use `Time.zone.parse` instead.".into(),
+                diagnostics,
+            );
+            return;
+        }
+        check_time_call(self, source, node, flexible, diagnostics);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(TimeZone, "cops/rails/time_zone");
 }

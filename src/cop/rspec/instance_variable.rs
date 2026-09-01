@@ -2,6 +2,7 @@
 
 use tree_sitter::Node;
 
+use crate::cop::shared::{call_method_name, call_receiver, node_bytes};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -9,7 +10,7 @@ use crate::parse::source::SourceFile;
 pub struct InstanceVariable;
 
 const MSG: &str =
-    "Avoid instance variables — use let, a method call, or a local variable (if possible).";
+    "Avoid instance variables - use let, a method call, or a local variable (if possible).";
 
 fn is_assign_lhs(node: Node<'_>) -> bool {
     let Some(parent) = node.parent() else {
@@ -24,11 +25,20 @@ fn is_assign_lhs(node: Node<'_>) -> bool {
     false
 }
 
-fn inside_method(node: Node<'_>) -> bool {
+/// RuboCop `valid_usage?` — only `Class.new { ... }` blocks are exempt.
+fn inside_class_new(source: &SourceFile, node: Node<'_>) -> bool {
     let mut p = node.parent();
     while let Some(cur) = p {
-        if matches!(cur.kind(), "method" | "singleton_method") {
-            return true;
+        if matches!(cur.kind(), "do_block" | "block") {
+            if let Some(call) = cur.parent() {
+                if matches!(call.kind(), "call" | "command")
+                    && call_method_name(source, call) == Some(b"new")
+                    && call_receiver(call)
+                        .is_some_and(|r| r.kind() == "constant" && node_bytes(source, r) == b"Class")
+                {
+                    return true;
+                }
+            }
         }
         p = cur.parent();
     }
@@ -56,10 +66,17 @@ impl Cop for InstanceVariable {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        if node.kind() != "instance_variable" || is_assign_lhs(node) || inside_method(node) {
+        if node.kind() != "instance_variable" || is_assign_lhs(node) || inside_class_new(source, node)
+        {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
         diagnostics.push(self.diagnostic(source, line, col, MSG.to_string()));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(InstanceVariable, "cops/rspec/instance_variable");
 }

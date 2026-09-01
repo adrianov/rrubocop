@@ -10,10 +10,9 @@ use crate::parse::source::SourceFile;
 
 pub struct SpaceInsideHashLiteralBraces;
 
-fn side_msg(want: bool, is_open: bool) -> String {
-    let problem = if is_open { "left brace" } else { "right brace" };
-    let _ = want;
-    format!("Space inside {problem}.")
+fn side_msg(want: bool, brace: &str) -> String {
+    let problem = if want { "missing" } else { "detected" };
+    format!("Space inside {brace} {problem}.")
 }
 
 fn check_open(
@@ -26,7 +25,7 @@ fn check_open(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let msg = side_msg(want, true);
+    let msg = side_msg(want, "{");
     if want {
         space_delim::add_space_after(cop, source, d, open_off, msg, diagnostics, corrections);
     } else {
@@ -43,7 +42,7 @@ fn check_close(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let msg = side_msg(want, false);
+    let msg = side_msg(want, "}");
     if want {
         space_delim::add_space_before(cop, source, d, d.inner_e, msg, diagnostics, corrections);
     } else {
@@ -59,7 +58,8 @@ impl Cop for SpaceInsideHashLiteralBraces {
         true
     }
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["hash"]
+        // RuboCop aliases `on_hash_pattern` → `on_hash`.
+        &["hash", "hash_pattern"]
     }
 
     fn check_node(
@@ -89,4 +89,10 @@ impl Cop for SpaceInsideHashLiteralBraces {
         );
         check_close(self, source, bytes, &d, want, diagnostics, &mut corrections);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(SpaceInsideHashLiteralBraces, "cops/layout/space_inside_hash_literal_braces");
 }

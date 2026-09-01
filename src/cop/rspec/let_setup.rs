@@ -1,13 +1,71 @@
-//! RSpec/LetSetup — breadth-first tree-sitter port.
+//! RSpec/LetSetup — unused `let!` used only for side effects.
+
+use std::collections::HashSet;
 
 use tree_sitter::Node;
 
+use crate::cop::rspec::helpers::{
+    bare_rspec_call, block_body, call_block, first_sym_arg, is_group, RSPEC_INCLUDE,
+};
+use crate::cop::shared::{call_method_name, call_receiver, for_each_descendant, method_node, node_bytes};
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct LetSetup;
 
+const MSG: &str = "Do not use `let!` to setup objects not referenced in tests.";
+
+fn skip_helper_name(name: &[u8]) -> bool {
+    matches!(name, b"let" | b"let!" | b"subject" | b"subject!" | b"expect")
+}
+
+fn collect_used_names(source: &SourceFile, body: Node<'_>) -> HashSet<Vec<u8>> {
+    let mut used = HashSet::new();
+    for_each_descendant(body, |node| {
+        let name = match node.kind() {
+            "call" | "command" if call_receiver(node).is_none() => call_method_name(source, node),
+            "identifier" => Some(node_bytes(source, node)),
+            _ => None,
+        };
+        if let Some(n) = name.filter(|n| !skip_helper_name(n)) {
+            used.insert(n.to_vec());
+        }
+    });
+    used
+}
+
+fn each_let_bang<'a>(source: &SourceFile, body: Node<'a>, mut f: impl FnMut(Vec<u8>, Node<'a>)) {
+    let mut cur = body.walk();
+    for stmt in body.named_children(&mut cur) {
+        if !matches!(stmt.kind(), "call" | "command") {
+            continue;
+        }
+        if call_method_name(source, stmt) != Some(b"let!") {
+            continue;
+        }
+        if let Some(name) = first_sym_arg(source, stmt) {
+            f(name.to_vec(), stmt);
+        }
+    }
+}
+
+fn check_group(
+    cop: &LetSetup,
+    source: &SourceFile,
+    body: Node<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let used = collect_used_names(source, body);
+    each_let_bang(source, body, |name, node| {
+        if used.contains(&name) {
+            return;
+        }
+        let meth = method_node(node).unwrap_or(node);
+        let (line, col) = source.offset_to_line_col(meth.start_byte());
+        diagnostics.push(cop.diagnostic(source, line, col, MSG.into()));
+    });
+}
 
 impl Cop for LetSetup {
     fn name(&self) -> &'static str {
@@ -15,7 +73,7 @@ impl Cop for LetSetup {
     }
 
     fn default_include(&self) -> &'static [&'static str] {
-        &["**/*_spec.rb", "**/spec/**/*"]
+        RSPEC_INCLUDE
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
@@ -30,7 +88,21 @@ impl Cop for LetSetup {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        // Breadth-first stub: not implemented — avoid method-name false positives.
-        let _ = (source, node, diagnostics);
+        let Some(method) = bare_rspec_call(source, node) else {
+            return;
+        };
+        if !is_group(method) {
+            return;
+        }
+        let Some(body) = call_block(node).and_then(block_body) else {
+            return;
+        };
+        check_group(self, source, body, diagnostics);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(LetSetup, "cops/rspec/let_setup");
 }

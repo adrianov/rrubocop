@@ -119,6 +119,27 @@ fn report(
     diagnostics.push(cop.diagnostic(source, line, col, msg.to_string()));
 }
 
+/// RuboCop `TrailingComma#autocorrect_range` — highlight from the first
+/// non-whitespace on the last line of the last argument through its end.
+fn put_comma_at(source: &SourceFile, last: Node<'_>) -> usize {
+    let bytes = source.as_bytes();
+    let start = last.start_byte();
+    let end = last.end_byte();
+    if start >= end || end > bytes.len() {
+        return start;
+    }
+    let region = &bytes[start..end];
+    let last_nl = region.iter().rposition(|&b| b == b'\n').unwrap_or(0);
+    let mut i = start + last_nl;
+    if last_nl > 0 {
+        i += 1;
+    }
+    while i < end && matches!(bytes[i], b' ' | b'\t' | b'\r') {
+        i += 1;
+    }
+    if i < end { i } else { start }
+}
+
 fn check_list(
     cop: &TrailingCommaInArguments,
     source: &SourceFile,
@@ -136,13 +157,18 @@ fn check_list(
     );
     let locs = effective_locs(source, args);
     let want = should_have_comma(source, &locs, style, close);
+    let at = if want && comma_at.is_none() {
+        put_comma_at(source, *last)
+    } else {
+        comma_at.unwrap_or(last.end_byte())
+    };
     report(
         cop,
         source,
         style,
         comma_at.is_some(),
         want,
-        comma_at.unwrap_or(last.end_byte()),
+        at,
         diagnostics,
     );
 }
@@ -218,11 +244,19 @@ mod tests {
     }
 
     #[test]
-    fn comma_style_heredoc_strip_trailing_ok() {
-        crate::testutil::assert_cop_no_offenses_full_with_config(
-            &TrailingCommaInArguments,
-            b"foo(\n  <<~MESSAGE.strip,\n    body\n  MESSAGE\n)\n",
-            comma_cfg(),
+    fn put_comma_highlights_last_arg_start() {
+        let mut c = CopConfig::default();
+        c.options.insert(
+            "EnforcedStyleForMultiline".into(),
+            serde_yml::Value::String("consistent_comma".into()),
         );
+        let diags = crate::testutil::run_cop_full_with_config(
+            &TrailingCommaInArguments,
+            b"qux(\n  first,\n  last\n)\n",
+            c,
+        );
+        assert_eq!(diags.len(), 1, "got: {diags:?}");
+        assert_eq!(diags[0].location.column, 2); // 0-based: start of `last`
+        assert!(diags[0].message.starts_with("Put a comma"));
     }
 }

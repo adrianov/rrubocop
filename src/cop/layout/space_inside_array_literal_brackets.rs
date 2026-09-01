@@ -47,7 +47,8 @@ fn check_filled(
 impl Cop for SpaceInsideArrayLiteralBrackets {
     fn name(&self) -> &'static str { "Layout/SpaceInsideArrayLiteralBrackets" }
     fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["array"] }
+    // RuboCop also visits array patterns (`on_array_pattern` / pattern arrays).
+    fn interested_node_kinds(&self) -> &'static [&'static str] { &["array", "array_pattern"] }
 
     fn check_node(
         &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,

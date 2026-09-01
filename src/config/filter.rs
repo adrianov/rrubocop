@@ -86,6 +86,11 @@ impl CopFilterSet {
         config.build_cop_filters(registry)
     }
 
+    /// Global excludes only — enough for `--list-target-files` / file discovery.
+    pub fn for_discover(config: &ResolvedConfig) -> Self {
+        config.build_discover_filters()
+    }
+
     pub fn is_cop_enabled_for_file(&self, name: &str, path: &Path) -> bool {
         self.name_to_index
             .get(name)

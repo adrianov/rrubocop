@@ -23,7 +23,6 @@ use cop::registry::CopRegistry;
 use diagnostic::Diagnostic;
 use formatter::color::Color;
 use formatter::{create_formatter, Formatter, ProgressSink};
-use fs::discover_files;
 use linter::{run_linter, run_linter_with, should_fail};
 use parse::source::SourceFile;
 
@@ -88,17 +87,25 @@ fn print_results(args: &Args, diags: &[Diagnostic], files: &[std::path::PathBuf]
     exit_from_diags(diags, &args.fail_level)
 }
 
+fn list_target_files(args: &Args, config: &ResolvedConfig) -> Result<ExitCode> {
+    let discovered = fs::discover_files_filtered(
+        &args.paths,
+        &CopFilterSet::for_discover(config),
+        args.force_exclusion,
+    )?;
+    for f in &discovered.files {
+        println!("{}", f.display());
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
 fn lint_paths(
     args: &Args,
     config: &ResolvedConfig,
     registry: &CopRegistry,
 ) -> Result<ExitCode> {
     if args.list_target_files {
-        let discovered = discover_files(&args.paths, config)?;
-        for f in &discovered.files {
-            println!("{}", f.display());
-        }
-        return Ok(ExitCode::SUCCESS);
+        return list_target_files(args, config);
     }
     let fmt = create_formatter(&args.format, Color::resolve(args.color_force()));
     if fmt.streams_marks() {

@@ -155,23 +155,47 @@ fn correct_braces(
     false
 }
 
+fn brace_message(style: &str, new_line_open: bool, method_call: bool) -> String {
+    if !method_call {
+        return format!("Opening and closing braces must follow EnforcedStyle `{style}`.");
+    }
+    match style {
+        "new_line" => {
+            "Closing method call brace must be on the line after the last argument.".into()
+        }
+        "same_line" => {
+            "Closing method call brace must be on the same line as the last argument.".into()
+        }
+        _ if new_line_open => {
+            "Closing method call brace must be on the line after the last argument when opening brace is on a separate line from the first argument.".into()
+        }
+        _ => {
+            "Closing method call brace must be on the same line as the last argument when opening brace is on the same line as the first argument.".into()
+        }
+    }
+}
+
 fn report_bad_style(
     cop: &dyn Cop,
     source: &SourceFile,
     node: Node<'_>,
     elems: &[Node<'_>],
     style: &str,
+    new_line_open: bool,
     want_nl_close: bool,
     close_on_same: bool,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let (l, c) = source.offset_to_line_col(node.start_byte());
+    // RuboCop highlights `node.loc.end` (the closing brace).
+    let close_off = node.end_byte().saturating_sub(1);
+    let (l, c) = source.offset_to_line_col(close_off);
+    let method_call = source.as_bytes().get(node.start_byte()) == Some(&b'(');
     let mut diag = cop.diagnostic(
         source,
         l,
         c,
-        format!("Opening and closing braces must follow EnforcedStyle `{style}`."),
+        brace_message(style, new_line_open, method_call),
     );
     if correct_braces(cop, source, node, elems, want_nl_close, close_on_same, corrections) {
         diag.corrected = true;
@@ -217,6 +241,7 @@ pub fn check_braces(
         node,
         &elems,
         style,
+        new_line_open,
         want_new_line_close(style, new_line_open),
         !new_line_close,
         diagnostics,

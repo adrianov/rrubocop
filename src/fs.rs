@@ -12,11 +12,27 @@ pub struct DiscoveredFiles {
     pub explicit: HashSet<PathBuf>,
 }
 
-pub fn discover_files(paths: &[PathBuf], _config: &ResolvedConfig) -> Result<DiscoveredFiles> {
+/// Discover Ruby files under `paths`, applying `AllCops.Exclude` from `config`.
+pub fn discover_files(paths: &[PathBuf], config: &ResolvedConfig) -> Result<DiscoveredFiles> {
+    discover_files_filtered(paths, &CopFilterSet::for_discover(config), false)
+}
+
+/// Discover Ruby files under `paths`, honoring `filters` (same as lint walk).
+pub fn discover_files_filtered(
+    paths: &[PathBuf],
+    filters: &CopFilterSet,
+    force_exclusion: bool,
+) -> Result<DiscoveredFiles> {
     let mut files = Vec::new();
     let mut explicit = HashSet::new();
+    let stop = AtomicBool::new(false);
+    discover_emitting(paths, filters, force_exclusion, &stop, |p| {
+        files.push(p);
+    })?;
     for path in paths {
-        collect_path(path, &mut files, &mut explicit)?;
+        if path.is_file() {
+            explicit.insert(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()));
+        }
     }
     files.sort();
     files.dedup();
@@ -52,23 +68,6 @@ pub fn discover_emitting(
         )?;
     }
     Ok(count)
-}
-
-fn collect_path(
-    path: &Path,
-    files: &mut Vec<PathBuf>,
-    explicit: &mut HashSet<PathBuf>,
-) -> Result<()> {
-    if path.is_file() {
-        explicit.insert(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()));
-        files.push(normalize_scan_path(path.to_path_buf()));
-        return Ok(());
-    }
-    if path.is_dir() {
-        files.extend(walk_directory(path)?);
-        return Ok(());
-    }
-    anyhow::bail!("path does not exist: {}", path.display());
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -118,27 +117,6 @@ fn maybe_emit(
     }
     *count += 1;
     emit(path);
-}
-
-fn walk_directory(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut builder = WalkBuilder::new(dir);
-    builder
-        .hidden(true)
-        .git_ignore(true)
-        .git_global(true)
-        .follow_links(false);
-
-    let mut files = Vec::new();
-    for entry in builder.build() {
-        let Ok(entry) = entry else {
-            continue;
-        };
-        let path = entry.path();
-        if path.is_file() && is_ruby_file(path) {
-            files.push(normalize_scan_path(path.to_path_buf()));
-        }
-    }
-    Ok(files)
 }
 
 fn walk_directory_emitting(
