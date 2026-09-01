@@ -11,7 +11,31 @@ Drop-in parity: reads your existing `.rubocop.yml`, emits RuboCop-like text/JSON
 ## Install
 
 ```sh
-cargo install --path .
+brew install adrianov/rrubocop/rrubocop
+```
+
+```sh
+cargo install rrubocop
+```
+
+macOS (`.tar.gz` from [GitHub Releases](https://github.com/adrianov/rrubocop/releases); binary + man):
+
+```sh
+# Apple Silicon — use the *-x86_64-apple-darwin.tar.gz asset on Intel Macs
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.7.0/rrubocop-0.7.0-aarch64-apple-darwin.tar.gz
+tar -xzf rrubocop-0.7.0-aarch64-apple-darwin.tar.gz
+sudo cp rrubocop-0.7.0-aarch64-apple-darwin/rrubocop /usr/local/bin/
+sudo mkdir -p /usr/local/share/man/man1
+sudo cp rrubocop-0.7.0-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
+```
+
+Ubuntu / Debian (`.deb` from [GitHub Releases](https://github.com/adrianov/rrubocop/releases); amd64, Ubuntu 22.04+ / Debian bookworm+):
+
+```sh
+# example for v0.7.0 — use the asset name from the release page
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.7.0/rrubocop_0.7.0-1_amd64.deb
+sudo dpkg -i rrubocop_0.7.0-1_amd64.deb
+man rrubocop
 ```
 
 ```sh

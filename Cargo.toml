@@ -5,6 +5,9 @@ edition = "2024"
 rust-version = "1.85"
 authors = ["Peter Adrianov"]
 license = "GPL-3.0-or-later"
+repository = "https://github.com/adrianov/rrubocop"
+homepage = "https://github.com/adrianov/rrubocop"
+documentation = "https://github.com/adrianov/rrubocop"
 description = "Fast RuboCop-compatible Ruby linter in Rust (tree-sitter). No Ruby for linting; ERB configs need ruby."
 readme = "README.md"
 keywords = ["ruby", "linter", "rubocop", "static-analysis"]
@@ -54,7 +57,8 @@ maintainer = "Peter M Adrianov <peter.adrianov@gmail.com>"
 copyright = "Peter M Adrianov"
 license-file = ["LICENSE", "0"]
 extended-description = """Fast RuboCop-compatible Ruby linter written in Rust.
-Uses tree-sitter; no Ruby for linting source. ERB in config still needs ruby."""
+Uses tree-sitter; no Ruby for linting source. ERB in config still needs ruby.
+Built for Ubuntu 22.04+ and Debian bookworm+ (amd64)."""
 depends = "$auto"
 assets = [
     ["target/release/rrubocop", "usr/bin/", "755"],
