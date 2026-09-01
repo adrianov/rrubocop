@@ -1,4 +1,4 @@
-# Squash-merge non-draft PRs after the ci workflow succeeds.
+# Squash-merge non-draft PRs after the ci workflow succeeds, then delete the head branch.
 # CI-gated on purpose: this repo has no required status checks, so agents must
 # not use `gh pr merge --auto` (it can merge before ci finishes).
 name: auto-merge
@@ -17,7 +17,7 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Squash-merge pull request
+      - name: Squash-merge pull request and delete branch
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -33,11 +33,12 @@ jobs:
             echo "No open PR for ${HEAD_SHA}; skipping"
             exit 0
           fi
-          meta=$(gh pr view "$pr_number" --repo "$REPO" --json isDraft,state,title)
+          meta=$(gh pr view "$pr_number" --repo "$REPO" --json isDraft,state,title,headRefName)
           draft=$(printf '%s' "$meta" | jq -r .isDraft)
           state=$(printf '%s' "$meta" | jq -r .state)
           title=$(printf '%s' "$meta" | jq -r .title)
-          echo "PR #${pr_number} state=${state} draft=${draft} title=${title}"
+          head_ref=$(printf '%s' "$meta" | jq -r .headRefName)
+          echo "PR #${pr_number} state=${state} draft=${draft} head=${head_ref} title=${title}"
           if [ "$draft" = "true" ]; then
             echo "PR #${pr_number} is draft; skipping"
             exit 0
@@ -48,3 +49,12 @@ jobs:
           fi
           echo "Squash-merging PR #${pr_number}"
           gh pr merge "$pr_number" --repo "$REPO" --squash --delete-branch
+          # Explicit fallback when --delete-branch is a no-op (setting off / race).
+          if [ -n "$head_ref" ] && [ "$head_ref" != "main" ] && [ "$head_ref" != "master" ]; then
+            if gh api "repos/${REPO}/git/refs/heads/${head_ref}" >/dev/null 2>&1; then
+              echo "Deleting leftover head branch ${head_ref}"
+              gh api -X DELETE "repos/${REPO}/git/refs/heads/${head_ref}"
+            else
+              echo "Head branch ${head_ref} already deleted"
+            fi
+          fi
