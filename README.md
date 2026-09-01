@@ -92,6 +92,16 @@ Cold lint (cache off) on [rails/rails](https://github.com/rails/rails) (`main`, 
 
 ≈ **12×** faster wall clock (`67.254s / 5.668s`). RuboCop user time was 66.9s; rrubocop used 20.2s of CPU across cores.
 
+Same host, cold no-cache, offense-set parity on **Active Support** and **Active Record** (`fp=0`, `fn=0` on shared `.rb` files):
+
+| Target | RuboCop | rrubocop | Speedup |
+|---|---|---|---|
+| `activesupport` (rails `main`) | 11.566s (531 files) | 1.872s | ≈6.2× |
+| `activerecord` (rails `main`) | 29.611s (1162 files) | 2.780s | ≈10.7× |
+| `activesupport` (v8.1.3.1) | 10.729s (506 files) | 1.795s | ≈6.0× |
+| `activerecord` (v8.1.3.1) | 27.847s (1126 files) | 2.656s | ≈10.5× |
+
+
 ## Cross-test vs nitrocop
 
 With a local nitrocop build:
