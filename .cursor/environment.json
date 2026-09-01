@@ -1,0 +1,4 @@
+{
+  "name": "rrubocop",
+  "install": "rustup default stable\nrustup update stable\nrustup component add clippy rustfmt\nsudo apt-get update\nsudo apt-get install -y ruby-full\nsudo gem install bundler --no-document\ncargo build --locked"
+}
