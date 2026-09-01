@@ -35,6 +35,23 @@ fn is_attr_call(source: &SourceFile, node: Node<'_>) -> bool {
     ) && node.child_by_field_name("receiver").is_none()
 }
 
+fn call_wraps_method(node: Node<'_>) -> bool {
+    // e.g. `memoize def foo` / `decorate def bar` — RuboCop walks into the call.
+    if !matches!(node.kind(), "call" | "command" | "command_call") {
+        return false;
+    }
+    if node.child_by_field_name("receiver").is_some() {
+        return false;
+    }
+    let mut found = false;
+    crate::cop::shared::for_each_descendant(node, |n| {
+        if matches!(n.kind(), "method" | "singleton_method") {
+            found = true;
+        }
+    });
+    found
+}
+
 fn has_following_method(source: &SourceFile, children: &[Node<'_>], from: usize) -> bool {
     for next in &children[from..] {
         if is_mod_id(source, *next) || is_bare_mod_call(source, *next) {
@@ -43,7 +60,7 @@ fn has_following_method(source: &SourceFile, children: &[Node<'_>], from: usize)
         if matches!(next.kind(), "method" | "singleton_method") {
             return true;
         }
-        if is_attr_call(source, *next) {
+        if is_attr_call(source, *next) || call_wraps_method(*next) {
             return true;
         }
     }
@@ -123,4 +140,12 @@ impl Cop for UselessAccessModifier {
 mod tests {
     use super::*;
     crate::cop_fixture_tests!(UselessAccessModifier, "cops/lint/useless_access_modifier");
+
+    #[test]
+    fn no_offense_memoize_fixture() {
+        crate::testutil::assert_cop_no_offenses_full(
+            &UselessAccessModifier,
+            include_bytes!("../../../tests/fixtures/cops/lint/useless_access_modifier/no_offense_memoize.rb"),
+        );
+    }
 }

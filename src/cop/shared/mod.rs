@@ -43,16 +43,22 @@ pub fn node_text(source: &SourceFile, node: Node<'_>) -> String {
 }
 
 /// True if `name` is SCREAMING_SNAKE_CASE (RuboCop Naming/ConstantName).
+/// Allows Unicode uppercase letters (e.g. `KIND_НАЧИСЛЕНИЕ`).
 pub fn is_screaming_snake_case(name: &[u8]) -> bool {
-    if name.is_empty() {
+    let Ok(s) = std::str::from_utf8(name) else {
+        return false;
+    };
+    if s.is_empty() {
         return false;
     }
     let mut has_letter = false;
-    for &b in name {
-        match b {
-            b'A'..=b'Z' => has_letter = true,
-            b'0'..=b'9' | b'_' => {}
-            _ => return false,
+    for c in s.chars() {
+        if c.is_uppercase() {
+            has_letter = true;
+        } else if c.is_ascii_digit() || c == '_' {
+            // ok
+        } else {
+            return false;
         }
     }
     has_letter

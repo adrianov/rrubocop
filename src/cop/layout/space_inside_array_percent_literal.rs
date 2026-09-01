@@ -72,6 +72,25 @@ fn report_double(
     );
 }
 
+fn singleline_percent_inner(text: &[u8]) -> Option<(usize, usize, &[u8])> {
+    let (open_idx, crel) = percent_span(text)?;
+    let inner = &text[open_idx + 1..crel];
+    if inner.contains(&b'\n') {
+        return None;
+    }
+    Some((open_idx, crel, inner))
+}
+
+fn double_space_abs(source: &SourceFile, node: Node<'_>) -> Option<(usize, usize)> {
+    let text = &source.as_bytes()[node.start_byte()..node.end_byte()];
+    if !is_array_percent(text) {
+        return None;
+    }
+    let (open_idx, crel, inner) = singleline_percent_inner(text)?;
+    let rel = double_space_at(inner)?;
+    Some((node.start_byte() + open_idx + 1 + rel, node.start_byte() + crel))
+}
+
 impl Cop for SpaceInsideArrayPercentLiteral {
     fn name(&self) -> &'static str {
         "Layout/SpaceInsideArrayPercentLiteral"
@@ -92,27 +111,31 @@ impl Cop for SpaceInsideArrayPercentLiteral {
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = config;
-        let bytes = source.as_bytes();
-        let text = &bytes[node.start_byte()..node.end_byte()];
-        if !is_array_percent(text) {
-            return;
-        }
-        let Some((open_idx, crel)) = percent_span(text) else {
+        let Some((abs, limit)) = double_space_abs(source, node) else {
             return;
         };
-        let inner = &text[open_idx + 1..crel];
-        let Some(rel) = double_space_at(inner) else {
-            return;
-        };
-        let abs = node.start_byte() + open_idx + 1 + rel;
         report_double(
             self,
             source,
-            bytes,
+            source.as_bytes(),
             abs,
-            node.start_byte() + crel,
+            limit,
             diagnostics,
             &mut corrections,
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(SpaceInsideArrayPercentLiteral, "cops/layout/space_inside_array_percent_literal");
+
+    #[test]
+    fn no_offense_multiline_fixture() {
+        crate::testutil::assert_cop_no_offenses_full(
+            &SpaceInsideArrayPercentLiteral,
+            include_bytes!("../../../tests/fixtures/cops/layout/space_inside_array_percent_literal/no_offense_multiline.rb"),
         );
     }
 }

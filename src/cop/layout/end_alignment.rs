@@ -19,7 +19,6 @@ fn base_name(kind: &str) -> &'static str {
         "while" => "while",
         "until" => "until",
         "case" => "case",
-        "begin" => "begin",
         _ => "def",
     }
 }
@@ -32,8 +31,8 @@ impl Cop for EndAlignment {
         true
     }
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        // `do`/`end` blocks are Layout/BlockAlignment — RuboCop EndAlignment
-        // covers if/class/def/etc. (variable style falls back to keyword).
+        // `begin`/`end` is Layout/BeginEndAlignment; `do`/`end` is BlockAlignment.
+        // RuboCop EndAlignment has no `on_kwbegin`.
         &[
             "class",
             "module",
@@ -42,7 +41,6 @@ impl Cop for EndAlignment {
             "while",
             "until",
             "case",
-            "begin",
         ]
     }
 

@@ -3,6 +3,7 @@
 use tree_sitter::{Node, Tree};
 
 use crate::cop::layout::report;
+use crate::cop::layout::multiline_operation_indentation;
 use crate::cop::shared;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
@@ -68,11 +69,85 @@ fn lift_from_arg_list<'a>(source: &SourceFile, n: &mut Node<'a>) -> bool {
     }
 }
 
+fn call_dot_line_col(source: &SourceFile, call: Node<'_>) -> Option<(usize, usize)> {
+    if !has_dot(source, call) {
+        return None;
+    }
+    let method = call.child_by_field_name("method")?;
+    let bytes = source.as_bytes();
+    let from = call.start_byte();
+    let to = method.start_byte().min(bytes.len());
+    let rel = bytes[from..to].iter().rposition(|&b| b == b'.' || b == b'&')?;
+    Some(source.offset_to_line_col(from + rel))
+}
+
+/// RuboCop `get_dot_right_above`: dot on the previous code line at the same column.
+fn is_comment_line(line: &[u8]) -> bool {
+    line.iter()
+        .skip_while(|b| **b == b' ' || **b == b'\t')
+        .next()
+        == Some(&b'#')
+}
+
+fn dot_at_col(line: &[u8], col: usize) -> bool {
+    line.get(col) == Some(&b'.')
+        || (col > 0
+            && line.get(col - 1) == Some(&b'&')
+            && line.get(col) == Some(&b'.'))
+}
+
+fn dot_aligned_above(source: &SourceFile, call: Node<'_>) -> Option<usize> {
+    // `offset_to_line_col` uses 1-based line numbers (see SourceFile).
+    let (line, col) = call_dot_line_col(source, call)?;
+    let mut prev_line = line.saturating_sub(1);
+    while prev_line >= 1 {
+        let prev = source
+            .line_text(prev_line)
+            .map(|s| s.as_bytes())
+            .unwrap_or(b"");
+        if is_comment_line(prev) {
+            prev_line -= 1;
+            continue;
+        }
+        return dot_at_col(prev, col).then_some(col);
+    }
+    None
+}
+
+/// RuboCop `first_call_has_a_dot`: walk receivers to the first same-line call
+/// (e.g. `Foo.bar` in `Foo.bar(...\n).baz`) and use that dot's column.
+fn first_same_line_dot_col(source: &SourceFile, call: Node<'_>) -> Option<usize> {
+    let mut n = call;
+    loop {
+        if !has_dot(source, n) {
+            return None;
+        }
+        let recv = n.child_by_field_name("receiver")?;
+        let method = n.child_by_field_name("method")?;
+        if shared::node_line(source, recv) == shared::node_line(source, method) {
+            return call_dot_line_col(source, n).map(|(_, c)| c);
+        }
+        if recv.kind() == "call" {
+            n = recv;
+            continue;
+        }
+        return None;
+    }
+}
+
 fn expected_col(source: &SourceFile, node: Node<'_>, recv: Node<'_>, style: &str, width: usize) -> usize {
     match style {
         "indented_relative_to_receiver" => shared::line_indent(source, recv.start_byte()) + width,
         "indented" => shared::line_indent(source, chain_root(source, node).start_byte()) + width,
-        _ => shared::node_col(source, recv),
+        "aligned" | _ => {
+            if let Some(col) = dot_aligned_above(source, node) {
+                return col;
+            }
+            if let Some(col) = first_same_line_dot_col(source, node) {
+                return col;
+            }
+            multiline_operation_indentation::aligned_method_call_col(source, node, recv, width)
+        }
     }
 }
 
@@ -182,6 +257,38 @@ mod tests {
             &MultilineMethodCallIndentation,
             b"expect { post(:create) }\n  .to change(A, :count).by(1)\n  .and(change(B, :count).by(1))\n",
             config,
+        );
+    }
+
+    #[test]
+    fn no_offense_indented_chain_fixture() {
+        crate::testutil::assert_cop_no_offenses_full(
+            &MultilineMethodCallIndentation,
+            include_bytes!("../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_indented_chain.rb"),
+        );
+    }
+
+    #[test]
+    fn no_offense_dot_above_fixture() {
+        crate::testutil::assert_cop_no_offenses_full(
+            &MultilineMethodCallIndentation,
+            include_bytes!("../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_dot_above.rb"),
+        );
+    }
+
+    #[test]
+    fn no_offense_comment_between_fixture() {
+        crate::testutil::assert_cop_no_offenses_full(
+            &MultilineMethodCallIndentation,
+            include_bytes!("../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_comment_between.rb"),
+        );
+    }
+
+    #[test]
+    fn no_offense_multiline_args_chain_fixture() {
+        crate::testutil::assert_cop_no_offenses_full(
+            &MultilineMethodCallIndentation,
+            include_bytes!("../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_multiline_args_chain.rb"),
         );
     }
 }

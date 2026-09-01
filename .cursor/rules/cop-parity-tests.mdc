@@ -5,6 +5,18 @@ alwaysApply: true
 
 # Cop parity regression tests
 
+## RuboCop baseline on target projects
+
+When comparing rrubocop output to RuboCop on a **Ruby project** (e.g. a client app), use the RuboCop that project actually runs:
+
+1. **`bundle exec rubocop`** when the project has RuboCop in `Gemfile` / `Gemfile.lock` — this is the parity baseline (pinned parser, plugins, and config resolution).
+2. **Never** use bare `rubocop` from PATH as the baseline — a global install can be a different RuboCop version and gem set, so offense counts and cops diverge from what CI and developers see.
+3. Match scan scope: same cwd, paths, `-F 0` for full runs, `--cache false` when diffing, and the project's `.rubocop.yml` (not `--force-default-config`).
+
+rrubocop's built-in baseline (`src/resources/baseline.json`, shown in `--version`) is the implementation target; **`bundle exec rubocop` on the project under test** is the acceptance check.
+
+## Fixture tests in this repo
+
 When fixing a **false positive**, **false negative**, or other **RuboCop/nitrocop discrepancy** in a cop:
 
 1. **Add or update fixtures** under `tests/fixtures/cops/<dept>/<snake_cop>/`:

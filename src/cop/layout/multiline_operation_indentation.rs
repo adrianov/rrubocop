@@ -358,6 +358,33 @@ impl Cop for MultilineOperationIndentation {
     }
 }
 
+fn multiline_rhs_candidate(source: &SourceFile, left: Node<'_>, right: Node<'_>) -> bool {
+    node_end_line(source, left) != shared::node_line(source, right)
+        && util::begins_its_line(source, right.start_byte())
+        && shared::node_col(source, right) == shared::line_indent(source, right.start_byte())
+}
+
+fn operation_expected_col(
+    source: &SourceFile,
+    node: Node<'_>,
+    left: Node<'_>,
+    width: usize,
+    style: &str,
+) -> (usize, bool) {
+    let left_line = shared::node_line(source, left);
+    let left_col = shared::node_col(source, left);
+    let keyword_ctx = keyword_context(source, node, left_line, left_col);
+    let assignment_ctx = assignment_from_ancestors(source, node)
+        .or_else(|| assignment_context(source, left_line, left_col));
+    let should_align = assignment_ctx.is_some_and(|c| c.rhs_begins_line)
+        || (style == "aligned" && (keyword_ctx.is_some() || assignment_ctx.is_some()));
+    if should_align {
+        (left_col, true)
+    } else {
+        (indented_anchor_col(source, left, width, keyword_ctx.as_ref()), false)
+    }
+}
+
 fn indent_mismatch(
     source: &SourceFile,
     node: Node<'_>,
@@ -367,35 +394,45 @@ fn indent_mismatch(
     let style = config.get_str("EnforcedStyle", "aligned");
     let left = node.child_by_field_name("left")?;
     let right = node.child_by_field_name("right")?;
-    if node_end_line(source, left) == shared::node_line(source, right) {
+    if !multiline_rhs_candidate(source, left, right) {
         return None;
     }
-    if !util::begins_its_line(source, right.start_byte()) {
-        return None;
-    }
-    if shared::node_col(source, right) != shared::line_indent(source, right.start_byte()) {
-        return None;
-    }
-
-    let left_line = shared::node_line(source, left);
-    let left_col = shared::node_col(source, left);
     let actual = shared::line_indent(source, right.start_byte());
-    let keyword_ctx = keyword_context(source, node, left_line, left_col);
-    let assignment_ctx = assignment_from_ancestors(source, node)
-        .or_else(|| assignment_context(source, left_line, left_col));
-    let should_align = assignment_ctx.is_some_and(|c| c.rhs_begins_line)
-        || (style == "aligned" && (keyword_ctx.is_some() || assignment_ctx.is_some()));
-    let kw_extra = keyword_ctx
+    let (expected, align_only) = operation_expected_col(source, node, left, width, style);
+    (actual != expected).then_some((actual, expected, align_only))
+}
+
+fn keyword_extra(width: usize, keyword_ctx: Option<&KeywordContext>) -> usize {
+    keyword_ctx
         .filter(|c| c.special_indent)
         .map(|_| width)
-        .unwrap_or(0);
-    let left_base = shared::line_indent(source, left.start_byte());
-    let (expected, align_only) = if should_align {
-        (left_col, true)
+        .unwrap_or(0)
+}
+
+fn indented_anchor_col(source: &SourceFile, left: Node<'_>, width: usize, keyword_ctx: Option<&KeywordContext>) -> usize {
+    shared::line_indent(source, left.start_byte()) + width + keyword_extra(width, keyword_ctx)
+}
+
+/// Expected column for the method-name part of a multiline dotted call (`aligned` style).
+pub(crate) fn aligned_method_call_col(
+    source: &SourceFile,
+    call: Node<'_>,
+    receiver: Node<'_>,
+    width: usize,
+) -> usize {
+    let left_line = shared::node_line(source, receiver);
+    let left_col = shared::node_col(source, receiver);
+    let keyword_ctx = keyword_context(source, call, left_line, left_col);
+    let assignment_ctx = assignment_from_ancestors(source, call)
+        .or_else(|| assignment_context(source, left_line, left_col));
+    let should_align = assignment_ctx.is_some_and(|c| c.rhs_begins_line)
+        || keyword_ctx.is_some()
+        || assignment_ctx.is_some();
+    if should_align {
+        left_col
     } else {
-        (left_base + width + kw_extra, false)
-    };
-    (actual != expected).then_some((actual, expected, align_only))
+        indented_anchor_col(source, receiver, width, keyword_ctx.as_ref())
+    }
 }
 
 #[cfg(test)]
@@ -421,8 +458,11 @@ mod tests {
 
     #[test]
     fn indented_if_or_chain_no_offense() {
-        let src = b"        if currency_id.blank? || !Currency.exists?(id: currency_id) ||\n            StringIdVersion.exists?(item_type: 'Currency')\n          stats[:skipped] += 1\n        end\n";
-        let diags = run_cop_full_with_config(&MultilineOperationIndentation, src, indented_config());
+        let diags = run_cop_full_with_config(
+            &MultilineOperationIndentation,
+            b"        if currency_id.blank? || !Currency.exists?(id: currency_id) ||\n            StringIdVersion.exists?(item_type: 'Currency')\n          stats[:skipped] += 1\n        end\n",
+            indented_config(),
+        );
         assert!(
             diags.is_empty(),
             "indented if-condition || continuation: {:?}",
@@ -432,8 +472,11 @@ mod tests {
 
     #[test]
     fn indented_return_unless_or_chain_no_offense() {
-        let src = b"      return unless ::Merchants::Firekassa::MERCHANT_TIDS.present? &&\n        merchant_tids.all? { |tid| withdraw_tids.include?(tid) }\n";
-        let diags = run_cop_full_with_config(&MultilineOperationIndentation, src, indented_config());
+        let diags = run_cop_full_with_config(
+            &MultilineOperationIndentation,
+            b"      return unless ::Merchants::Firekassa::MERCHANT_TIDS.present? &&\n        merchant_tids.all? { |tid| withdraw_tids.include?(tid) }\n",
+            indented_config(),
+        );
         assert!(
             diags.is_empty(),
             "return unless || continuation: {:?}",
@@ -443,8 +486,11 @@ mod tests {
 
     #[test]
     fn indented_assignment_or_continuation_no_offense() {
-        let src = b"    wallet = Wallet.fee.find_by(blockchain_key: blockchain.real_key, tag: tag) ||\n      Wallet.deposit.find_by(blockchain_key: blockchain.real_key, tag: tag)\n";
-        let diags = run_cop_full_with_config(&MultilineOperationIndentation, src, indented_config());
+        let diags = run_cop_full_with_config(
+            &MultilineOperationIndentation,
+            b"    wallet = Wallet.fee.find_by(blockchain_key: blockchain.real_key, tag: tag) ||\n      Wallet.deposit.find_by(blockchain_key: blockchain.real_key, tag: tag)\n",
+            indented_config(),
+        );
         assert!(
             diags.is_empty(),
             "indented assignment || continuation: {:?}",
@@ -454,8 +500,11 @@ mod tests {
 
     #[test]
     fn indented_assignment_plus_chain_no_offense() {
-        let src = b"    line = headers['TS-API-TIMESTAMP'].to_s +\n      headers['TS-API-API-KEY'].to_s +\n      payload\n";
-        let diags = run_cop_full_with_config(&MultilineOperationIndentation, src, indented_config());
+        let diags = run_cop_full_with_config(
+            &MultilineOperationIndentation,
+            b"    line = headers['TS-API-TIMESTAMP'].to_s +\n      headers['TS-API-API-KEY'].to_s +\n      payload\n",
+            indented_config(),
+        );
         assert!(
             diags.is_empty(),
             "indented assignment + chain: {:?}",

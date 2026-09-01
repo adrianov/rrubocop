@@ -6,3 +6,5 @@ good = 1
 withdrawal => { id:, apply_time: }
 _ = Integer(apply_time)
 _ = apply_time.present?
+
+annotate: "path #{__FILE__}"

@@ -1,5 +1,7 @@
 //! Lint/Syntax — tree-sitter ERROR/missing plus TargetRubyVersion-gated / MRI-invalid forms.
 
+mod false_errors;
+
 use tree_sitter::Node;
 
 use crate::cop::shared::node_bytes;
@@ -7,6 +9,8 @@ use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
+
+use self::false_errors::{endless_eq_offset, mri_valid_false_error};
 
 /// Lint/Syntax — report parse / version syntax issues as fatals (RuboCop parity).
 pub struct Syntax;
@@ -96,6 +100,10 @@ fn check_error(
     if !(node.is_error() || node.is_missing()) {
         return;
     }
+    // Tree-sitter-ruby false parses that MRI accepts (Ruby 2.x/3.x).
+    if mri_valid_false_error(source, node) {
+        return;
+    }
     let (line, col) = source.offset_to_line_col(node.start_byte());
     diagnostics.push(syntax_diag(cop, source, line, col, "unexpected token", ruby_ver));
 }
@@ -162,28 +170,6 @@ fn walk(
     }
 }
 
-/// Endless method: `def name(...) = expr` (Ruby 3.0+). Returns byte offset of `=`.
-fn endless_eq_offset(source: &SourceFile, node: Node<'_>) -> Option<usize> {
-    if !matches!(node.kind(), "method" | "singleton_method") {
-        return None;
-    }
-    let mut has_end = false;
-    let mut eq_off = None;
-    let mut cur = node.walk();
-    for child in node.children(&mut cur) {
-        match child.kind() {
-            "end" => has_end = true,
-            "=" if node_bytes(source, child) == b"=" => eq_off = Some(child.start_byte()),
-            _ => {}
-        }
-    }
-    if has_end {
-        None
-    } else {
-        eq_off
-    }
-}
-
 /// MRI rejects bare `not expr` (no parentheses) outside statement/condition contexts.
 fn bare_not_offense(source: &SourceFile, node: Node<'_>) -> Option<(usize, usize)> {
     if node.kind() != "unary" {
@@ -246,4 +232,91 @@ pub fn has_syntax_fatals(diagnostics: &[Diagnostic]) -> bool {
     diagnostics
         .iter()
         .any(|d| d.cop_name == "Lint/Syntax" && d.severity >= Severity::Error)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::{assert_cop_no_offenses_full, run_cop_full, run_cop_full_with_config};
+    use std::collections::HashMap;
+
+    fn ruby34() -> CopConfig {
+        CopConfig {
+            options: HashMap::from([(
+                "TargetRubyVersion".into(),
+                serde_yml::Value::Number(serde_yml::Number::from(3.4)),
+            )]),
+            ..CopConfig::default()
+        }
+    }
+
+    #[test]
+    fn no_offense_unicode_symbol() {
+        assert_cop_no_offenses_full(
+            &Syntax,
+            include_bytes!("../../../tests/fixtures/cops/lint/syntax/no_offense_unicode_symbol.rb"),
+        );
+    }
+
+    #[test]
+    fn no_offense_endless_raise() {
+        let diags = run_cop_full_with_config(
+            &Syntax,
+            include_bytes!("../../../tests/fixtures/cops/lint/syntax/no_offense_endless_raise.rb"),
+            ruby34(),
+        );
+        assert!(diags.is_empty(), "{diags:?}");
+    }
+
+    #[test]
+    fn no_offense_anonymous_block() {
+        assert_cop_no_offenses_full(
+            &Syntax,
+            include_bytes!("../../../tests/fixtures/cops/lint/syntax/no_offense_anonymous_block.rb"),
+        );
+    }
+
+    #[test]
+    fn still_reports_ampersand_not_anonymous_block_forward() {
+        let diags = run_cop_full(&Syntax, b"foo(& 1)\n");
+        assert!(
+            diags.iter().any(|d| d.cop_name == "Lint/Syntax"),
+            "`& 1` must still report: {diags:?}"
+        );
+    }
+
+    #[test]
+    fn no_offense_pattern_match() {
+        assert_cop_no_offenses_full(
+            &Syntax,
+            include_bytes!("../../../tests/fixtures/cops/lint/syntax/no_offense_pattern_match.rb"),
+        );
+    }
+
+    #[test]
+    fn still_reports_unclosed_delimiter() {
+        let diags = run_cop_full(&Syntax, b"1 + (\n");
+        assert!(
+            diags.iter().any(|d| d.cop_name == "Lint/Syntax"),
+            "unclosed paren must report: {diags:?}"
+        );
+    }
+
+    #[test]
+    fn still_reports_error_after_hash_rocket_not_match_pattern() {
+        let diags = run_cop_full(&Syntax, b"h = {\n  a =>\n  !!!\n}\n");
+        assert!(
+            diags.iter().any(|d| d.cop_name == "Lint/Syntax"),
+            "invalid hash after => must report: {diags:?}"
+        );
+    }
+
+    #[test]
+    fn does_not_suppress_error_merely_because_line_has_def_and_eq() {
+        let diags = run_cop_full_with_config(&Syntax, b"# def x = y\nfoo(!!!\n", ruby34());
+        assert!(
+            diags.iter().any(|d| d.cop_name == "Lint/Syntax"),
+            "ERROR after comment with def/= must still report: {diags:?}"
+        );
+    }
 }

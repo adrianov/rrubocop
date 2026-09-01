@@ -17,3 +17,4 @@ Rust RuboCop drop-in for Ruby (tree-sitter). No Ruby for linting; ERB configs ne
 - `testdata/cross_test_nitrocop.py` — offense compare vs local nitrocop
 - `tests/fixtures/cops/` — nitrocop-style `offense.rb` / `no_offense.rb` per cop (`src/testutil/` + `cop_fixture_tests!`); when fixing FPs/parity, always add fixtures (see `.cursor/rules/cop-parity-tests.mdc`)
 - Reference clones (outside repo): `/home/crexus/nitrocop`, `/home/crexus/rubocop`, `/home/crexus/abcop`
+- Parity on external projects: compare against `bundle exec rubocop` (project Gemfile), not bare `rubocop` from PATH — see `.cursor/rules/cop-parity-tests.mdc`

@@ -16,11 +16,32 @@ fn line_indent(line: &[u8]) -> Option<usize> {
     let indent = line.iter().take_while(|&&b| b == b' ' || b == b'\t').count();
     let rest = &line[indent..];
     // Leading-dot continuations are Layout/MultilineMethodCallIndentation's job.
-    if rest.starts_with(b"#") || rest.starts_with(b".") || rest.starts_with(b"&.") {
+    // `when`/`in`/`else`/… alignment is CaseIndentation / ElseAlignment, not Width.
+    if rest.starts_with(b"#")
+        || rest.starts_with(b".")
+        || rest.starts_with(b"&.")
+        || is_branch_keyword(rest)
+    {
         None
     } else {
         Some(indent)
     }
+}
+
+fn is_branch_keyword(rest: &[u8]) -> bool {
+    let rest = trim_ascii_end(rest);
+    matches!(
+        rest,
+        b"else" | b"rescue" | b"ensure"
+    ) || rest.starts_with(b"when ")
+        || rest.starts_with(b"when(")
+        || rest.starts_with(b"in ")
+        || rest.starts_with(b"in(")
+        || rest.starts_with(b"elsif ")
+        || rest.starts_with(b"elsif(")
+        || rest.starts_with(b"else ")
+        || rest.starts_with(b"rescue ")
+        || rest.starts_with(b"ensure ")
 }
 
 fn ends_with_open_delim(line: &[u8]) -> bool {
@@ -60,19 +81,40 @@ fn strip_line_comment(line: &[u8]) -> &[u8] {
     }
 }
 
+fn ends_with_multi_char_op(t: &[u8]) -> bool {
+    const OPS: &[&[u8]] = &[
+        b"->", b"=>", b"&&", b"||", b"==", b"!=", b">=", b"<=", b"<<", b">>",
+    ];
+    OPS.iter().any(|op| t.ends_with(op))
+}
+
+fn ends_with_single_char_op(t: &[u8]) -> bool {
+    matches!(
+        t.last(),
+        Some(b',' | b'\\' | b'(' | b'[' | b'{' | b'+' | b'-' | b'*' | b'/' | b'%' | b'|' | b'^' | b'<' | b'>')
+    )
+}
+
 fn ends_with_continuation(line: &[u8]) -> bool {
-    let code = strip_line_comment(line);
-    let t = trim_ascii_end(code);
-    if t.is_empty() {
+    let t = trim_ascii_end(strip_line_comment(line));
+    !t.is_empty()
+        && (ends_with_multi_char_op(t)
+            || ends_with_single_char_op(t)
+            || trailing_if_kw(t)
+            || case_opener(t))
+}
+
+/// `x = case y` / `case y` — `when`/`end` may align under `case`, not Width steps.
+fn case_opener(t: &[u8]) -> bool {
+    let Ok(s) = std::str::from_utf8(t) else {
         return false;
-    }
-    if matches!(t[t.len() - 1], b',' | b'\\' | b'(' | b'[' | b'{') {
-        return true;
-    }
-    if t.ends_with(b"->") || t.ends_with(b"=>") {
-        return true;
-    }
-    trailing_if_kw(t)
+    };
+    let s = s.trim_end();
+    s.starts_with("case ")
+        || s.starts_with("case(")
+        || s.contains(" = case ")
+        || s.contains("=case ")
+        || s.ends_with("= case")
 }
 
 fn trim_ascii_end(code: &[u8]) -> &[u8] {
@@ -131,6 +173,78 @@ fn report_width(
     );
 }
 
+fn aligned_continuation(
+    indent: usize,
+    prev: usize,
+    prev_line: &[u8],
+    cont_base: &mut Option<usize>,
+) -> bool {
+    let start = indent > prev
+        && (ends_with_open_delim(prev_line) || ends_with_continuation(prev_line));
+    let ongoing = cont_base.is_some_and(|b| indent >= b.saturating_sub(1));
+    if start || ongoing {
+        if cont_base.is_none() {
+            *cont_base = Some(prev);
+        }
+        true
+    } else {
+        *cont_base = None;
+        false
+    }
+}
+
+fn check_step_from_prev(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    code_map: &CodeMap,
+    line_no: usize,
+    indent: usize,
+    prev: usize,
+    width: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    if bad_step(indent, prev, width) {
+        report_width(
+            cop, source, code_map, line_no, indent, prev, width, diagnostics, corrections,
+        );
+    }
+}
+
+fn scan_file_indents(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    code_map: &CodeMap,
+    width: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    let mut prev_indent: Option<usize> = None;
+    let mut prev_line: &[u8] = b"";
+    let mut cont_base: Option<usize> = None;
+    for (i, line) in source.lines().enumerate() {
+        let Some(indent) = line_indent(line) else {
+            continue;
+        };
+        let off = source.line_start(i + 1).unwrap_or(0);
+        if let Some(prev) = prev_indent {
+            if aligned_continuation(indent, prev, prev_line, &mut cont_base) {
+                prev_line = line;
+                continue;
+            }
+            check_step_from_prev(
+                cop, source, code_map, i + 1, indent, prev, width, diagnostics, corrections,
+            );
+        }
+        if code_map.covers(off + indent) {
+            prev_line = line;
+            continue;
+        }
+        prev_indent = Some(indent);
+        prev_line = line;
+    }
+}
+
 impl Cop for IndentationWidth {
     fn name(&self) -> &'static str { "Layout/IndentationWidth" }
     fn supports_autocorrect(&self) -> bool { true }
@@ -140,40 +254,14 @@ impl Cop for IndentationWidth {
         config: &CopConfig, diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let width = config.get_usize("Width", 2);
-        let mut prev_indent: Option<usize> = None;
-        let mut prev_line: &[u8] = b"";
-        let mut cont_base: Option<usize> = None;
-        for (i, line) in source.lines().enumerate() {
-            let Some(indent) = line_indent(line) else { continue; };
-            let off = source.line_start(i + 1).unwrap_or(0);
-            if let Some(prev) = prev_indent {
-                let start_aligned = indent > prev
-                    && (ends_with_open_delim(prev_line) || ends_with_continuation(prev_line));
-                let in_aligned = cont_base.is_some_and(|b| indent >= b.saturating_sub(1));
-                if start_aligned || in_aligned {
-                    if cont_base.is_none() {
-                        cont_base = Some(prev);
-                    }
-                    prev_line = line;
-                    continue;
-                }
-                cont_base = None;
-                if bad_step(indent, prev, width) {
-                    report_width(
-                        self, source, code_map, i + 1, indent, prev, width,
-                        diagnostics, &mut corrections,
-                    );
-                }
-            }
-            // Don't use string/heredoc/comment content as indentation baseline.
-            if code_map.covers(off + indent) {
-                prev_line = line;
-                continue;
-            }
-            prev_indent = Some(indent);
-            prev_line = line;
-        }
+        scan_file_indents(
+            self,
+            source,
+            code_map,
+            config.get_usize("Width", 2),
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 

@@ -20,7 +20,21 @@ fn described_const<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<&'a [u8
 }
 
 fn is_matching_const(source: &SourceFile, node: Node<'_>, want: &[u8]) -> bool {
-    matches!(node.kind(), "constant" | "scope_resolution") && node_bytes(source, node) == want
+    if !matches!(node.kind(), "constant" | "scope_resolution") {
+        return false;
+    }
+    // `Yandex::SuggestAddresses` name node ≠ bare described `SuggestAddresses`.
+    if node.kind() == "constant" {
+        if let Some(parent) = node.parent() {
+            if parent.kind() == "scope_resolution"
+                && parent.child_by_field_name("name").is_some_and(|n| n.id() == node.id())
+                && parent.child_by_field_name("scope").is_some()
+            {
+                return false;
+            }
+        }
+    }
+    node_bytes(source, node) == want
 }
 
 fn skip_describe_arg(node: Node<'_>, describe: Node<'_>) -> bool {
@@ -53,6 +67,57 @@ fn is_nested_describe_arg(source: &SourceFile, node: Node<'_>) -> bool {
     call_method_name(source, gp).is_some_and(is_group) && skip_describe_arg(node, gp)
 }
 
+/// RuboCop skips constants inside method bodies nested in the example group
+/// (e.g. `def helper; Class.new { validates_with Foo }; end`).
+fn inside_method(node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(n) = p {
+        if matches!(n.kind(), "method" | "singleton_method") {
+            return true;
+        }
+        if matches!(n.kind(), "program" | "class" | "module") {
+            break;
+        }
+        p = n.parent();
+    }
+    false
+}
+
+/// RuboCop `common_instance_exec_closure?`: `Class.new` / `Module.new` / `Struct.new` blocks.
+fn inside_class_new_block(source: &SourceFile, node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(n) = p {
+        if matches!(n.kind(), "block" | "do_block") {
+            if let Some(parent) = n.parent() {
+                if is_class_module_struct_new(source, parent) {
+                    return true;
+                }
+            }
+        }
+        if is_class_module_struct_new(source, n) {
+            return true;
+        }
+        if matches!(n.kind(), "program" | "method" | "singleton_method") {
+            break;
+        }
+        p = n.parent();
+    }
+    false
+}
+
+fn is_class_module_struct_new(source: &SourceFile, node: Node<'_>) -> bool {
+    if !matches!(node.kind(), "call" | "command") {
+        return false;
+    }
+    if call_method_name(source, node) != Some(b"new") {
+        return false;
+    }
+    let Some(recv) = node.child_by_field_name("receiver") else {
+        return false;
+    };
+    matches!(node_bytes(source, recv), b"Class" | b"Module" | b"Struct")
+}
+
 fn report_usage(
     cop: &DescribedClass,
     source: &SourceFile,
@@ -77,6 +142,21 @@ fn report_usage(
         diag.corrected = true;
     }
     diagnostics.push(diag);
+}
+
+fn reportable_const_usage(
+    source: &SourceFile,
+    n: Node<'_>,
+    describe: Node<'_>,
+    const_name: &[u8],
+    only_static: bool,
+) -> bool {
+    is_matching_const(source, n, const_name)
+        && !skip_describe_arg(n, describe)
+        && !(only_static && is_scope_prefix(n))
+        && !is_nested_describe_arg(source, n)
+        && !inside_method(n)
+        && !inside_class_new_block(source, n)
 }
 
 impl Cop for DescribedClass {
@@ -121,19 +201,9 @@ impl Cop for DescribedClass {
             return;
         };
         for_each_descendant(block, |n| {
-            if !is_matching_const(source, n, const_name) {
-                return;
+            if reportable_const_usage(source, n, node, const_name, only_static) {
+                report_usage(self, source, n, const_name, diagnostics, &mut corrections);
             }
-            if skip_describe_arg(n, node) {
-                return;
-            }
-            if only_static && is_scope_prefix(n) {
-                return;
-            }
-            if is_nested_describe_arg(source, n) {
-                return;
-            }
-            report_usage(self, source, n, const_name, diagnostics, &mut corrections);
         });
     }
 }

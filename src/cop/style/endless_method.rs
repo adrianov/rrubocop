@@ -15,7 +15,8 @@ impl Cop for EndlessMethod {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["method", "singleton_method"]
+        // RuboCop only implements `on_def` (instance methods), not `on_defs`.
+        &["method"]
     }
 
     fn check_node(
@@ -49,5 +50,18 @@ impl Cop for EndlessMethod {
                 "Avoid endless method definitions.".to_string(),
             ));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_offense_singleton_endless() {
+        crate::testutil::assert_cop_no_offenses_full(
+            &EndlessMethod,
+            include_bytes!("../../../tests/fixtures/cops/style/endless_method/no_offense_singleton.rb"),
+        );
     }
 }

@@ -60,10 +60,17 @@ fn check_line(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let trimmed = line.trim_start();
-    if !trimmed.starts_with('#') {
+    // RuboCop AnnotationComment: `/^(# ?)(KEYWORD)/` — at most one space after `#`.
+    let body = if let Some(rest) = trimmed.strip_prefix("# ") {
+        rest
+    } else if let Some(rest) = trimmed.strip_prefix('#') {
+        if rest.starts_with(char::is_whitespace) {
+            return;
+        }
+        rest
+    } else {
         return;
-    }
-    let body = trimmed.trim_start_matches('#').trim_start();
+    };
     for kw in ["TODO", "FIXME", "OPTIMIZE", "HACK", "REVIEW", "NOTE"] {
         if let Some(msg) = annotation_msg(body, kw, require_colon) {
             let (line_n, col) =
