@@ -16,6 +16,7 @@ mod date;
 mod delegate;
 mod delegate_allow_blank;
 mod dynamic_find_by;
+mod eager_evaluation_log_message;
 mod enum_hash;
 mod enforce_superclass;
 mod enum_uniqueness;
@@ -84,6 +85,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         delegate::Delegate,
         delegate_allow_blank::DelegateAllowBlank,
         dynamic_find_by::DynamicFindBy,
+        eager_evaluation_log_message::EagerEvaluationLogMessage,
         enum_hash::EnumHash,
         enum_uniqueness::EnumUniqueness,
         environment_comparison::EnvironmentComparison,
