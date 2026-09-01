@@ -58,18 +58,23 @@ impl Cop for AccessorMethodName {
             return;
         };
         let name = node_bytes(source, name_node);
-        if name.ends_with(b"!") || name.ends_with(b"?") || name.ends_with(b"=") {
-            return;
-        }
-        let argc = param_count(node);
-        let msg = if name.starts_with(b"get_") && argc == 0 {
-            "Do not prefix reader method names with `get_`. (https://rubystyle.guide#accessor_methods)"
-        } else if name.starts_with(b"set_") && has_single_positional_arg(node) {
-            "Do not prefix writer method names with `set_`. (https://rubystyle.guide#accessor_methods)"
-        } else {
+        let Some(msg) = accessor_offense_msg(name, node) else {
             return;
         };
         let (line, column) = source.offset_to_line_col(name_node.start_byte());
         diagnostics.push(self.diagnostic(source, line, column, msg.into()));
+    }
+}
+
+fn accessor_offense_msg(name: &[u8], node: Node<'_>) -> Option<&'static str> {
+    if name.ends_with(b"!") || name.ends_with(b"?") || name.ends_with(b"=") {
+        return None;
+    }
+    if name.starts_with(b"get_") && param_count(node) == 0 {
+        Some("Do not prefix reader method names with `get_`. (https://rubystyle.guide#accessor_methods)")
+    } else if name.starts_with(b"set_") && has_single_positional_arg(node) {
+        Some("Do not prefix writer method names with `set_`. (https://rubystyle.guide#accessor_methods)")
+    } else {
+        None
     }
 }

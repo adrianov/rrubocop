@@ -103,47 +103,61 @@ pub fn check_breaks_cfg(
     allow_multiline_final: bool,
 ) {
     let elems = named_elems(node);
-    if elems.len() < 2 {
+    if elems.len() < 2 || skip_breaks(source, node, &elems, allow_multiline_final) {
         return;
     }
-    let start_line = shared::node_line(source, node);
-    // For method args only: RuboCop send first_line includes receiver — skip when
-    // args begin after the call expression's first line (chained `.with(a,`).
-    if matches!(node.kind(), "argument_list" | "command_argument_list") {
-        let call_start = node
-            .parent()
-            .map(|p| shared::node_line(source, p))
-            .unwrap_or(start_line);
-        let first_elem_line = shared::node_line(source, elems[0]);
-        if call_start != first_elem_line {
-            return;
-        }
-    }
-    let end_line = if allow_multiline_final {
+    scan_breaks(cop, source, &elems, message, diagnostics, corrections);
+}
+
+fn is_arg_list(node: Node<'_>) -> bool {
+    matches!(node.kind(), "argument_list" | "command_argument_list")
+}
+
+fn call_or_node_line(source: &SourceFile, node: Node<'_>, fallback: usize) -> usize {
+    node.parent()
+        .map(|p| shared::node_line(source, p))
+        .unwrap_or(fallback)
+}
+
+fn breaks_end_line(source: &SourceFile, node: Node<'_>, elems: &[Node<'_>], allow_final: bool) -> usize {
+    if allow_final {
         elems
             .iter()
             .map(|e| shared::node_line(source, *e))
             .max()
-            .unwrap_or(start_line)
+            .unwrap_or_else(|| shared::node_line(source, node))
     } else {
         elem_end_line(source, node)
-    };
-    let align_start = if matches!(node.kind(), "argument_list" | "command_argument_list") {
-        node.parent()
-            .map(|p| shared::node_line(source, p))
-            .unwrap_or(start_line)
+    }
+}
+
+fn skip_breaks(
+    source: &SourceFile,
+    node: Node<'_>,
+    elems: &[Node<'_>],
+    allow_multiline_final: bool,
+) -> bool {
+    let start_line = shared::node_line(source, node);
+    // For method args only: RuboCop send first_line includes receiver — skip when
+    // args begin after the call expression's first line (chained `.with(a,`).
+    if is_arg_list(node) {
+        let call_start = call_or_node_line(source, node, start_line);
+        if call_start != shared::node_line(source, elems[0]) {
+            return true;
+        }
+    }
+    let end_line = breaks_end_line(source, node, elems, allow_multiline_final);
+    let align_start = if is_arg_list(node) {
+        call_or_node_line(source, node, start_line)
     } else {
         start_line
     };
     if align_start == end_line {
-        return;
+        return true;
     }
     // All keys/args on one line (even if `{` / `}` wrap) → not an offense.
-    if all_elems_same_line(source, &elems) {
-        return;
+    if all_elems_same_line(source, elems) {
+        return true;
     }
-    if allow_multiline_final && all_first_lines_equal(source, &elems) {
-        return;
-    }
-    scan_breaks(cop, source, &elems, message, diagnostics, corrections);
+    allow_multiline_final && all_first_lines_equal(source, elems)
 }

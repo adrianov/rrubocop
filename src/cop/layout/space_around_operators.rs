@@ -67,16 +67,20 @@ fn check_binary(
     if op_bytes == b"**" {
         return;
     }
+    if binary_spaces_ok(bytes, left, right, op) {
+        return;
+    }
+    report_op(cop, source, left, right, op, op_bytes, diagnostics, corrections);
+}
+
+fn binary_spaces_ok(bytes: &[u8], left: Node<'_>, right: Node<'_>, op: Node<'_>) -> bool {
     let before = &bytes[left.end_byte()..op.start_byte()];
     let after = &bytes[op.end_byte()..right.start_byte()];
     // Line-continuation `\` before the operator (next-line `||`) — RuboCop allows.
     if before.contains(&b'\\') || after.contains(&b'\\') {
-        return;
+        return true;
     }
-    if space_ok(before) && (space_ok(after) || after_ok_with_comment(after)) {
-        return;
-    }
-    report_op(cop, source, left, right, op, op_bytes, diagnostics, corrections);
+    space_ok(before) && (space_ok(after) || after_ok_with_comment(after))
 }
 
 fn after_ok_with_comment(after: &[u8]) -> bool {

@@ -85,8 +85,11 @@ mod tests {
 
     #[test]
     fn variable_style_operator_assignment_if_no_offense() {
-        let src = b"      trades.each do |t|\n        total_from += if cr.from_currency_id == t.currency_id\n          t.volume\n        else\n          t.funds\n        end\n      end\n";
-        let diags = run_cop_full_with_config(&EndAlignment, src, variable_config());
+        let diags = run_cop_full_with_config(
+            &EndAlignment,
+            b"      trades.each do |t|\n        total_from += if cr.from_currency_id == t.currency_id\n          t.volume\n        else\n          t.funds\n        end\n      end\n",
+            variable_config(),
+        );
         assert!(
             diags.is_empty(),
             "variable style should align end with += assignment: {:?}",
@@ -96,8 +99,11 @@ mod tests {
 
     #[test]
     fn variable_style_shovel_if_no_offense() {
-        let src = b"      warnings << if initiator\n        t('msg')\n      else\n        t('other')\n      end\n";
-        let diags = run_cop_full_with_config(&EndAlignment, src, variable_config());
+        let diags = run_cop_full_with_config(
+            &EndAlignment,
+            b"      warnings << if initiator\n        t('msg')\n      else\n        t('other')\n      end\n",
+            variable_config(),
+        );
         assert!(
             diags.is_empty(),
             "variable style should align end with << receiver: {:?}",

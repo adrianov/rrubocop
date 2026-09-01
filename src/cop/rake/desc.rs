@@ -130,33 +130,34 @@ fn task_name_is_default(source: &SourceFile, task: Node<'_>) -> bool {
         return false;
     };
     let mut cur = args.walk();
-    for child in args.named_children(&mut cur) {
-        match child.kind() {
-            "simple_symbol" | "hash_key_symbol" | "symbol" => {
-                let b = crate::cop::shared::node_bytes(source, child);
-                let name = b.strip_prefix(b":").unwrap_or(b);
-                if name == b"default" {
-                    return true;
-                }
-            }
-            "pair" => {
-                if let Some(key) = child.child_by_field_name("key").or_else(|| {
-                    let mut c2 = child.walk();
-                    child.named_children(&mut c2).next()
-                }) {
-                    let b = crate::cop::shared::node_bytes(source, key);
-                    let name = b.strip_prefix(b":").unwrap_or(b);
-                    if name == b"default" || name.starts_with(b"default") {
-                        // `default:` hash key symbol may include trailing `:`
-                        let bare = name.strip_suffix(b":").unwrap_or(name);
-                        if bare == b"default" {
-                            return true;
-                        }
-                    }
-                }
-            }
-            _ => {}
+    args.named_children(&mut cur)
+        .any(|child| child_is_default_name(source, child))
+}
+
+fn symbol_bare_name<'a>(source: &'a SourceFile, node: Node<'_>) -> &'a [u8] {
+    let b = crate::cop::shared::node_bytes(source, node);
+    b.strip_prefix(b":").unwrap_or(b)
+}
+
+fn child_is_default_name(source: &SourceFile, child: Node<'_>) -> bool {
+    match child.kind() {
+        "simple_symbol" | "hash_key_symbol" | "symbol" => {
+            symbol_bare_name(source, child) == b"default"
         }
+        "pair" => pair_key_is_default(source, child),
+        _ => false,
     }
-    false
+}
+
+fn pair_key_is_default(source: &SourceFile, pair: Node<'_>) -> bool {
+    let Some(key) = pair.child_by_field_name("key").or_else(|| {
+        let mut c2 = pair.walk();
+        pair.named_children(&mut c2).next()
+    }) else {
+        return false;
+    };
+    let name = symbol_bare_name(source, key);
+    // `default:` hash key symbol may include trailing `:`
+    let bare = name.strip_suffix(b":").unwrap_or(name);
+    bare == b"default"
 }

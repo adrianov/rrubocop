@@ -143,21 +143,7 @@ fn is_hash_arg(node: Node<'_>) -> bool {
 }
 
 fn hash_style_deps(node: Node<'_>) -> bool {
-    let pairs: Vec<Node<'_>> = if node.kind() == "pair" {
-        vec![node]
-    } else {
-        let mut cur = node.walk();
-        node.named_children(&mut cur)
-            .filter(|n| n.kind() == "pair")
-            .collect()
-    };
-    let Some(pair) = pairs.first() else {
-        return false;
-    };
-    let Some(value) = pair.child_by_field_name("value").or_else(|| {
-        let mut c = pair.walk();
-        pair.named_children(&mut c).nth(1)
-    }) else {
+    let Some(value) = first_pair_value(node) else {
         return false;
     };
     if value.kind() == "array" {
@@ -165,6 +151,19 @@ fn hash_style_deps(node: Node<'_>) -> bool {
         return value.named_children(&mut c).next().is_some();
     }
     true
+}
+
+fn first_pair_value(node: Node<'_>) -> Option<Node<'_>> {
+    let pair = if node.kind() == "pair" {
+        node
+    } else {
+        let mut cur = node.walk();
+        node.named_children(&mut cur).find(|n| n.kind() == "pair")?
+    };
+    pair.child_by_field_name("value").or_else(|| {
+        let mut c = pair.walk();
+        pair.named_children(&mut c).nth(1)
+    })
 }
 
 #[cfg(test)]

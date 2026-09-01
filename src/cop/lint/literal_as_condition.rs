@@ -84,15 +84,10 @@ impl Cop for LiteralAsCondition {
             return;
         };
         let cond = unwrap(cond);
-        if !is_literal(cond) {
+        if !is_literal(cond) || skip_infinite_loop_literal(node, source, cond) {
             return;
         }
         let lit = node_text(source, cond);
-        // RuboCop skips `while true` / `until false` (Style/InfiniteLoop owns those).
-        if (node.kind() == "while" && lit == "true") || (node.kind() == "until" && lit == "false")
-        {
-            return;
-        }
         let (line, col) = source.offset_to_line_col(cond.start_byte());
         diagnostics.push(self.diagnostic(
             source,
@@ -101,6 +96,12 @@ impl Cop for LiteralAsCondition {
             format!("Literal `{lit}` appeared as a condition."),
         ));
     }
+}
+
+/// RuboCop skips `while true` / `until false` (Style/InfiniteLoop owns those).
+fn skip_infinite_loop_literal(node: Node<'_>, source: &SourceFile, cond: Node<'_>) -> bool {
+    let lit = node_text(source, cond);
+    (node.kind() == "while" && lit == "true") || (node.kind() == "until" && lit == "false")
 }
 
 #[cfg(test)]

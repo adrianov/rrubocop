@@ -59,16 +59,20 @@ fn contains_guard_clause(source: &SourceFile, node: Node<'_>) -> bool {
     false
 }
 
+fn stmt_siblings<'a>(parent: Node<'a>) -> Vec<Node<'a>> {
+    let mut cur = parent.walk();
+    parent
+        .named_children(&mut cur)
+        .filter(|n| !matches!(n.kind(), "comment" | "rescue" | "ensure" | "else"))
+        .collect()
+}
+
 /// RuboCop `next_sibling_empty_or_guard_clause?`.
 fn next_sibling_is_guard_if(source: &SourceFile, node: Node<'_>) -> bool {
     let Some(parent) = node.parent() else {
         return false;
     };
-    let mut cur = parent.walk();
-    let kids: Vec<_> = parent
-        .named_children(&mut cur)
-        .filter(|n| !matches!(n.kind(), "comment" | "rescue" | "ensure" | "else"))
-        .collect();
+    let kids = stmt_siblings(parent);
     let Some(idx) = kids.iter().position(|k| k.id() == node.id()) else {
         return false;
     };
@@ -131,30 +135,12 @@ impl Cop for EmptyLineAfterGuardClause {
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = config;
-        if !is_guard_node(source, node) {
-            return;
-        }
-        // RuboCop only considers statement-level guards in begin/method bodies —
-        // not modifiers nested inside block arguments (`tap { raise x if err }`).
-        if !is_statement_level(node) {
+        if !is_guard_node(source, node) || !is_statement_level(node) {
             return;
         }
         let (end_line, _) = source.offset_to_line_col(node.end_byte().saturating_sub(1));
         let next = end_line + 1;
-        if source.line_start(next).is_none() || shared::line_blank(source, next) {
-            return;
-        }
-        if let Some(ls) = source.line_start(next) {
-            if next_is_kw_or_comment(source.as_bytes(), ls) {
-                return;
-            }
-        }
-        // Consecutive guard clauses need no blank between them.
-        if line_starts_with_guard(source, next) {
-            return;
-        }
-        // RuboCop: next sibling `if` that itself contains a guard clause — no blank.
-        if next_sibling_is_guard_if(source, node) {
+        if skip_empty_line_after(source, node, next) {
             return;
         }
         report::insert_newline(
@@ -166,6 +152,20 @@ impl Cop for EmptyLineAfterGuardClause {
             &mut corrections,
         );
     }
+}
+
+fn skip_empty_line_after(source: &SourceFile, node: Node<'_>, next: usize) -> bool {
+    if source.line_start(next).is_none() || shared::line_blank(source, next) {
+        return true;
+    }
+    if source
+        .line_start(next)
+        .is_some_and(|ls| next_is_kw_or_comment(source.as_bytes(), ls))
+    {
+        return true;
+    }
+    // Consecutive guards / next sibling `if` with a guard — no blank.
+    line_starts_with_guard(source, next) || next_sibling_is_guard_if(source, node)
 }
 
 #[cfg(test)]

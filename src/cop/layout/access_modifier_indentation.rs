@@ -91,6 +91,19 @@ fn report_modifier(
     );
 }
 
+/// `obj.private` / argument identifiers are not access modifiers.
+fn is_receiver_or_arg_ident(node: Node<'_>) -> bool {
+    node.kind() == "identifier"
+        && matches!(
+            node.parent().map(|p| p.kind()),
+            Some("call" | "command" | "command_call")
+        )
+}
+
+fn skip_modifier(node: Node<'_>, name: &[u8]) -> bool {
+    !is_modifier(name) || is_receiver_or_arg_ident(node) || shared::call_receiver(node).is_some()
+}
+
 impl Cop for AccessModifierIndentation {
     fn name(&self) -> &'static str {
         "Layout/AccessModifierIndentation"
@@ -115,19 +128,7 @@ impl Cop for AccessModifierIndentation {
         let Some(name) = modifier_name(source, node) else {
             return;
         };
-        if !is_modifier(name) {
-            return;
-        }
-        // `obj.private` / argument identifiers are not access modifiers.
-        if node.kind() == "identifier"
-            && matches!(
-                node.parent().map(|p| p.kind()),
-                Some("call" | "command" | "command_call")
-            )
-        {
-            return;
-        }
-        if shared::call_receiver(node).is_some() {
+        if skip_modifier(node, name) {
             return;
         }
         let Some(enclosing) = enclosing_type(node) else {

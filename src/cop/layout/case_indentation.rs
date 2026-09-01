@@ -84,26 +84,17 @@ impl Cop for CaseIndentation {
             return;
         }
         let parent = node.parent().unwrap();
-        // RuboCop skips single-line `case … when … end`.
-        let case_line = shared::node_line(source, parent);
-        let end_line = shared::end_keyword(parent)
-            .map(|e| shared::node_line(source, e))
-            .unwrap_or(case_line);
-        if case_line == end_line {
+        if skip_case_branch(source, parent, config) {
             return;
         }
         let style = config.get_str("EnforcedStyle", "case");
-        if style == "end" && end_and_last_conditional_same_line(source, parent) {
-            return;
-        }
         let expected = expected_col(
             source,
             parent,
             style,
             config.get_usize("IndentationWidth", 2),
         );
-        let actual = shared::node_col(source, node);
-        if actual == expected {
+        if shared::node_col(source, node) == expected {
             return;
         }
         report::fix_indent(
@@ -117,6 +108,19 @@ impl Cop for CaseIndentation {
             expected,
         );
     }
+}
+
+/// RuboCop skips single-line `case … when … end` and same-line end/last when.
+fn skip_case_branch(source: &SourceFile, parent: Node<'_>, config: &CopConfig) -> bool {
+    let case_line = shared::node_line(source, parent);
+    let end_line = shared::end_keyword(parent)
+        .map(|e| shared::node_line(source, e))
+        .unwrap_or(case_line);
+    if case_line == end_line {
+        return true;
+    }
+    let style = config.get_str("EnforcedStyle", "case");
+    style == "end" && end_and_last_conditional_same_line(source, parent)
 }
 
 #[cfg(test)]
