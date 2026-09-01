@@ -1,4 +1,6 @@
 # Squash-merge non-draft PRs after the ci workflow succeeds.
+# CI-gated on purpose: this repo has no required status checks, so agents must
+# not use `gh pr merge --auto` (it can merge before ci finishes).
 name: auto-merge
 
 on:
@@ -20,8 +22,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           set -euo pipefail
+          echo "ci succeeded for ${HEAD_BRANCH} @ ${HEAD_SHA}"
           pr_json=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
             -H "Accept: application/vnd.github.groot-preview+json")
           pr_number=$(printf '%s' "$pr_json" | jq -r '.[0].number // empty')
@@ -29,12 +33,15 @@ jobs:
             echo "No open PR for ${HEAD_SHA}; skipping"
             exit 0
           fi
-          draft=$(gh pr view "$pr_number" --repo "$REPO" --json isDraft --jq .isDraft)
+          meta=$(gh pr view "$pr_number" --repo "$REPO" --json isDraft,state,title)
+          draft=$(printf '%s' "$meta" | jq -r .isDraft)
+          state=$(printf '%s' "$meta" | jq -r .state)
+          title=$(printf '%s' "$meta" | jq -r .title)
+          echo "PR #${pr_number} state=${state} draft=${draft} title=${title}"
           if [ "$draft" = "true" ]; then
             echo "PR #${pr_number} is draft; skipping"
             exit 0
           fi
-          state=$(gh pr view "$pr_number" --repo "$REPO" --json state --jq .state)
           if [ "$state" != "OPEN" ]; then
             echo "PR #${pr_number} is ${state}; skipping"
             exit 0
