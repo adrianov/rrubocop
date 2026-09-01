@@ -76,7 +76,7 @@ fn prepare_run(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> 
     let mode = args.autocorrect_mode();
     let only_key = only.as_ref().map(|v| v.join(",")).unwrap_or_default();
     RunPrep {
-        cache: open_result_cache(mode, args.no_cache),
+        cache: open_result_cache(mode, args.cache_enabled()),
         config_fp: config.cache_fingerprint(),
         except_key: except.join(","),
         only_key,
@@ -96,11 +96,11 @@ fn optional_cop_list(list: &[String], registry: &CopRegistry) -> Option<Vec<Stri
     (!list.is_empty()).then(|| expand_cop_list(list, registry))
 }
 
-fn open_result_cache(mode: AutocorrectMode, no_cache: bool) -> Option<Cache> {
+fn open_result_cache(mode: AutocorrectMode, cache_enabled: bool) -> Option<Cache> {
     if mode != AutocorrectMode::Off {
         return None;
     }
-    let cache = Cache::open(no_cache)?;
+    let cache = Cache::open(!cache_enabled)?;
     cache.prune();
     Some(cache)
 }

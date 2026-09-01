@@ -2,7 +2,7 @@
 
 **10x faster RuboCop drop-in** — same CLI, `.rubocop.yml`, and offense output, without maintaining RuboCop gems. Linting and simple config need no Ruby; complex ERB still does. Point it at an existing project and use it like RuboCop.
 
-One binary — runs the same way regardless of rbenv, rvm, or system Ruby. Uses [tree-sitter](https://tree-sitter.github.io/tree-sitter/); **no Ruby runtime required** for linting or simple ERB. Unsupported ERB falls back to `ruby` / `bundle exec ruby`.
+One binary — runs the same way regardless of rbenv, rvm, system Ruby, or Docker. Uses [tree-sitter](https://tree-sitter.github.io/tree-sitter/); **no Ruby runtime required** for linting or simple ERB. Unsupported ERB falls back to `ruby` / `bundle exec ruby`.
 
 Drop-in parity: reads your existing `.rubocop.yml`, emits RuboCop-like text/JSON, supports `-a`/`-A` autocorrect, and grows cop coverage over time.
 
@@ -22,19 +22,19 @@ macOS (`.tar.gz` from [GitHub Releases](https://github.com/adrianov/rrubocop/rel
 
 ```sh
 # Apple Silicon — use the *-x86_64-apple-darwin.tar.gz asset on Intel Macs
-curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.7.2/rrubocop-0.7.2-aarch64-apple-darwin.tar.gz
-tar -xzf rrubocop-0.7.2-aarch64-apple-darwin.tar.gz
-sudo cp rrubocop-0.7.2-aarch64-apple-darwin/rrubocop /usr/local/bin/
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.7.3/rrubocop-0.7.3-aarch64-apple-darwin.tar.gz
+tar -xzf rrubocop-0.7.3-aarch64-apple-darwin.tar.gz
+sudo cp rrubocop-0.7.3-aarch64-apple-darwin/rrubocop /usr/local/bin/
 sudo mkdir -p /usr/local/share/man/man1
-sudo cp rrubocop-0.7.2-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
+sudo cp rrubocop-0.7.3-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
 ```
 
 Ubuntu / Debian (`.deb` from [GitHub Releases](https://github.com/adrianov/rrubocop/releases); amd64, Ubuntu 22.04+ / Debian bookworm+):
 
 ```sh
-# example for v0.7.2 — use the asset name from the release page
-curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.7.2/rrubocop_0.7.2-1_amd64.deb
-sudo dpkg -i rrubocop_0.7.2-1_amd64.deb
+# example for v0.7.3 — use the asset name from the release page
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.7.3/rrubocop_0.7.3-1_amd64.deb
+sudo dpkg -i rrubocop_0.7.3-1_amd64.deb
 man rrubocop
 ```
 
@@ -49,7 +49,7 @@ rrubocop [OPTIONS] [PATH]...
 - **Output** — `progress` (marks stream as files finish), `text`, `json`, `github`, `quiet`, `files`, … (TTY color like RuboCop; `--color` / `--no-color`)
 - **Directives** — `# rubocop:disable` / `enable`
 - **Parser** — tree-sitter-ruby (no Prism / no CRuby)
-- **Cache** — content-addressed `cache.redb` under `$RRUBOCOP_CACHE_DIR` or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop` (same style as abcop); `--no-cache` disables
+- **Cache** — content-addressed `cache.redb` under `$RRUBOCOP_CACHE_DIR` or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop` (same style as abcop); `--cache false` disables (RuboCop-compatible)
 
 Reference implementations: [nitrocop](https://github.com/6/nitrocop) (architecture & fixtures), upstream [RuboCop](https://github.com/rubocop/rubocop).
 
@@ -91,7 +91,7 @@ Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
 
 ## Caching
 
-Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop`). Keys cover contents, version, rule revision, `--only`/`--except`, config fingerprint, and path. Auto-pruned to 20 000 entries; `--no-cache` disables. Autocorrect runs bypass the cache. Nothing is written inside the project.
+Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop`). Keys cover contents, version, rule revision, `--only`/`--except`, config fingerprint, and path. Auto-pruned to 20 000 entries; `--cache false` disables. Autocorrect runs bypass the cache. Nothing is written inside the project.
 
 ## Benchmarks
 
@@ -100,7 +100,7 @@ Cold lint (cache off) on a large Rails codebase (~3.8k Ruby files), same host:
 | Tool | Wall clock | Result | Notes |
 |---|---|---|---|
 | `bundle exec rubocop --cache false` | **2m 37s** (`2:36.64`) | 0 offenses | ~99% CPU (mostly single-core) |
-| `rrubocop --no-cache` | **7.0s** (`7.005`) | 0 offenses | ~1040% CPU (parallel) |
+| `rrubocop --cache false` | **7.0s** (`7.005`) | 0 offenses | ~1040% CPU (parallel) |
 | `nitrocop --no-cache` | **8.9s** (`8.906`) | ~21k offenses | ~1000% CPU; not a fair parity run (see below) |
 
 rrubocop is ≈ **22×** faster wall clock than RuboCop (`156.6s / 7.0s`) on the same clean result. RuboCop user time was 155s; rrubocop used 71s of CPU across cores.
@@ -112,11 +112,11 @@ Cold lint (cache off) on [rails/rails](https://github.com/rails/rails) (`main`, 
 | Tool | Wall clock | Notes |
 |---|---|---|
 | `bundle exec rubocop --cache false` | **1m 7s** (`67.254`) | ~99% CPU (mostly single-core); 3543 files |
-| `rrubocop --no-cache` | **5.7s** (`5.668`) | ~357% CPU (parallel); 3446 files |
+| `rrubocop --cache false` | **5.7s** (`5.668`) | ~357% CPU (parallel); 3446 files |
 
 ≈ **12×** faster wall clock (`67.254s / 5.668s`). RuboCop user time was 66.9s; rrubocop used 20.2s of CPU across cores.
 
-Same host, cold no-cache, offense-set parity on **Active Support** and **Active Record** (`fp=0`, `fn=0` on shared `.rb` files):
+Same host, cold `--cache false`, offense-set parity on **Active Support** and **Active Record** (`fp=0`, `fn=0` on shared `.rb` files):
 
 | Target | RuboCop | rrubocop | Speedup |
 |---|---|---|---|
@@ -130,7 +130,7 @@ Cold lint on a fresh **`rails new`** app (Rails 8.1.3.1, default `rubocop-rails-
 | Tool | Wall clock |
 |---|---|
 | `bundle exec rubocop --cache false` | **0.722s** |
-| `rrubocop --no-cache` | **0.593s** |
+| `rrubocop --cache false` | **0.593s** |
 
 ## Cross-test vs nitrocop
 
