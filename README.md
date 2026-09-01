@@ -69,6 +69,17 @@ Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
 
 Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop`). Keys cover contents, version, rule revision, `--only`/`--except`, config fingerprint, and path. Auto-pruned to 20 000 entries; `--no-cache` disables. Autocorrect runs bypass the cache. Nothing is written inside the project.
 
+## Benchmarks
+
+Cold lint (cache off) on a large Rails codebase (~3.8k Ruby files), same host, both clean (0 offenses):
+
+| Tool | Wall clock | Notes |
+|---|---|---|
+| `bundle exec rubocop --cache false` | **2m 37s** (`2:36.64`) | ~99% CPU (mostly single-core) |
+| `rrubocop --no-cache` | **7.0s** (`7.005`) | ~1040% CPU (parallel) |
+
+≈ **22×** faster wall clock (`156.6s / 7.0s`). RuboCop user time was 155s; rrubocop used 71s of CPU across cores.
+
 ## Cross-test vs nitrocop
 
 With a local nitrocop build:
