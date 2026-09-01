@@ -83,6 +83,15 @@ rrubocop is ≈ **22×** faster wall clock than RuboCop (`156.6s / 7.0s`) on the
 
 **nitrocop caveat:** out of the box it did not honor the same disabled cops / custom rules / gem configs as `bundle exec rubocop` (e.g. failed `inherit_gem` load, skipped/unimplemented cops), so it reported ~21k false positives vs RuboCop/rrubocop’s clean run. Matching that baseline needs extra setup (`--migrate`, plugin/config wiring). Treat the 8.9s figure as raw throughput only, not drop-in parity.
 
+Cold lint (cache off) on [rails/rails](https://github.com/rails/rails) (`main`, RuboCop 1.79.2 via `bundle exec`), same host (4 cores), both clean (0 offenses). Two runs averaged:
+
+| Tool | Wall clock | Notes |
+|---|---|---|
+| `bundle exec rubocop --cache false` | **1m 7s** (`67.254`) | ~99% CPU (mostly single-core); 3543 files |
+| `rrubocop --no-cache` | **5.7s** (`5.668`) | ~357% CPU (parallel); 3446 files |
+
+≈ **12×** faster wall clock (`67.254s / 5.668s`). RuboCop user time was 66.9s; rrubocop used 20.2s of CPU across cores.
+
 ## Cross-test vs nitrocop
 
 With a local nitrocop build:
