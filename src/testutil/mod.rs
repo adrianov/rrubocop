@@ -12,6 +12,7 @@ pub use parse::{parse_fixture, ExpectedOffense, ParsedFixture};
 pub use run::{run_cop_full, run_cop_full_internal, run_cop_full_with_config};
 
 /// `offense.rb` + `no_offense.rb` under `tests/fixtures/<path>/`.
+/// Paths are rooted at `CARGO_MANIFEST_DIR` so nested `mod.rs` trees work.
 #[macro_export]
 macro_rules! cop_fixture_tests {
     ($cop:expr, $path:literal) => {
@@ -19,7 +20,12 @@ macro_rules! cop_fixture_tests {
         fn offense_fixture() {
             $crate::testutil::assert_cop_offenses_full(
                 &$cop,
-                include_bytes!(concat!("../../../tests/fixtures/", $path, "/offense.rb")),
+                include_bytes!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/tests/fixtures/",
+                    $path,
+                    "/offense.rb"
+                )),
             );
         }
 
@@ -27,7 +33,12 @@ macro_rules! cop_fixture_tests {
         fn no_offense_fixture() {
             $crate::testutil::assert_cop_no_offenses_full(
                 &$cop,
-                include_bytes!(concat!("../../../tests/fixtures/", $path, "/no_offense.rb")),
+                include_bytes!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/tests/fixtures/",
+                    $path,
+                    "/no_offense.rb"
+                )),
             );
         }
     };

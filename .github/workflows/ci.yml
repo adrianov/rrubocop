@@ -12,3 +12,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Test
         run: cargo test --locked
+
+  abcop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install abcop
+        run: |
+          set -euo pipefail
+          ver=0.16.4
+          curl -fsSLO "https://github.com/adrianov/abcop/releases/download/v${ver}/abcop_${ver}-1_amd64.deb"
+          sudo dpkg -i "abcop_${ver}-1_amd64.deb"
+          abcop --version
+      - name: abcop
+        run: abcop --full

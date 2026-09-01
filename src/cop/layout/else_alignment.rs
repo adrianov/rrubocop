@@ -74,20 +74,18 @@ fn if_align_col(source: &SourceFile, parent: Node<'_>, end_style: &str) -> Optio
     if !matches!(end_style, "variable" | "start_of_line") {
         return Some(kw_c);
     }
-    // RuboCop CheckAssignment: same-line `||=` / `=` / mass-assign → LHS column.
-    // Walk from the outermost `if` when parent is `elsif`.
+    Some(variable_if_align_col(source, parent, kw).unwrap_or(kw_c))
+}
+
+/// RuboCop CheckAssignment: same-line `||=` / `=` / mass-assign → LHS column.
+/// Walk from the outermost `if` when parent is `elsif`.
+fn variable_if_align_col(source: &SourceFile, parent: Node<'_>, kw: &str) -> Option<usize> {
     let assign_anchor = outermost_if(parent);
-    Some(
-        same_line_assign_col(source, assign_anchor)
-            .or_else(|| {
-                assignment_context_base_col(
-                    source,
-                    if_kw_offset(assign_anchor, assign_anchor.kind()),
-                )
-            })
-            .or_else(|| assignment_context_base_col(source, if_kw_offset(parent, kw)))
-            .unwrap_or(kw_c),
-    )
+    same_line_assign_col(source, assign_anchor)
+        .or_else(|| {
+            assignment_context_base_col(source, if_kw_offset(assign_anchor, assign_anchor.kind()))
+        })
+        .or_else(|| assignment_context_base_col(source, if_kw_offset(parent, kw)))
 }
 
 fn outermost_if(mut node: Node<'_>) -> Node<'_> {

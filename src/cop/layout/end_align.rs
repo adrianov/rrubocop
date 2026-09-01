@@ -61,11 +61,24 @@ fn report_misaligned_end(
 /// variable-alignment context: first non-whitespace on the assignment line.
 pub fn assignment_context_base_col(source: &SourceFile, kw_offset: usize) -> Option<usize> {
     let bytes = source.as_bytes();
-    let mut line_start = kw_offset;
+    let line_start = line_start_before(bytes, kw_offset);
+    let before = &bytes[line_start..kw_offset];
+    first_non_ws_if_assign(before).or_else(|| first_non_ws_if_shovel(before))
+}
+
+fn line_start_before(bytes: &[u8], offset: usize) -> usize {
+    let mut line_start = offset;
     while line_start > 0 && bytes[line_start - 1] != b'\n' {
         line_start -= 1;
     }
-    let before = &bytes[line_start..kw_offset];
+    line_start
+}
+
+fn first_non_ws(before: &[u8]) -> Option<usize> {
+    before.iter().position(|&b| b != b' ' && b != b'\t')
+}
+
+fn first_non_ws_if_assign(before: &[u8]) -> Option<usize> {
     let mut i = 0;
     while i < before.len() {
         if before[i] != b'=' {
@@ -83,8 +96,12 @@ pub fn assignment_context_base_col(source: &SourceFile, kw_offset: usize) -> Opt
             continue;
         }
         // Bare `=` / `||=` / `+=` / … — align with line's first non-ws.
-        return before.iter().position(|&b| b != b' ' && b != b'\t');
+        return first_non_ws(before);
     }
+    None
+}
+
+fn first_non_ws_if_shovel(before: &[u8]) -> Option<usize> {
     let mut j = 0;
     while j + 1 < before.len() {
         if before[j] == b'<' && before[j + 1] == b'<' {
@@ -93,7 +110,7 @@ pub fn assignment_context_base_col(source: &SourceFile, kw_offset: usize) -> Opt
                 j += 3;
                 continue;
             }
-            return before.iter().position(|&b| b != b' ' && b != b'\t');
+            return first_non_ws(before);
         }
         j += 1;
     }

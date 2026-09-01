@@ -114,28 +114,22 @@ fn keyword_child<'a>(source: &SourceFile, node: Node<'a>, kw: &[u8]) -> Option<N
         .find(|c| node_bytes(source, *c) == kw)
 }
 
-fn negated_operand<'a>(source: &SourceFile, cond: Node<'a>) -> Option<Node<'a>> {
-    if cond.kind() != "unary" {
-        return None;
-    }
-    let mut cur = cond.walk();
-    let has_neg = cond.children(&mut cur).any(|c| {
+fn has_negation_op(source: &SourceFile, node: Node<'_>) -> bool {
+    let mut cur = node.walk();
+    node.children(&mut cur).any(|c| {
         let t = node_bytes(source, c);
         t == b"!" || t == b"not"
-    });
-    if !has_neg {
+    })
+}
+
+fn negated_operand<'a>(source: &SourceFile, cond: Node<'a>) -> Option<Node<'a>> {
+    if cond.kind() != "unary" || !has_negation_op(source, cond) {
         return None;
     }
     let operand = cond.child_by_field_name("operand")?;
     // `!!x` / `not not x` — RuboCop does not suggest `unless !x`.
-    if operand.kind() == "unary" {
-        let mut c2 = operand.walk();
-        if operand.children(&mut c2).any(|c| {
-            let t = node_bytes(source, c);
-            t == b"!" || t == b"not"
-        }) {
-            return None;
-        }
+    if operand.kind() == "unary" && has_negation_op(source, operand) {
+        return None;
     }
     Some(operand)
 }

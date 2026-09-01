@@ -1,0 +1,96 @@
+//! Line / source / file-model lint phases.
+
+use crate::cli::AutocorrectMode;
+use crate::correction::Correction;
+use crate::diagnostic::Diagnostic;
+use crate::model;
+use crate::parse::codemap::CodeMap;
+use crate::parse::source::SourceFile;
+
+use super::syntax_gate::ActiveCop;
+use super::{allow_corr, finish_cop_pass};
+
+pub(super) fn run_line_phase(
+    source: &SourceFile,
+    active: &[ActiveCop<'_>],
+    mode: AutocorrectMode,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
+    for (cop, cfg, idx) in active.iter().filter(|(c, _, _)| c.uses_line_phase()) {
+        let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
+        let before = diagnostics.len();
+        cop.check_lines(source, cfg, diagnostics, corr_buf.as_mut());
+        finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, *idx, corrections);
+    }
+}
+
+pub(super) fn run_source_phase(
+    source: &SourceFile,
+    tree: &tree_sitter::Tree,
+    code_map: &CodeMap,
+    active: &[ActiveCop<'_>],
+    mode: AutocorrectMode,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
+    run_file_model_cops(source, tree, active, mode, diagnostics, corrections);
+    run_plain_source_cops(source, tree, code_map, active, mode, diagnostics, corrections);
+}
+
+fn run_file_model_cops(
+    source: &SourceFile,
+    tree: &tree_sitter::Tree,
+    active: &[ActiveCop<'_>],
+    mode: AutocorrectMode,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
+    let model_cops: Vec<_> = active
+        .iter()
+        .filter(|(c, _, _)| c.needs_file_model())
+        .collect();
+    if model_cops.is_empty() {
+        return;
+    }
+    let file_model = model::build(source.as_bytes(), tree.clone());
+    for (cop, cfg, idx) in model_cops {
+        one_file_model_cop(source, &file_model, *cop, cfg, *idx, mode, diagnostics, corrections);
+    }
+}
+
+fn one_file_model_cop(
+    source: &SourceFile,
+    file_model: &crate::model::FileModel,
+    cop: &dyn crate::cop::Cop,
+    cfg: &crate::cop::CopConfig,
+    idx: usize,
+    mode: AutocorrectMode,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
+    let mut corr_buf = allow_corr(mode, cop).then(Vec::new);
+    let before = diagnostics.len();
+    cop.check_file_model(source, file_model, cfg, diagnostics, corr_buf.as_mut());
+    finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, idx, corrections);
+}
+
+fn run_plain_source_cops(
+    source: &SourceFile,
+    tree: &tree_sitter::Tree,
+    code_map: &CodeMap,
+    active: &[ActiveCop<'_>],
+    mode: AutocorrectMode,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
+    for (cop, cfg, idx) in active
+        .iter()
+        .filter(|(c, _, _)| c.uses_source_phase() && !c.needs_file_model())
+    {
+        let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
+        let before = diagnostics.len();
+        cop.check_source(source, tree, code_map, cfg, diagnostics, corr_buf.as_mut());
+        finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, *idx, corrections);
+    }
+}

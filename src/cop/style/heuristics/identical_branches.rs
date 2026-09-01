@@ -39,34 +39,44 @@ pub fn matches_identical_conditional_branches(
 fn if_branches<'a>(node: Node<'a>) -> Vec<Option<Node<'a>>> {
     // Ternary `conditional` uses condition/consequence/alternative fields.
     if node.kind() == "conditional" || is_ternary(node) {
-        let then_b = node.child_by_field_name("consequence");
-        let else_b = node.child_by_field_name("alternative");
-        if then_b.is_some() && else_b.is_some() {
-            return vec![then_b, else_b];
-        }
-        let mut cur = node.walk();
-        let named: Vec<_> = node.named_children(&mut cur).collect();
-        if named.len() >= 3 {
-            return vec![Some(named[1]), Some(named[2])];
-        }
+        return ternary_branches(node);
     }
     let then_b = node
         .child_by_field_name("consequence")
         .or_else(|| node.child_by_field_name("body"));
     let else_b = node.child_by_field_name("alternative");
     match (then_b, else_b) {
-        (Some(t), Some(e)) if e.kind() == "else" => {
-            let mut cur = e.walk();
-            let body = e.named_children(&mut cur).next();
-            vec![Some(t), body]
-        }
-        (Some(t), Some(e)) if matches!(e.kind(), "if" | "elsif") => {
-            let mut out = vec![Some(t)];
-            out.extend(if_branches(e));
-            out
-        }
-        (Some(t), Some(e)) => vec![Some(t), Some(e)],
+        (Some(t), Some(e)) => then_else_branches(t, e),
         _ => vec![],
+    }
+}
+
+fn then_else_branches<'a>(then_b: Node<'a>, else_b: Node<'a>) -> Vec<Option<Node<'a>>> {
+    if else_b.kind() == "else" {
+        let mut cur = else_b.walk();
+        let body = else_b.named_children(&mut cur).next();
+        return vec![Some(then_b), body];
+    }
+    if matches!(else_b.kind(), "if" | "elsif") {
+        let mut out = vec![Some(then_b)];
+        out.extend(if_branches(else_b));
+        return out;
+    }
+    vec![Some(then_b), Some(else_b)]
+}
+
+fn ternary_branches<'a>(node: Node<'a>) -> Vec<Option<Node<'a>>> {
+    let then_b = node.child_by_field_name("consequence");
+    let else_b = node.child_by_field_name("alternative");
+    if then_b.is_some() && else_b.is_some() {
+        return vec![then_b, else_b];
+    }
+    let mut cur = node.walk();
+    let named: Vec<_> = node.named_children(&mut cur).collect();
+    if named.len() >= 3 {
+        vec![Some(named[1]), Some(named[2])]
+    } else {
+        vec![]
     }
 }
 

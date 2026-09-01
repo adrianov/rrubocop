@@ -1,5 +1,8 @@
 //! Per-file cop execution (line / source / AST phases).
 
+mod node_phase;
+mod offense;
+mod source_phase;
 mod syntax_gate;
 
 use anyhow::Result;
@@ -7,11 +10,9 @@ use anyhow::Result;
 use crate::cli::AutocorrectMode;
 use crate::config::{CopFilterSet, ResolvedConfig};
 use crate::cop::registry::CopRegistry;
-use crate::cop::walker::BatchedWalker;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::{Correction, CorrectionSet};
 use crate::diagnostic::Diagnostic;
-use crate::model;
 use crate::parse;
 use crate::parse::codemap::CodeMap;
 use crate::parse::directives;
@@ -60,95 +61,8 @@ pub fn lint_source(
         }
     }
     filter_directives(source, ignore_disable, &mut diagnostics);
-    finalize_offenses(source, config, registry, &mut diagnostics);
+    offense::finalize_offenses(source, config, registry, &mut diagnostics);
     Ok(diagnostics)
-}
-
-/// RuboCop MessageAnnotator + clang source line / correctable flags.
-fn finalize_offenses(
-    source: &SourceFile,
-    config: &ResolvedConfig,
-    registry: &CopRegistry,
-    diagnostics: &mut [Diagnostic],
-) {
-    for d in diagnostics.iter_mut() {
-        enrich_offense(source, config, registry, d);
-    }
-}
-
-fn enrich_offense(
-    source: &SourceFile,
-    config: &ResolvedConfig,
-    registry: &CopRegistry,
-    d: &mut Diagnostic,
-) {
-    if let Some(cop) = registry.get(d.cop_name.as_str()) {
-        if !cop.supports_autocorrect() {
-            d.correctable = false;
-        }
-    }
-    fill_source_highlight(source, d);
-    let cop_cfg = config.cop_config(&d.cop_name);
-    let details = cop_cfg.options.get("Details").and_then(|v| v.as_str());
-    let style_guide = style_guide_url(config, &cop_cfg);
-    let raw = strip_cop_prefix(&d.message, &d.cop_name);
-    d.message = crate::diagnostic::annotate_offense_message(
-        raw,
-        &d.cop_name,
-        config.display_cop_names,
-        config.extra_details,
-        details,
-        config.display_style_guide,
-        style_guide.as_deref(),
-    );
-}
-
-fn fill_source_highlight(source: &SourceFile, d: &mut Diagnostic) {
-    if d.source_line.is_empty() {
-        if let Some(line) = source.line_text(d.location.line) {
-            d.source_line = line.to_string();
-        }
-    }
-    if d.highlight_length == 0 {
-        d.highlight_length = 1;
-    }
-}
-
-fn strip_cop_prefix<'a>(message: &'a str, cop_name: &str) -> &'a str {
-    let prefix = format!("{cop_name}: ");
-    message.strip_prefix(&prefix).unwrap_or(message)
-}
-
-fn style_guide_url(config: &ResolvedConfig, cop_cfg: &CopConfig) -> Option<String> {
-    let path = style_guide_path(cop_cfg)?;
-    let base = config.style_guide_base_url.as_deref().filter(|s| !s.is_empty());
-    Some(resolve_style_guide(base, path))
-}
-
-fn style_guide_path(cop_cfg: &CopConfig) -> Option<&str> {
-    cop_cfg
-        .options
-        .get("StyleGuide")
-        .and_then(|v| v.as_str())
-        .filter(|s| !s.is_empty())
-}
-
-fn resolve_style_guide(base: Option<&str>, path: &str) -> String {
-    base.filter(|_| !is_http_url(path))
-        .map(|b| join_url(b, path))
-        .unwrap_or_else(|| path.to_string())
-}
-
-fn is_http_url(path: &str) -> bool {
-    path.starts_with("http://") || path.starts_with("https://")
-}
-
-fn join_url(base: &str, path: &str) -> String {
-    format!(
-        "{}/{}",
-        base.trim_end_matches('/'),
-        path.trim_start_matches('/')
-    )
 }
 
 fn run_non_syntax(
@@ -178,9 +92,9 @@ fn run_phases(
     corrections: &mut Option<Vec<Correction>>,
 ) {
     let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
-    run_line_phase(source, active, mode, diagnostics, corrections);
-    run_source_phase(source, tree, &code_map, active, mode, diagnostics, corrections);
-    run_node_phase(source, tree, active, registry, mode, diagnostics, corrections);
+    source_phase::run_line_phase(source, active, mode, diagnostics, corrections);
+    source_phase::run_source_phase(source, tree, &code_map, active, mode, diagnostics, corrections);
+    node_phase::run_node_phase(source, tree, active, registry, mode, diagnostics, corrections);
 }
 
 fn filter_directives(source: &SourceFile, ignore_disable: bool, diagnostics: &mut Vec<Diagnostic>) {
@@ -224,11 +138,11 @@ fn cop_wanted(
     filters.is_cop_enabled_for_file(name, path)
 }
 
-fn corr_bucket(mode: AutocorrectMode) -> Option<Vec<Correction>> {
+pub(super) fn corr_bucket(mode: AutocorrectMode) -> Option<Vec<Correction>> {
     (mode != AutocorrectMode::Off).then(Vec::new)
 }
 
-fn allow_corr(mode: AutocorrectMode, cop: &dyn Cop) -> bool {
+pub(super) fn allow_corr(mode: AutocorrectMode, cop: &dyn Cop) -> bool {
     match mode {
         AutocorrectMode::Off => false,
         AutocorrectMode::Safe => cop.supports_autocorrect() && cop.safe_autocorrect(),
@@ -236,108 +150,13 @@ fn allow_corr(mode: AutocorrectMode, cop: &dyn Cop) -> bool {
     }
 }
 
-fn run_line_phase(
-    source: &SourceFile,
-    active: &[ActiveCop<'_>],
-    mode: AutocorrectMode,
-    diagnostics: &mut Vec<Diagnostic>,
-    corrections: &mut Option<Vec<Correction>>,
-) {
-    // Shared line-phase group: only cops that opted in (skips hundreds of no-ops).
-    for (cop, cfg, idx) in active.iter().filter(|(c, _, _)| c.uses_line_phase()) {
-        let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
-        let before = diagnostics.len();
-        cop.check_lines(source, cfg, diagnostics, corr_buf.as_mut());
-        finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, *idx, corrections);
-    }
-}
-
-fn run_source_phase(
-    source: &SourceFile,
-    tree: &tree_sitter::Tree,
-    code_map: &CodeMap,
-    active: &[ActiveCop<'_>],
-    mode: AutocorrectMode,
-    diagnostics: &mut Vec<Diagnostic>,
-    corrections: &mut Option<Vec<Correction>>,
-) {
-    // One FileModel build shared by variable/metrics cops.
-    let model_cops: Vec<_> = active
-        .iter()
-        .filter(|(c, _, _)| c.needs_file_model())
-        .collect();
-    if !model_cops.is_empty() {
-        let file_model = model::build(source.as_bytes(), tree.clone());
-        for (cop, cfg, idx) in model_cops {
-            let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
-            let before = diagnostics.len();
-            cop.check_file_model(
-                source,
-                &file_model,
-                cfg,
-                diagnostics,
-                corr_buf.as_mut(),
-            );
-            finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, *idx, corrections);
-        }
-    }
-
-    for (cop, cfg, idx) in active
-        .iter()
-        .filter(|(c, _, _)| c.uses_source_phase() && !c.needs_file_model())
-    {
-        let mut corr_buf = allow_corr(mode, *cop).then(Vec::new);
-        let before = diagnostics.len();
-        cop.check_source(source, tree, code_map, cfg, diagnostics, corr_buf.as_mut());
-        finish_cop_pass(diagnostics, before, cfg, &mut corr_buf, *idx, corrections);
-    }
-}
-
-fn run_node_phase(
-    source: &SourceFile,
-    tree: &tree_sitter::Tree,
-    active: &[ActiveCop<'_>],
-    registry: &CopRegistry,
-    mode: AutocorrectMode,
-    diagnostics: &mut Vec<Diagnostic>,
-    corrections: &mut Option<Vec<Correction>>,
-) {
-    // Single AST walk over cops that declared node-kind interest.
-    let ast: Vec<_> = active
-        .iter()
-        .filter(|(c, _, _)| !c.interested_node_kinds().is_empty())
-        .collect();
-    if ast.is_empty() {
-        return;
-    }
-    let walker = BatchedWalker::new(
-        ast.iter().map(|(c, _, _)| *c).collect(),
-        ast.iter().map(|(_, c, _)| c).collect(),
-    );
-    let mut node_corr = corr_bucket(mode);
-    walker.walk(source, tree.root_node(), diagnostics, node_corr.as_mut());
-    stamp_node_corrections(registry, &mut node_corr);
-    merge_corrections(corrections, node_corr);
-}
-
-fn stamp_node_corrections(registry: &CopRegistry, node_corr: &mut Option<Vec<Correction>>) {
-    let Some(buf) = node_corr.as_mut() else {
-        return;
-    };
-    for c in buf {
-        if let Some(idx) = registry.index_of(c.cop_name) {
-            c.cop_index = idx;
-        }
-    }
-}
-
-fn merge_corrections(into: &mut Option<Vec<Correction>>, from: Option<Vec<Correction>>) {
+pub(super) fn merge_corrections(into: &mut Option<Vec<Correction>>, from: Option<Vec<Correction>>) {
     if let (Some(all), Some(buf)) = (into.as_mut(), from) {
         all.extend(buf);
     }
 }
 
-fn finish_cop_pass(
+pub(super) fn finish_cop_pass(
     diagnostics: &mut [Diagnostic],
     before: usize,
     cfg: &CopConfig,

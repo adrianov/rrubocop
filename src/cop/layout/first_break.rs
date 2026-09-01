@@ -78,20 +78,26 @@ fn first_break_target<'a>(
     if elems.len() < min_elems || !uses_parens(source, node, first) {
         return None;
     }
-    // RuboCop uses the send/call node's first line (includes receiver). When the
-    // receiver is on a prior line (`recv\n  .with(a,`), first arg is not on the
-    // call's first line → no offense.
-    let call_start = node
-        .parent()
-        .map(|p| shared::node_line(source, p))
-        .unwrap_or_else(|| shared::node_line(source, node));
-    if call_start != shared::node_line(source, first) {
+    if !first_on_call_start_line(source, node, first) {
         return None;
     }
-    if call_start == span_end_line(source, &elems, node, allow_multiline_final) {
+    if call_start_line(source, node) == span_end_line(source, &elems, node, allow_multiline_final) {
         return None;
     }
     Some(first)
+}
+
+/// RuboCop uses the send/call node's first line (includes receiver). When the
+/// receiver is on a prior line (`recv\n  .with(a,`), first arg is not on the
+/// call's first line → no offense.
+fn call_start_line(source: &SourceFile, node: Node<'_>) -> usize {
+    node.parent()
+        .map(|p| shared::node_line(source, p))
+        .unwrap_or_else(|| shared::node_line(source, node))
+}
+
+fn first_on_call_start_line(source: &SourceFile, node: Node<'_>, first: Node<'_>) -> bool {
+    call_start_line(source, node) == shared::node_line(source, first)
 }
 
 /// Like [`check_first_break_min`], with `AllowMultilineFinalElement` support.

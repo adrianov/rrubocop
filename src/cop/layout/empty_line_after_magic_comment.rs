@@ -13,6 +13,23 @@ fn trim_ws(line: &[u8]) -> &[u8] {
     &line[s..]
 }
 
+fn is_encoding_magic(lower: &str) -> bool {
+    let s = lower.trim_start_matches(|c: char| c == '-' || c == '*' || c == ' ');
+    s.starts_with("encoding:")
+        || s.starts_with("coding:")
+        || s.starts_with("encoding =")
+        || (s.contains("-*-") && (s.contains("encoding:") || s.contains("coding:")))
+}
+
+fn is_named_magic(lower: &str) -> bool {
+    lower.starts_with("frozen_string_literal:")
+        || lower.starts_with("frozen-string-literal:")
+        || lower.starts_with("shareable_constant_value:")
+        || lower.starts_with("typed:")
+        || lower.starts_with("rbs_inline:")
+        || is_encoding_magic(lower)
+}
+
 fn is_magic(line: &[u8]) -> bool {
     let Ok(s) = std::str::from_utf8(line) else {
         return false;
@@ -25,19 +42,7 @@ fn is_magic(line: &[u8]) -> bool {
     if after.starts_with('#') {
         return false;
     }
-    let lower = after.to_ascii_lowercase();
-    lower.starts_with("frozen_string_literal:")
-        || lower.starts_with("frozen-string-literal:")
-        || lower.starts_with("shareable_constant_value:")
-        || lower.starts_with("typed:")
-        || lower.starts_with("rbs_inline:")
-        || {
-            let s = lower.trim_start_matches(|c: char| c == '-' || c == '*' || c == ' ');
-            s.starts_with("encoding:")
-                || s.starts_with("coding:")
-                || s.starts_with("encoding =")
-                || (s.contains("-*-") && (s.contains("encoding:") || s.contains("coding:")))
-        }
+    is_named_magic(&after.to_ascii_lowercase())
 }
 
 fn line_at<'a>(lines: &[&'a [u8]], idx: usize) -> &'a [u8] {
