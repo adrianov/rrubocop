@@ -113,13 +113,26 @@ fn select_active<'a>(
     only: Option<&[String]>,
     except: &[String],
 ) -> Vec<ActiveCop<'a>> {
+    let path = source.path.as_path();
     registry
         .cops()
         .iter()
         .enumerate()
-        .filter(|(_, cop)| cop_wanted(cop.name(), source.path.as_path(), filters, only, except))
-        .map(|(idx, cop)| (&**cop, config.cop_config(cop.name()), idx))
+        .filter(|(_, cop)| {
+            cop_wanted(cop.name(), path, filters, only, except)
+                && !config.disabled_by_dir_override(cop.name(), path)
+        })
+        .map(|(idx, cop)| active_cop_entry(cop.as_ref(), config, path, idx))
         .collect()
+}
+
+fn active_cop_entry<'a>(
+    cop: &'a dyn Cop,
+    config: &ResolvedConfig,
+    path: &std::path::Path,
+    idx: usize,
+) -> ActiveCop<'a> {
+    (cop, config.cop_config_for_file(cop.name(), path), idx)
 }
 
 fn cop_wanted(

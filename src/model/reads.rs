@@ -90,6 +90,10 @@ impl Builder<'_> {
         // never treat the @method slot as a variable read
         let method_slot = n.child_by_field_name("method");
         self.note_csend_site(n, scope);
+        // RuboCop VariableForce: `binding` / `binding()` uses every local in scope.
+        if is_binding_call(n, method_slot, self.src) {
+            mark_all_reads(self, scope, n.start_byte(), under_defined);
+        }
         let mut cursor = n.walk();
         for child in n.children(&mut cursor) {
             if method_slot.map(|m| m.id()) == Some(child.id()) {
@@ -124,7 +128,7 @@ impl Builder<'_> {
         // Parser gem uses dedicated `__FILE__`/`__LINE__`/`__ENCODING__` nodes
         // (not sends). tree-sitter-ruby often emits them as `identifier`; they
         // must not become ABC vcall branches.
-        if matches!(name.as_str(), "__FILE__" | "__LINE__" | "__ENCODING__") {
+        if is_magic_file_ident(&name) {
             return;
         }
         let r = Read {
@@ -132,12 +136,60 @@ impl Builder<'_> {
             under_defined,
         };
         if self.lookup(scope, r.byte, &name).is_some() {
-            if !name.starts_with('_') {
-                self.record_read(scope, &name, r);
-            }
+            record_named_read(self, scope, &name, r);
         } else {
-            // unresolved bare identifier == zero-arity method call
-            self.vcall_sites.push(n.start_byte());
+            record_unresolved_vcall(self, scope, &name, n.start_byte(), under_defined);
         }
+    }
+}
+
+fn is_magic_file_ident(name: &str) -> bool {
+    matches!(name, "__FILE__" | "__LINE__" | "__ENCODING__")
+}
+
+fn record_named_read(b: &mut Builder<'_>, scope: ScopeId, name: &str, r: Read) {
+    if !name.starts_with('_') {
+        b.record_read(scope, name, r);
+    }
+}
+
+fn record_unresolved_vcall(
+    b: &mut Builder<'_>,
+    scope: ScopeId,
+    name: &str,
+    byte: usize,
+    under_defined: bool,
+) {
+    // unresolved bare identifier == zero-arity method call
+    if name == "binding" {
+        mark_all_reads(b, scope, byte, under_defined);
+    }
+    b.vcall_sites.push(byte);
+}
+
+fn is_binding_call(n: Node<'_>, method_slot: Option<Node<'_>>, src: &[u8]) -> bool {
+    let Some(m) = method_slot else {
+        return false;
+    };
+    if n.child_by_field_name("receiver").is_some() {
+        return false;
+    }
+    m.utf8_text(src).unwrap_or("") == "binding"
+}
+
+fn mark_all_reads(b: &mut Builder<'_>, scope: ScopeId, byte: usize, under_defined: bool) {
+    let names: Vec<Box<str>> = b.scopes[scope].entries.keys().cloned().collect();
+    for name in names {
+        if name.starts_with('_') {
+            continue;
+        }
+        b.record_read(
+            scope,
+            &name,
+            Read {
+                byte,
+                under_defined,
+            },
+        );
     }
 }

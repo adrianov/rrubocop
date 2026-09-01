@@ -309,5 +309,27 @@ mod tests {
         let cfg_b = load_config(Some(&b), None, None).unwrap();
         assert_ne!(cfg_a.cache_fingerprint(), cfg_b.cache_fingerprint());
     }
-}
 
+    #[test]
+    fn rails_guides_nested_disables_redundant_percent_q() {
+        let root = std::path::Path::new("/tmp/parity/rails");
+        if !root.join(".rubocop.yml").exists() {
+            return;
+        }
+        let config = load_config(None, Some(root), None).unwrap();
+        assert!(
+            config.has_dir_overrides(),
+            "expected guides/.rubocop.yml override"
+        );
+        let abs = root.join("guides/test/epub_test.rb");
+        let rel = std::path::Path::new("guides/test/epub_test.rb");
+        assert!(
+            config.disabled_by_dir_override("Style/RedundantPercentQ", &abs),
+            "absolute guides path should disable Style/RedundantPercentQ"
+        );
+        assert!(
+            config.disabled_by_dir_override("Style/RedundantPercentQ", rel),
+            "relative guides path should disable Style/RedundantPercentQ"
+        );
+    }
+}

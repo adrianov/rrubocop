@@ -26,15 +26,34 @@ impl Cop for RedundantReturn {
         &self,
         source: &SourceFile,
         node: Node<'_>,
-        _config: &CopConfig,
+        config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         if !is_trailing_return(node) {
             return;
         }
+        if config.get_bool("AllowMultipleReturnValues", false) && returns_multiple(node) {
+            return;
+        }
         report(self, source, node, diagnostics, &mut corrections);
     }
+}
+
+fn returns_multiple(node: Node<'_>) -> bool {
+    let mut cur = node.walk();
+    let named: Vec<_> = node.named_children(&mut cur).collect();
+    if named.len() > 1 {
+        return true;
+    }
+    // `return a, b` → one `argument_list` child with multiple values.
+    named.first().is_some_and(|n| {
+        if n.kind() != "argument_list" {
+            return false;
+        }
+        let mut c2 = n.walk();
+        n.named_children(&mut c2).count() > 1
+    })
 }
 
 fn report(
@@ -102,5 +121,27 @@ fn return_body<'a>(parent: Node<'a>, container: Node<'a>) -> Option<Node<'a>> {
         Some(parent)
     } else {
         container.child_by_field_name("body")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cop::CopConfig;
+    use crate::testutil::assert_cop_no_offenses_full_with_config;
+
+    crate::cop_fixture_tests!(RedundantReturn, "cops/style/redundant_return");
+
+    #[test]
+    fn allow_multiple_return_values_no_offense() {
+        let mut config = CopConfig::default();
+        config
+            .options
+            .insert("AllowMultipleReturnValues".into(), serde_yml::Value::Bool(true));
+        assert_cop_no_offenses_full_with_config(
+            &RedundantReturn,
+            b"def foo\n  return a, b\nend\n",
+            config,
+        );
     }
 }

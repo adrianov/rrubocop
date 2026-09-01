@@ -45,6 +45,29 @@ fn rescue_label(from: Node<'_>) -> &'static str {
     "rescue"
 }
 
+fn do_block_align_col(source: &SourceFile, n: Node<'_>) -> Option<usize> {
+    // When `do` trails a call (`open(...) do`), align rescue/else/end with the
+    // line indent (call start), not the `do` keyword column — matches RuboCop.
+    Some(shared::line_indent(source, n.start_byte()))
+}
+
+fn ancestor_kw_col(source: &SourceFile, from: Node<'_>) -> Option<usize> {
+    let mut p = Some(from);
+    while let Some(n) = p {
+        let col = match n.kind() {
+            "begin" => kw_or_node_col(source, n, "begin"),
+            "method" | "singleton_method" => kw_or_node_col(source, n, "def"),
+            "do_block" | "block" => do_block_align_col(source, n),
+            _ => None,
+        };
+        if col.is_some() {
+            return col;
+        }
+        p = n.parent();
+    }
+    Some(shared::node_col(source, from))
+}
+
 fn alignment_label(else_node: Node<'_>) -> &'static str {
     let Some(parent) = else_node.parent() else {
         return "keyword";
@@ -99,23 +122,6 @@ fn outermost_if(mut node: Node<'_>) -> Node<'_> {
     node
 }
 
-fn ancestor_kw_col(source: &SourceFile, from: Node<'_>) -> Option<usize> {
-    let mut p = Some(from);
-    while let Some(n) = p {
-        let col = match n.kind() {
-            "begin" => kw_or_node_col(source, n, "begin"),
-            "method" | "singleton_method" => kw_or_node_col(source, n, "def"),
-            "do_block" | "block" => kw_or_node_col(source, n, "do"),
-            _ => None,
-        };
-        if col.is_some() {
-            return col;
-        }
-        p = n.parent();
-    }
-    Some(shared::node_col(source, from))
-}
-
 fn base_col_for_else(source: &SourceFile, else_node: Node<'_>, end_style: &str) -> Option<usize> {
     let parent = else_node.parent()?;
     match parent.kind() {
@@ -123,6 +129,7 @@ fn base_col_for_else(source: &SourceFile, else_node: Node<'_>, end_style: &str) 
         "if" | "unless" | "elsif" => if_align_col(source, parent, end_style),
         "begin" => kw_or_node_col(source, parent, "begin"),
         "method" | "singleton_method" => kw_or_node_col(source, parent, "def"),
+        "do_block" | "block" => do_block_align_col(source, parent),
         "rescue" | "body_statement" => ancestor_kw_col(source, parent),
         _ => Some(shared::node_col(source, parent)),
     }

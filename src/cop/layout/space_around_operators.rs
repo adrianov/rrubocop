@@ -63,6 +63,13 @@ fn check_binary(
     let Some((left, right, op)) = sides(n) else {
         return;
     };
+    // tree-sitter may parse `return +""` as binary(return, +, string).
+    if matches!(
+        left.kind(),
+        "return" | "break" | "next" | "redo" | "retry" | "yield"
+    ) {
+        return;
+    }
     let op_bytes = &bytes[op.start_byte()..op.end_byte()];
     if op_bytes == b"**" {
         return;

@@ -11,3 +11,14 @@ _msg = "hello #{data["key"]}"
 _log = "value: #{record.dig("a", "b")}"
 _out = "#{items.join(", ")}"
 _path = "#{Rails.root.join("lib/logstash_patch.rb")}"
+
+# Quoted symbol keys (tree-sitter string + ':') — not string literals
+book = {
+  '0': { name: 'William Shakespeare' },
+  '1': { name: 'Assistant' },
+}
+
+# Escapes that keep single quotes under EnforcedStyle: double_quotes
+_path = '../\\../test/abstract_unit.rb'
+_esc = '\\*\\*bold\\*\\*'
+_win = 'C:\\Programs\\MsPaint'

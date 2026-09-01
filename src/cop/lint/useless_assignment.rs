@@ -54,3 +54,9 @@ impl Cop for UselessAssignment {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(UselessAssignment, "cops/lint/useless_assignment");
+}

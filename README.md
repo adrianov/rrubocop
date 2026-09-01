@@ -59,7 +59,7 @@ rrubocop -A .                    # all autocorrect
 rrubocop --only Metrics/AbcSize lib
 rrubocop --list-cops
 rrubocop -L                      # list target files
-rrubocop -F 10                   # stop after 10 offenses (default 50; `-F` = 1; `-F 0` off)
+rrubocop -F 10                   # stop after 10 offenses (off by default; `-F` = 1)
                                  # with `-a`/`-A`, N is non-autocorrectable offenses only
 ```
 
@@ -82,6 +82,25 @@ Cold lint (cache off) on a large Rails codebase (~3.8k Ruby files), same host:
 rrubocop is ≈ **22×** faster wall clock than RuboCop (`156.6s / 7.0s`) on the same clean result. RuboCop user time was 155s; rrubocop used 71s of CPU across cores.
 
 **nitrocop caveat:** out of the box it did not honor the same disabled cops / custom rules / gem configs as `bundle exec rubocop` (e.g. failed `inherit_gem` load, skipped/unimplemented cops), so it reported ~21k false positives vs RuboCop/rrubocop’s clean run. Matching that baseline needs extra setup (`--migrate`, plugin/config wiring). Treat the 8.9s figure as raw throughput only, not drop-in parity.
+
+Cold lint (cache off) on [rails/rails](https://github.com/rails/rails) (`main`, RuboCop 1.79.2 via `bundle exec`), same host (4 cores), both clean (0 offenses). Two runs averaged:
+
+| Tool | Wall clock | Notes |
+|---|---|---|
+| `bundle exec rubocop --cache false` | **1m 7s** (`67.254`) | ~99% CPU (mostly single-core); 3543 files |
+| `rrubocop --no-cache` | **5.7s** (`5.668`) | ~357% CPU (parallel); 3446 files |
+
+≈ **12×** faster wall clock (`67.254s / 5.668s`). RuboCop user time was 66.9s; rrubocop used 20.2s of CPU across cores.
+
+Same host, cold no-cache, offense-set parity on **Active Support** and **Active Record** (`fp=0`, `fn=0` on shared `.rb` files):
+
+| Target | RuboCop | rrubocop | Speedup |
+|---|---|---|---|
+| `activesupport` (rails `main`) | 11.566s (531 files) | 1.872s | ≈6.2× |
+| `activerecord` (rails `main`) | 29.611s (1162 files) | 2.780s | ≈10.7× |
+| `activesupport` (v8.1.3.1) | 10.729s (506 files) | 1.795s | ≈6.0× |
+| `activerecord` (v8.1.3.1) | 27.847s (1126 files) | 2.656s | ≈10.5× |
+
 
 ## Cross-test vs nitrocop
 

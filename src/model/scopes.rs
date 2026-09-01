@@ -11,10 +11,20 @@ impl Builder<'_> {
     pub(super) fn walk_scope_intro(&mut self, n: Node, kind: &str, parent: ScopeId) -> bool {
         match kind {
             "method" | "singleton_method" => {
+                // `def obj.foo` reads `obj` in the enclosing scope.
+                if kind == "singleton_method" {
+                    walk_singleton_object(self, n, parent);
+                }
                 let s = self.scope_for(n, ScopeKind::Method, None);
                 self.declare_params_and_body(n, s);
             }
             "class" | "module" | "singleton_class" => {
+                // `class << obj` reads `obj` in the enclosing scope.
+                if kind == "singleton_class" {
+                    walk_singleton_class_object(self, n, parent);
+                } else if let Some(sc) = n.child_by_field_name("superclass") {
+                    self.walk(sc, parent, false);
+                }
                 let s = self.scope_for(n, ScopeKind::ClassLike, None);
                 if let Some(body) = n.child_by_field_name("body") {
                     self.walk(body, s, false);
@@ -83,6 +93,75 @@ impl Builder<'_> {
                     self.bind_entry(scope, name, inner.start_byte());
                 }
             }
+        }
+    }
+}
+
+/// Walk the object of `class << obj` in the enclosing scope (a read).
+fn walk_singleton_class_object(b: &mut Builder<'_>, n: Node<'_>, parent: ScopeId) {
+    if let Some(obj) = n.child_by_field_name("value") {
+        b.walk(obj, parent, false);
+        return;
+    }
+    // tree-sitter-ruby: expression after `<<`.
+    let mut cur = n.walk();
+    let mut seen_shl = false;
+    for child in n.children(&mut cur) {
+        if child.kind() == "<<" {
+            seen_shl = true;
+            continue;
+        }
+        if !seen_shl {
+            continue;
+        }
+        if matches!(
+            child.kind(),
+            "identifier"
+                | "constant"
+                | "self"
+                | "instance_variable"
+                | "call"
+                | "parenthesized_statements"
+        ) {
+            b.walk(child, parent, false);
+            break;
+        }
+    }
+}
+
+/// Walk the object of `def obj.method` in the enclosing scope (a read).
+fn walk_singleton_object(b: &mut Builder<'_>, n: Node<'_>, parent: ScopeId) {
+    if let Some(obj) = n.child_by_field_name("object") {
+        b.walk(obj, parent, false);
+        return;
+    }
+    // tree-sitter-ruby: first expression after `def`, before `.`.
+    let mut cur = n.walk();
+    let mut seen_def = false;
+    for child in n.children(&mut cur) {
+        if child.kind() == "def" {
+            seen_def = true;
+            continue;
+        }
+        if !seen_def {
+            continue;
+        }
+        if child.kind() == "." {
+            break;
+        }
+        if matches!(
+            child.kind(),
+            "identifier"
+                | "constant"
+                | "self"
+                | "instance_variable"
+                | "class_variable"
+                | "global_variable"
+                | "parenthesized_statements"
+                | "call"
+        ) {
+            b.walk(child, parent, false);
+            break;
         }
     }
 }
