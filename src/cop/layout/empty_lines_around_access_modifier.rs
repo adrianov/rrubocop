@@ -68,7 +68,7 @@ fn at_body_opening(source: &SourceFile, n: Node<'_>) -> bool {
     let mut cur = n.parent();
     while let Some(parent) = cur {
         match parent.kind() {
-            "body_statement" => cur = parent.parent(),
+            "body_statement" | "block_body" => cur = parent.parent(),
             "class" | "module" | "singleton_class" => {
                 let open = superclass_or_self(parent)
                     .map(|s| shared::node_line(source, s))

@@ -47,6 +47,16 @@ fn find_heredoc_end<'a>(
     best
 }
 
+fn heredoc_type(open_text: &str) -> &str {
+    if open_text.starts_with("<<~") {
+        "<<~"
+    } else if open_text.starts_with("<<-") {
+        "<<-"
+    } else {
+        "<<"
+    }
+}
+
 fn delim_of(open_text: &str) -> &str {
     open_text
         .trim_start_matches('<')
@@ -64,6 +74,10 @@ impl Cop for ClosingHeredocIndentation {
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let open_text = shared::node_text(source, node);
+        // RuboCop skips plain `<<EOF` (terminator must stay at column 0).
+        if heredoc_type(&open_text) == "<<" {
+            return;
+        }
         let delim = delim_of(&open_text);
         // RuboCop compares leading indent of the *lines*, not the column of `<<~`.
         let open_indent = shared::line_indent(source, node.start_byte());

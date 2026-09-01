@@ -90,6 +90,10 @@ impl Builder<'_> {
         // never treat the @method slot as a variable read
         let method_slot = n.child_by_field_name("method");
         self.note_csend_site(n, scope);
+        // RuboCop VariableForce: `binding` / `binding()` uses every local in scope.
+        if is_binding_call(n, method_slot, self.src) {
+            mark_all_reads(self, scope, n.start_byte(), under_defined);
+        }
         let mut cursor = n.walk();
         for child in n.children(&mut cursor) {
             if method_slot.map(|m| m.id()) == Some(child.id()) {
@@ -127,6 +131,12 @@ impl Builder<'_> {
         if matches!(name.as_str(), "__FILE__" | "__LINE__" | "__ENCODING__") {
             return;
         }
+        // Bare `binding` (no receiver/args) captures every local — same as call.
+        if name == "binding" && n.parent().is_some_and(|p| !matches!(p.kind(), "call" | "command"))
+        {
+            // Fall through as a normal unresolved vcall / read below; also mark
+            // all locals when this identifier is a zero-arity call site.
+        }
         let r = Read {
             byte: n.start_byte(),
             under_defined,
@@ -137,7 +147,37 @@ impl Builder<'_> {
             }
         } else {
             // unresolved bare identifier == zero-arity method call
+            if name == "binding" {
+                mark_all_reads(self, scope, n.start_byte(), under_defined);
+            }
             self.vcall_sites.push(n.start_byte());
         }
+    }
+}
+
+fn is_binding_call(n: Node<'_>, method_slot: Option<Node<'_>>, src: &[u8]) -> bool {
+    let Some(m) = method_slot else {
+        return false;
+    };
+    if n.child_by_field_name("receiver").is_some() {
+        return false;
+    }
+    m.utf8_text(src).unwrap_or("") == "binding"
+}
+
+fn mark_all_reads(b: &mut Builder<'_>, scope: ScopeId, byte: usize, under_defined: bool) {
+    let names: Vec<Box<str>> = b.scopes[scope].entries.keys().cloned().collect();
+    for name in names {
+        if name.starts_with('_') {
+            continue;
+        }
+        b.record_read(
+            scope,
+            &name,
+            Read {
+                byte,
+                under_defined,
+            },
+        );
     }
 }

@@ -10,6 +10,25 @@ use super::types::{ConfigLayer, NewCopsPolicy};
 use super::ResolvedConfig;
 
 impl ResolvedConfig {
+    /// True when a nested `.rubocop.yml` disables this cop for `file_path`.
+    pub fn disabled_by_dir_override(&self, name: &str, file_path: &Path) -> bool {
+        let Some(layer) = self.find_dir_layer_for_file(file_path) else {
+            return false;
+        };
+        if layer
+            .cop_configs
+            .get(name)
+            .is_some_and(|c| c.enabled == EnabledState::False)
+        {
+            return true;
+        }
+        let dept = name.split('/').next().unwrap_or("");
+        layer
+            .department_configs
+            .get(dept)
+            .is_some_and(|c| c.enabled == EnabledState::False)
+    }
+
     /// Build the effective config for a file under a nested `.rubocop.yml`.
     pub fn effective_config_for_file(&self, file_path: &Path) -> Option<Self> {
         let layer = self.find_dir_layer_for_file(file_path)?;
@@ -37,12 +56,14 @@ impl ResolvedConfig {
 
     fn find_dir_layer_relativized(&self, file_path: &Path) -> Option<&ConfigLayer> {
         let config_dir = self.config_dir.as_ref()?;
-        let rel_path = file_path.strip_prefix(config_dir).ok()?;
+        // Absolute file under config_dir, or already-relative path from scan root.
+        let rel_path = file_path
+            .strip_prefix(config_dir)
+            .unwrap_or(file_path);
         for (dir, layer) in &self.dir_overrides {
-            if let Ok(rel_dir) = dir.strip_prefix(config_dir) {
-                if rel_path.starts_with(rel_dir) {
-                    return Some(layer);
-                }
+            let rel_dir = dir.strip_prefix(config_dir).unwrap_or(dir.as_path());
+            if rel_path.starts_with(rel_dir) {
+                return Some(layer);
             }
         }
         None

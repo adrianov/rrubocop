@@ -62,9 +62,45 @@ fn pair_key_is_symbol(source: &SourceFile, node: Node<'_>) -> bool {
     if !matches!(key.kind(), "simple_symbol" | "hash_key_symbol") {
         return false;
     }
-    // RuboCop: setter symbols (`:foo=`) cannot use Ruby 1.9 label syntax.
     let bytes = &source.as_bytes()[key.start_byte()..key.end_byte()];
-    !bytes.ends_with(b"=")
+    // RuboCop `acceptable_19_syntax_symbol?`: word symbols only (not :@ivar / :$g / :foo=).
+    acceptable_19_symbol(bytes)
+}
+
+fn acceptable_19_symbol(bytes: &[u8]) -> bool {
+    let name = if bytes.starts_with(b":") {
+        &bytes[1..]
+    } else {
+        bytes
+    };
+    // Setter symbols and non-word forms cannot use `key:` label syntax.
+    if name.ends_with(b"=") || name.starts_with(b"@") || name.starts_with(b"$") {
+        return false;
+    }
+    if name.starts_with(b"'") || name.starts_with(b"\"") {
+        return true;
+    }
+    let Ok(s) = std::str::from_utf8(name) else {
+        return false;
+    };
+    // /\A[_a-z]\w*[?!]?\z/i
+    let mut chars = s.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if first != '_' && !first.is_ascii_alphabetic() {
+        return false;
+    }
+    let rest: String = chars.collect();
+    if rest.is_empty() {
+        return true;
+    }
+    let (body, last) = rest.split_at(rest.len() - 1);
+    let last_ch = last.chars().next().unwrap();
+    if last_ch == '?' || last_ch == '!' {
+        return body.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+    }
+    rest.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 pub fn matches_symbol_array(_source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {

@@ -1,6 +1,7 @@
 //! Heuristic matchers for breadth-first Style cops.
 use tree_sitter::Node;
 use crate::cop::CopConfig;
+use crate::cop::style::heuristics::percent::double_quotes_required;
 use crate::parse::source::SourceFile;
 
 pub fn matches_redundant_capital_w(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
@@ -34,9 +35,63 @@ pub fn matches_redundant_interpolation(_source: &SourceFile, node: Node<'_>, _co
     kids.iter().all(|k| k.kind() == "interpolation")
 }
 
+/// RuboCop Style/RedundantPercentQ: `%q`/`%Q` only when `'`/`"` would work equally.
 pub fn matches_redundant_percent_q(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "string" { return false; }
+    if node.kind() != "string" {
+        return false;
+    }
     let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
-    b.starts_with(b"%q") || b.starts_with(b"%Q")
+    let is_q = b.starts_with(b"%q") && !b.starts_with(b"%Q");
+    let is_cap_q = b.starts_with(b"%Q");
+    if !is_q && !is_cap_q {
+        return false;
+    }
+    // Both `'` and `"` appear in the literal → keep percent form.
+    if b.contains(&b'\'') && b.contains(&b'"') {
+        return false;
+    }
+    if is_q {
+        return !acceptable_q(b);
+    }
+    !acceptable_capital_q(node, b)
 }
 
+fn has_interpolation_text(src: &[u8]) -> bool {
+    // RuboCop STRING_INTERPOLATION_REGEXP = /#\{.+\}/
+    let s = std::str::from_utf8(src).unwrap_or("");
+    s.contains("#{") && s.contains('}')
+}
+
+fn escaped_non_backslash(src: &[u8]) -> bool {
+    let mut i = 0;
+    while i + 1 < src.len() {
+        if src[i] == b'\\' {
+            if src[i + 1] != b'\\' {
+                return true;
+            }
+            i += 2;
+        } else {
+            i += 1;
+        }
+    }
+    false
+}
+
+fn acceptable_q(src: &[u8]) -> bool {
+    has_interpolation_text(src) || escaped_non_backslash(src)
+}
+
+fn acceptable_capital_q(node: Node<'_>, src: &[u8]) -> bool {
+    if !src.contains(&b'"') {
+        return false;
+    }
+    if has_interpolation_text(src) {
+        return true;
+    }
+    // Static %Q — allowed when double quotes are required (e.g. `\n` escapes).
+    let mut cur = node.walk();
+    let has_interp = node
+        .named_children(&mut cur)
+        .any(|ch| ch.kind() == "interpolation");
+    !has_interp && double_quotes_required(src)
+}

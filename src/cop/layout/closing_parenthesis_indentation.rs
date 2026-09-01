@@ -16,15 +16,44 @@ fn is_paren_wrapped(bytes: &[u8], node: Node<'_>) -> bool {
         && bytes.get(node.end_byte().saturating_sub(1)) == Some(&b')')
 }
 
-fn first_named_child(node: Node<'_>) -> Option<Node<'_>> {
+fn named_elements(node: Node<'_>) -> Vec<Node<'_>> {
     let mut cur = node.walk();
-    node.named_children(&mut cur).find(|n| n.kind() != "comment")
+    node.named_children(&mut cur)
+        .filter(|n| n.kind() != "comment")
+        .collect()
 }
 
+/// RuboCop `all_elements_aligned?`: every element's start column is the same
+/// (for a leading hash, compare its pair keys instead).
+fn all_elements_aligned(source: &SourceFile, elements: &[Node<'_>]) -> bool {
+    let Some(first) = elements.first() else {
+        return true;
+    };
+    let cols: Vec<usize> = if first.kind() == "hash" {
+        let mut cur = first.walk();
+        first
+            .named_children(&mut cur)
+            .filter(|n| n.kind() == "pair")
+            .map(|n| shared::node_col(source, n))
+            .collect()
+    } else {
+        elements
+            .iter()
+            .map(|n| shared::node_col(source, *n))
+            .collect()
+    };
+    let Some(c0) = cols.first() else {
+        return true;
+    };
+    cols.iter().all(|c| c == c0)
+}
+
+/// RuboCop `expected_column` for a hanging `)`.
 fn expected_close_col(source: &SourceFile, node: Node<'_>, indent_width: usize) -> usize {
     let open_line = shared::node_line(source, node);
     let open_col = shared::node_col(source, node);
-    let Some(first) = first_named_child(node) else {
+    let elements = named_elements(node);
+    let Some(first) = elements.first().copied() else {
         // empty multiline `()` → align `)` with `(`
         return open_col;
     };
@@ -34,7 +63,12 @@ fn expected_close_col(source: &SourceFile, node: Node<'_>, indent_width: usize) 
         let arg_indent = shared::line_indent(source, first.start_byte());
         return arg_indent.saturating_sub(indent_width);
     }
-    open_col
+    if all_elements_aligned(source, &elements) {
+        open_col
+    } else {
+        // Params not lined up — outdent `)` to the first argument's line indent.
+        shared::line_indent(source, first.start_byte())
+    }
 }
 
 impl Cop for ClosingParenthesisIndentation {
@@ -85,4 +119,13 @@ impl Cop for ClosingParenthesisIndentation {
             want,
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(
+        ClosingParenthesisIndentation,
+        "cops/layout/closing_parenthesis_indentation"
+    );
 }

@@ -97,6 +97,39 @@ fn report_width(
     );
 }
 
+fn is_end_like(line: &[u8]) -> bool {
+    let rest = trim_ascii_end(
+        line.iter()
+            .position(|&b| b != b' ' && b != b'\t')
+            .map(|i| &line[i..])
+            .unwrap_or(line),
+    );
+    matches!(rest, b"end" | b"}" | b"]" | b")")
+        || rest.starts_with(b"end ")
+        || rest.starts_with(b"end;")
+}
+
+fn end_relative_ok(source: &SourceFile, line_no: usize, indent: usize, width: usize) -> bool {
+    // RuboCop `on_block`: body indent is checked against `end`, not `do`.
+    // When `end` is itself mis-indented, body at end_col+width is accepted.
+    for later in source.lines().enumerate().skip(line_no) {
+        let (idx, line) = later;
+        let Some(end_indent) = line_indent(line) else {
+            continue;
+        };
+        if !is_end_like(line) {
+            // Another indent level before end — not a direct block body match.
+            if end_indent < indent {
+                return false;
+            }
+            continue;
+        }
+        let _ = idx;
+        return indent == end_indent.saturating_add(width);
+    }
+    false
+}
+
 fn check_step_from_prev(
     cop: &dyn Cop,
     source: &SourceFile,
@@ -105,22 +138,32 @@ fn check_step_from_prev(
     indent: usize,
     prev: usize,
     width: usize,
+    line: &[u8],
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    if bad_step(indent, prev, width) {
-        report_width(
-            cop,
-            source,
-            code_map,
-            line_no,
-            indent,
-            prev,
-            width,
-            diagnostics,
-            corrections,
-        );
+    if !bad_step(indent, prev, width) {
+        return;
     }
+    // `end` / closers: RuboCop EndAlignment owns their column; IndentationWidth
+    // checks body against the closer instead.
+    if is_end_like(line) {
+        return;
+    }
+    if end_relative_ok(source, line_no, indent, width) {
+        return;
+    }
+    report_width(
+        cop,
+        source,
+        code_map,
+        line_no,
+        indent,
+        prev,
+        width,
+        diagnostics,
+        corrections,
+    );
 }
 
 fn scan_file_indents(
@@ -144,17 +187,22 @@ fn scan_file_indents(
                 prev_line = line;
                 continue;
             }
-            check_step_from_prev(
-                cop,
-                source,
-                code_map,
-                i + 1,
-                indent,
-                prev,
-                width,
-                diagnostics,
-                corrections,
-            );
+            // After a misaligned `end`, the next method/class at a "normal" indent
+            // shouldn't be judged against that closer's column.
+            if !is_end_like(prev_line) {
+                check_step_from_prev(
+                    cop,
+                    source,
+                    code_map,
+                    i + 1,
+                    indent,
+                    prev,
+                    width,
+                    line,
+                    diagnostics,
+                    corrections,
+                );
+            }
         }
         if code_map.covers(off + indent) {
             prev_line = line;

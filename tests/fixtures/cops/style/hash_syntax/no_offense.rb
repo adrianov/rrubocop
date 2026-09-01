@@ -11,3 +11,6 @@
 # Rails routes-style mixed rockets
 get '/signout' => 'sessions#destroy', :as => :signout
 get '/auth/failure' => 'sessions#failure', :as => :failure
+
+# Instance-variable symbols cannot use label syntax
+hashes = { :@strings => 1, :@symbols => 2 }

@@ -49,7 +49,7 @@ fn ends_with_single_char_op(t: &[u8]) -> bool {
         t.last(),
         Some(
             b',' | b'\\' | b'(' | b'[' | b'{' | b'+' | b'-' | b'*' | b'/' | b'%' | b'|' | b'^'
-                | b'<' | b'>'
+                | b'<' | b'>' | b'.'
         )
     )
 }

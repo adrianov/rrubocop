@@ -63,7 +63,7 @@ fn odd_escape_needs_double(src: &[u8], i: usize) -> (usize, bool) {
     (n, next != b'\\' && next != b'"')
 }
 
-fn double_quotes_required(src: &[u8]) -> bool {
+pub(crate) fn double_quotes_required(src: &[u8]) -> bool {
     let mut i = 0;
     while i < src.len() {
         match src[i] {
@@ -82,21 +82,22 @@ fn double_quotes_required(src: &[u8]) -> bool {
 }
 
 fn double_quotes_preferred(src: &[u8]) -> bool {
+    // RuboCop StringLiteralsHelp: /" | \\[^'\\] | \#[@{$]/x
+    // Note: `\\.` matches starting at the *second* backslash of `\\.` — do not
+    // skip ahead by 2 on `\\` or that match is missed.
     let mut i = 0;
     while i < src.len() {
         match src[i] {
             b'"' => return true,
-            b'\\' if i + 1 < src.len() => {
-                if !matches!(src[i + 1], b'\'' | b'\\') {
-                    return true;
-                }
-                i += 2;
+            b'\\' if i + 1 < src.len() && !matches!(src[i + 1], b'\'' | b'\\') => {
+                return true;
             }
             b'#' if src.get(i + 1).is_some_and(|b| matches!(b, b'@' | b'$' | b'{')) => {
                 return true;
             }
-            _ => i += 1,
+            _ => {}
         }
+        i += 1;
     }
     false
 }
@@ -124,11 +125,31 @@ pub fn matches_string_literals(source: &SourceFile, node: Node<'_>, config: &Cop
     if node.kind() != "string" || inside_interpolation(node) || is_multiline_string(source, node) {
         return false;
     }
+    // `'0':` / `"x y":` — tree-sitter emits a string key + `:`; RuboCop sees a symbol.
+    if is_label_string_key(node) {
+        return false;
+    }
     let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
     !b.starts_with(b"%")
         && !b.starts_with(b"?")
         && !has_interpolation(node)
         && quote_mismatch(config.get_str("EnforcedStyle", "single_quotes"), b)
+}
+
+fn is_label_string_key(node: Node<'_>) -> bool {
+    let Some(parent) = node.parent() else {
+        return false;
+    };
+    if parent.kind() != "pair" {
+        return false;
+    }
+    if parent.child_by_field_name("key").map(|k| k.id()) != Some(node.id()) {
+        return false;
+    }
+    let mut cur = parent.walk();
+    parent
+        .children(&mut cur)
+        .any(|c| !c.is_named() && c.kind() == ":")
 }
 
 fn inside_interpolation(node: Node<'_>) -> bool {

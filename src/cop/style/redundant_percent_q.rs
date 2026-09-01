@@ -38,3 +38,9 @@ impl Cop for RedundantPercentQ {
         ));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(RedundantPercentQ, "cops/style/redundant_percent_q");
+}

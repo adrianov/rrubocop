@@ -113,12 +113,20 @@ fn select_active<'a>(
     only: Option<&[String]>,
     except: &[String],
 ) -> Vec<ActiveCop<'a>> {
+    let path = source.path.as_path();
     registry
         .cops()
         .iter()
         .enumerate()
-        .filter(|(_, cop)| cop_wanted(cop.name(), source.path.as_path(), filters, only, except))
-        .map(|(idx, cop)| (&**cop, config.cop_config(cop.name()), idx))
+        .filter(|(_, cop)| cop_wanted(cop.name(), path, filters, only, except))
+        .filter(|(_, cop)| !config.disabled_by_dir_override(cop.name(), path))
+        .map(|(idx, cop)| {
+            (
+                &**cop,
+                config.cop_config_for_file(cop.name(), path),
+                idx,
+            )
+        })
         .collect()
 }
 

@@ -3,6 +3,7 @@
 use crate::cop::walker::BatchedWalker;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
+use crate::model;
 use crate::parse;
 use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
@@ -31,7 +32,12 @@ pub fn run_cop_full_internal(
     let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
     let mut diagnostics = Vec::new();
     cop.check_lines(&source, &config, &mut diagnostics, None);
-    cop.check_source(&source, &tree, &code_map, &config, &mut diagnostics, None);
+    if cop.needs_file_model() {
+        let file_model = model::build(source.as_bytes(), tree.clone());
+        cop.check_file_model(&source, &file_model, &config, &mut diagnostics, None);
+    } else {
+        cop.check_source(&source, &tree, &code_map, &config, &mut diagnostics, None);
+    }
     BatchedWalker::new(vec![cop], vec![&config]).walk(
         &source,
         tree.root_node(),

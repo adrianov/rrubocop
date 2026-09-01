@@ -3,6 +3,7 @@
 use tree_sitter::Node;
 
 use crate::cop::layout::space_delim::{self, DelimSpace};
+use crate::cop::shared;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
@@ -57,6 +58,7 @@ fn check_nonempty(
     bytes: &[u8],
     d: &DelimSpace,
     want: bool,
+    single_line: bool,
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
@@ -64,9 +66,12 @@ fn check_nonempty(
         space_delim::add_space_after(
             cop, source, d, d.inner_s, "Space missing inside {.".into(), diagnostics, corrections,
         );
-        space_delim::add_space_before(
-            cop, source, d, d.inner_e, "Space missing inside }.".into(), diagnostics, corrections,
-        );
+        // RuboCop: missing space before `}` is only enforced on single-line blocks.
+        if single_line {
+            space_delim::add_space_before(
+                cop, source, d, d.inner_e, "Space missing inside }.".into(), diagnostics, corrections,
+            );
+        }
     } else {
         let mut correctable = true;
         space_delim::strip_space_after(
@@ -123,6 +128,7 @@ impl Cop for SpaceInsideBlockBraces {
             bytes,
             &d,
             style != "no_space",
+            shared::node_line(source, lbrace) == shared::node_line(source, rbrace),
             diagnostics,
             &mut corrections,
         );

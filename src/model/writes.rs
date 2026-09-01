@@ -32,7 +32,18 @@ impl Builder<'_> {
                 self.walk_rescue(n, scope, under_defined);
                 true
             }
-            "when" | "in_clause" => {
+            "when" => {
+                // `when` conditions are expressions (reads/assigns), not pattern binds.
+                let mut cur = n.walk();
+                for child in n.children(&mut cur) {
+                    if child.kind() == "when" {
+                        continue;
+                    }
+                    self.walk(child, scope, under_defined);
+                }
+                true
+            }
+            "in_clause" => {
                 // pattern subtree may bind variables we deliberately do not
                 // track; walk only the body
                 if let Some(b) = n.child_by_field_name("body") {
