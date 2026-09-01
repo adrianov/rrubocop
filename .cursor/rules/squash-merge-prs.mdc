@@ -1,0 +1,16 @@
+---
+description: Squash-merge every pull request into a single commit
+alwaysApply: true
+---
+
+# Squash-merge pull requests
+
+Land every PR as **one squashed commit** on the base branch. Do not use merge commits or plain rebase that keeps each WIP commit.
+
+## How
+- Merge via squash: `gh pr merge <pr> --squash` (or the "Squash and merge" button). To let it merge once checks pass, add `--auto`.
+- Write a clean squashed commit: a clear title (imperative, matches the PR) and a short body; drop noise like `fixup`, `wip`, and `address review`.
+- Keep the branch itself as normal incremental commits while iterating; squashing happens only at merge time.
+
+## Why
+- One commit per PR keeps `main` history linear, readable, and easy to revert or bisect.
