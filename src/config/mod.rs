@@ -5,6 +5,7 @@
 
 pub mod gem_path;
 mod gem_configs;
+mod gem_path_local;
 mod gem_path_version;
 
 mod types;

@@ -1,14 +1,43 @@
-//! Resolve vendored gem config YAML from Gemfile.lock + embedded resources.
+//! Resolve gem config YAML: vendored embed first, then local `bundle info`.
 //!
-//! Does not call `bundle info` or write gem trees to disk. Version comes from
-//! `Gemfile.lock` / `gems.locked`; YAML is compiled into the binary.
+//! Public plugin defaults are compiled into the binary (version from
+//! `Gemfile.lock` / `gems.locked`). Private or unlisted gems fall back to
+//! `bundle info --path` so `inherit_gem` / `require` still work without
+//! vendoring proprietary YAML.
 
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
 use super::gem_configs;
+use super::gem_path_local::resolve_local_root;
 use super::gem_path_version::select_version;
+
+/// Where to read a gem's RuboCop YAML from.
+pub enum GemConfigSrc {
+    /// Installed gem root (explicit cache or `bundle info --path`).
+    Disk(PathBuf),
+    /// Vendored bytes + version (virtual path via [`virtual_config_path`]).
+    Embed { version: String, yaml: &'static str },
+}
+
+/// Prefer `gem_cache`, then vendored embed, then local `bundle info --path`.
+pub fn resolve_gem_config(
+    gem_name: &str,
+    rel_path: &str,
+    working_dir: &Path,
+    gem_cache: Option<&HashMap<String, PathBuf>>,
+) -> Result<GemConfigSrc> {
+    if let Some(root) = gem_cache.and_then(|c| c.get(gem_name)) {
+        return Ok(GemConfigSrc::Disk(root.clone()));
+    }
+    if has_vendored(gem_name) {
+        let (version, yaml) = embedded_yaml(gem_name, rel_path, working_dir)?;
+        return Ok(GemConfigSrc::Embed { version, yaml });
+    }
+    Ok(GemConfigSrc::Disk(resolve_local_root(gem_name, working_dir)?))
+}
 
 /// Select lockfile/baseline version and return embedded YAML for `rel_path`.
 pub fn embedded_yaml(
@@ -27,11 +56,13 @@ pub fn embedded_yaml(
     Ok((version, yaml))
 }
 
+fn has_vendored(gem_name: &str) -> bool {
+    !gem_configs::versions_for(gem_name).is_empty()
+}
+
 /// Stable virtual path for visited-set / error messages (not on disk).
-pub fn virtual_config_path(gem_name: &str, version: &str, rel_path: &str) -> std::path::PathBuf {
-    std::path::PathBuf::from(format!(
-        "/__rrubocop_gem__/{gem_name}/{version}/{rel_path}"
-    ))
+pub fn virtual_config_path(gem_name: &str, version: &str, rel_path: &str) -> PathBuf {
+    PathBuf::from(format!("/__rrubocop_gem__/{gem_name}/{version}/{rel_path}"))
 }
 
 /// Whether `working_dir` likely needs `mise exec` for Ruby subprocesses (ERB).

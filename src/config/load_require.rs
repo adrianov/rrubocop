@@ -80,12 +80,15 @@ fn load_gem_yaml_layer(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
 ) -> anyhow::Result<ConfigLayer> {
-    if let Some(root) = gem_cache.and_then(|c| c.get(gem_name)) {
-        return load_config_recursive(&root.join(rel_path), working_dir, visited, gem_cache);
+    match gem_path::resolve_gem_config(gem_name, rel_path, working_dir, gem_cache)? {
+        gem_path::GemConfigSrc::Disk(root) => {
+            load_config_recursive(&root.join(rel_path), working_dir, visited, gem_cache)
+        }
+        gem_path::GemConfigSrc::Embed { version, yaml } => {
+            let path = gem_path::virtual_config_path(gem_name, &version, rel_path);
+            load_config_recursive_inner(&path, working_dir, visited, gem_cache, Some(yaml))
+        }
     }
-    let (version, yaml) = gem_path::embedded_yaml(gem_name, rel_path, working_dir)?;
-    let path = gem_path::virtual_config_path(gem_name, &version, rel_path);
-    load_config_recursive_inner(&path, working_dir, visited, gem_cache, Some(yaml))
 }
 
 fn merge_require_layer(base_layer: &mut ConfigLayer, layer: ConfigLayer) {
