@@ -36,5 +36,3 @@ pub fn matches_redundant_string_escape(_source: &SourceFile, _node: Node<'_>, _c
 pub fn matches_return_nil_in_predicate_method_definition(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
 
 pub fn matches_symbol_proc(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
-
-pub fn matches_while_until_modifier(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }

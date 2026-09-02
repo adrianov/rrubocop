@@ -141,7 +141,7 @@ enum PassOutcome {
 
 fn next_pass(ctx: &LintCtx<'_>, bytes: &[u8]) -> Result<PassOutcome> {
     let LintOutput {
-        mut diagnostics,
+        diagnostics,
         corrections,
     } = ctx.lint_bytes(bytes)?;
     let Some(set) = corrections

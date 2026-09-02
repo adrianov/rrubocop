@@ -54,4 +54,3 @@ pub use stubs::matches_redundant_parentheses;
 pub use stubs::matches_redundant_string_escape;
 pub use stubs::matches_return_nil_in_predicate_method_definition;
 pub use stubs::matches_symbol_proc;
-pub use stubs::matches_while_until_modifier;
