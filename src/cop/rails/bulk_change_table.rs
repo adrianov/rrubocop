@@ -14,6 +14,10 @@ impl Cop for BulkChangeTable {
         "Rails/BulkChangeTable"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &["**/db/**/*.rb"]
     }

@@ -94,6 +94,9 @@ fn load_gem_yaml_layer(
 fn merge_require_layer(base_layer: &mut ConfigLayer, layer: ConfigLayer) {
     // Keep AllCops.Exclude from rubocop-* gems (e.g. rubocop-rails `db/*schema.rb`).
     // Patterns stay project-relative — do not rewrite them against a gem path.
+    // Also record them so a later project Exclude replace cannot drop them
+    // (RuboCop injects plugin Exclude into default_configuration).
+    base_layer.extend_plugin_excludes(&layer.global_excludes);
     merge_layer_into(base_layer, &layer, None);
 }
 

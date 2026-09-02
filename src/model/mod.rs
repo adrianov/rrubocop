@@ -7,6 +7,7 @@
 //! multiple-assignment target lists.
 
 mod builder;
+mod patterns;
 mod reads;
 mod scopes;
 mod writes;
@@ -25,6 +26,9 @@ pub enum IntroKind {
     Assign,
     /// `x op= ...` / masgn target / block param etc.
     Binding,
+    /// Pattern-match bind (`=> { applyTime: }`). RuboCop `match_var` — no
+    /// style check at intro; reads still use `on_lvar`.
+    Pattern,
 }
 
 #[derive(Clone, Copy, Debug)]

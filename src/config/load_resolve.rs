@@ -9,7 +9,7 @@ use crate::cop::EnabledState;
 
 use super::discover::find_config;
 use super::load_lockfile::LockfileMeta;
-use super::load_recursive::{load_config_recursive, load_config_recursive_inner};
+use super::load_recursive::{load_config_recursive_inner, load_project_config_recursive};
 use super::resolved::ResolvedConfig;
 use super::ruby_ver::resolve_ruby_version_from_gemspec;
 use super::standard::convert_standard_yml;
@@ -96,7 +96,7 @@ pub(crate) fn load_project_layer(
             Some(&synthetic_yaml),
         )
     } else {
-        load_config_recursive(config_path, config_dir, &mut visited, gem_cache)
+        load_project_config_recursive(config_path, config_dir, &mut visited, gem_cache)
     }
 }
 

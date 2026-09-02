@@ -14,6 +14,10 @@ impl Cop for Caller {
         "Performance/Caller"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

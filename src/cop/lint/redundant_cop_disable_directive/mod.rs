@@ -388,4 +388,23 @@ mod tests {
         audit_redundant_disables(&cop, &source, &[], &[], &mut diags, None);
         assert!(diags.is_empty());
     }
+
+    #[test]
+    fn bare_disable_is_not_treated_as_all() {
+        let source = SourceFile::from_bytes(
+            "test.rb",
+            b"scope: 'x', # rubocop:disable\n".to_vec(),
+        );
+        let (cops, cfgs) = active_cops(&["Style/StringLiterals"]);
+        let mut diags = Vec::new();
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            None,
+        );
+        assert!(diags.is_empty());
+    }
 }

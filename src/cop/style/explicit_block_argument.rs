@@ -14,6 +14,10 @@ impl Cop for ExplicitBlockArgument {
         "Style/ExplicitBlockArgument"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["block", "do_block", "block_argument"]
     }

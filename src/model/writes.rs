@@ -15,6 +15,9 @@ impl Builder<'_> {
         scope: ScopeId,
         under_defined: bool,
     ) -> bool {
+        if self.walk_pattern_write(n, kind, scope, under_defined) {
+            return true;
+        }
         match kind {
             "assignment" => {
                 self.walk_assignment(n, scope, under_defined);
@@ -40,14 +43,6 @@ impl Builder<'_> {
                         continue;
                     }
                     self.walk(child, scope, under_defined);
-                }
-                true
-            }
-            "in_clause" => {
-                // pattern subtree may bind variables we deliberately do not
-                // track; walk only the body
-                if let Some(b) = n.child_by_field_name("body") {
-                    self.walk(b, scope, under_defined);
                 }
                 true
             }

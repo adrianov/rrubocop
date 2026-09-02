@@ -14,6 +14,10 @@ impl Cop for ArgumentDescription {
         "GraphQL/ArgumentDescription"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         DEPT_INCLUDE
     }

@@ -22,16 +22,12 @@ fn merge_global_excludes(
     overlay: &ConfigLayer,
     inherit_mode: Option<&InheritMode>,
 ) {
-    // RuboCop ALWAYS merges AllCops.Exclude (union), unlike per-cop Exclude
-    // which replaces by default. The only exception is when inherit_mode
-    // explicitly sets `override: [Exclude]`.
+    // RuboCop `should_union?`: arrays replace by default. Union only when
+    // inherit_mode.merge includes the key (child or already-on-base parent).
     if overlay.global_excludes.is_empty() {
         return;
     }
-    let should_replace = match inherit_mode {
-        None => false,
-        Some(mode) => mode.override_keys.contains("Exclude"),
-    };
+    let should_replace = !exclude_should_union(base, overlay, inherit_mode);
     merge_exclude_list(
         &mut base.global_excludes,
         &overlay.global_excludes,
@@ -39,7 +35,27 @@ fn merge_global_excludes(
     );
 }
 
+/// RuboCop ConfigLoaderResolver#should_union? for AllCops.Exclude.
+fn exclude_should_union(
+    base: &ConfigLayer,
+    overlay: &ConfigLayer,
+    inherit_mode: Option<&InheritMode>,
+) -> bool {
+    let child = inherit_mode.unwrap_or(&overlay.inherit_mode);
+    if child.override_keys.contains("Exclude") {
+        return false;
+    }
+    if child.merge.contains("Exclude") {
+        return true;
+    }
+    if base.inherit_mode.override_keys.contains("Exclude") {
+        return false;
+    }
+    base.inherit_mode.merge.contains("Exclude")
+}
+
 fn merge_layer_scalars(base: &mut ConfigLayer, overlay: &ConfigLayer) {
+    merge_inherit_mode(&mut base.inherit_mode, &overlay.inherit_mode);
     overlay_clone(&mut base.new_cops, &overlay.new_cops);
     overlay_copy(&mut base.disabled_by_default, overlay.disabled_by_default);
     overlay_copy(&mut base.target_ruby_version, overlay.target_ruby_version);
@@ -56,6 +72,12 @@ fn merge_layer_scalars(base: &mut ConfigLayer, overlay: &ConfigLayer) {
     overlay_copy(&mut base.display_style_guide, overlay.display_style_guide);
     overlay_copy(&mut base.extra_details, overlay.extra_details);
     overlay_clone(&mut base.style_guide_base_url, &overlay.style_guide_base_url);
+}
+
+fn merge_inherit_mode(base: &mut InheritMode, overlay: &InheritMode) {
+    base.merge.extend(overlay.merge.iter().cloned());
+    base.override_keys
+        .extend(overlay.override_keys.iter().cloned());
 }
 
 fn overlay_clone<T: Clone>(base: &mut Option<T>, overlay: &Option<T>) {

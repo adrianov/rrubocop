@@ -14,6 +14,10 @@ impl Cop for AssertNot {
         "Rails/AssertNot"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &["**/test/**/*"]
     }

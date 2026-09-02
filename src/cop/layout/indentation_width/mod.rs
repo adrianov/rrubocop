@@ -31,6 +31,8 @@ fn line_indent(line: &[u8]) -> Option<usize> {
 }
 
 fn is_branch_keyword(rest: &[u8]) -> bool {
+    // Bare `rescue`/`else`/`ensure` only — `rescue Foo,` is a continued
+    // exception list and must keep a real indent for step checks.
     let rest = trim_ascii_end(rest);
     matches!(rest, b"else" | b"rescue" | b"ensure")
         || rest.starts_with(b"when ")
@@ -39,9 +41,6 @@ fn is_branch_keyword(rest: &[u8]) -> bool {
         || rest.starts_with(b"in(")
         || rest.starts_with(b"elsif ")
         || rest.starts_with(b"elsif(")
-        || rest.starts_with(b"else ")
-        || rest.starts_with(b"rescue ")
-        || rest.starts_with(b"ensure ")
 }
 
 fn trim_ascii_end(code: &[u8]) -> &[u8] {

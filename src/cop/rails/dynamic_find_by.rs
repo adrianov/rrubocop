@@ -14,6 +14,10 @@ impl Cop for DynamicFindBy {
         "Rails/DynamicFindBy"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

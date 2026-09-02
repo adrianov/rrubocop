@@ -10,6 +10,10 @@ impl Cop for UnderscorePrefixedVariableName {
         "Lint/UnderscorePrefixedVariableName"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_severity(&self) -> Severity {
         Severity::Warning
     }

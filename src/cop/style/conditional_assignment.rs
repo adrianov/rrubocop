@@ -14,6 +14,10 @@ impl Cop for ConditionalAssignment {
         "Style/ConditionalAssignment"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["if", "unless", "assignment"]
     }

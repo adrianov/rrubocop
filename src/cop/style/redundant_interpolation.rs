@@ -38,3 +38,9 @@ impl Cop for RedundantInterpolation {
         ));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(RedundantInterpolation, "cops/style/redundant_interpolation");
+}

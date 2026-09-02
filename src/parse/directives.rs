@@ -59,9 +59,10 @@ fn apply_enable(d: &mut Directives, rest: &str, line_no: usize) {
 }
 
 fn apply_disable(d: &mut Directives, rest: &str, line: &str, line_no: usize) {
-    let mut names = cop_names(rest.trim_start_matches([' ', ':']));
+    let names = cop_names(rest.trim_start_matches([' ', ':']));
+    // Bare `# rubocop:disable` is malformed (Lint/CopDirectiveSyntax), not "all".
     if names.is_empty() {
-        names.push("all".into());
+        return;
     }
     let trailing = !line.trim_start().starts_with('#');
     for name in names {

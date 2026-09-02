@@ -14,6 +14,10 @@ impl Cop for OptionalArguments {
         "Style/OptionalArguments"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["method", "singleton_method"]
     }

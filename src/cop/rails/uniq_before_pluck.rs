@@ -14,6 +14,10 @@ impl Cop for UniqBeforePluck {
         "Rails/UniqBeforePluck"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

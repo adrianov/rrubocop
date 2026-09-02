@@ -14,6 +14,10 @@ impl Cop for RedundantParentheses {
         "Style/RedundantParentheses"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["parenthesized_statements"]
     }

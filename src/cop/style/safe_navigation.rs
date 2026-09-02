@@ -14,8 +14,13 @@ impl Cop for SafeNavigation {
         "Style/SafeNavigation"
     }
 
+    /// Still misses chained `x && x.y.z` and `x.y if x.y` — skip redundant-disable audit.
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["binary", "unless_modifier"]
+        &["binary", "unless_modifier", "if_modifier"]
     }
 
     fn check_node(
@@ -26,13 +31,12 @@ impl Cop for SafeNavigation {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        if node.kind() == "unless_modifier" {
-            if let Some(diag) = unless_nil_safe_nav(self, source, node) {
-                diagnostics.push(diag);
-            }
+        if let Some(diag) = modifier_offense(self, source, node) {
+            diagnostics.push(diag);
             return;
         }
-        if !is_and_safe_nav(source, node)
+        if node.kind() != "binary"
+            || !is_and_safe_nav(source, node)
             || lhs_reassigned_in_method(source, node)
             || inside_block(node)
         {
@@ -48,6 +52,18 @@ impl Cop for SafeNavigation {
     }
 }
 
+fn modifier_offense<'a>(
+    cop: &SafeNavigation,
+    source: &'a SourceFile,
+    node: Node<'a>,
+) -> Option<Diagnostic> {
+    match node.kind() {
+        "unless_modifier" => unless_nil_safe_nav(cop, source, node),
+        "if_modifier" => if_modifier_safe_nav(cop, source, node),
+        _ => None,
+    }
+}
+
 fn unless_nil_safe_nav(cop: &SafeNavigation, source: &SourceFile, node: Node<'_>) -> Option<Diagnostic> {
     let cond = node.child_by_field_name("condition")?;
     if !is_nil_check(source, cond) {
@@ -58,6 +74,27 @@ fn unless_nil_safe_nav(cop: &SafeNavigation, source: &SourceFile, node: Node<'_>
     if !call_on_receiver(source, body, recv) {
         return None;
     }
+    modifier_safe_nav_diag(cop, source, body)
+}
+
+/// `foo.bar if foo` → `foo&.bar` (RuboCop Style/SafeNavigation).
+fn if_modifier_safe_nav(cop: &SafeNavigation, source: &SourceFile, node: Node<'_>) -> Option<Diagnostic> {
+    let cond = node.child_by_field_name("condition")?;
+    if cond.kind() != "identifier" {
+        return None;
+    }
+    let body = node.child_by_field_name("body")?;
+    if !call_on_receiver(source, body, cond) {
+        return None;
+    }
+    modifier_safe_nav_diag(cop, source, body)
+}
+
+fn modifier_safe_nav_diag(
+    cop: &SafeNavigation,
+    source: &SourceFile,
+    body: Node<'_>,
+) -> Option<Diagnostic> {
     let (line, col) = source.offset_to_line_col(body.start_byte());
     Some(cop.diagnostic(
         source,

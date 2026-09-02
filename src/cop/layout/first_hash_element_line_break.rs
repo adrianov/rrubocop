@@ -12,6 +12,11 @@ pub struct FirstHashElementLineBreak;
 
 impl Cop for FirstHashElementLineBreak {
     fn name(&self) -> &'static str { "Layout/FirstHashElementLineBreak" }
+
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn supports_autocorrect(&self) -> bool { true }
     fn interested_node_kinds(&self) -> &'static [&'static str] { &["hash"] }
 

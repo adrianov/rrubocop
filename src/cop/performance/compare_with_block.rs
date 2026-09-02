@@ -14,6 +14,10 @@ impl Cop for CompareWithBlock {
         "Performance/CompareWithBlock"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

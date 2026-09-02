@@ -30,6 +30,10 @@ impl Cop for Output {
         "Rails/Output"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &[
             "**/app/**/*.rb",

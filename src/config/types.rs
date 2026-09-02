@@ -32,6 +32,9 @@ pub(crate) struct ConfigLayer {
     pub(crate) cop_configs: HashMap<String, CopConfig>,
     pub(crate) department_configs: HashMap<String, DepartmentConfig>,
     pub(crate) global_excludes: Vec<String>,
+    /// AllCops.Exclude from `plugins`/`require` gems — RuboCop injects these
+    /// into default_configuration so project Exclude replace cannot drop them.
+    pub(crate) plugin_excludes: Vec<String>,
     pub(crate) new_cops: Option<String>,
     pub(crate) disabled_by_default: Option<bool>,
     pub(crate) inherit_mode: InheritMode,
@@ -57,6 +60,7 @@ impl ConfigLayer {
             cop_configs: HashMap::new(),
             department_configs: HashMap::new(),
             global_excludes: Vec::new(),
+            plugin_excludes: Vec::new(),
             new_cops: None,
             disabled_by_default: None,
             inherit_mode: InheritMode::default(),
@@ -75,5 +79,25 @@ impl ConfigLayer {
             extra_details: None,
             style_guide_base_url: None,
         }
+    }
+
+    /// Record plugin AllCops.Exclude patterns (survive later Exclude replace).
+    pub(crate) fn extend_plugin_excludes(&mut self, excludes: &[String]) {
+        for ex in excludes {
+            push_unique(&mut self.plugin_excludes, ex);
+        }
+    }
+
+    /// Re-inject `plugin_excludes` into `global_excludes` after a replace merge.
+    pub(crate) fn reapply_plugin_excludes(&mut self) {
+        for ex in self.plugin_excludes.clone() {
+            push_unique(&mut self.global_excludes, &ex);
+        }
+    }
+}
+
+fn push_unique(list: &mut Vec<String>, item: &str) {
+    if !list.iter().any(|e| e == item) {
+        list.push(item.to_string());
     }
 }

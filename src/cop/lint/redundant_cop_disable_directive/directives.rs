@@ -28,19 +28,13 @@ fn enable_marker(line: &str) -> Option<&str> {
 
 pub(super) fn cop_names(rest: &str) -> Vec<String> {
     let rest = rest.trim_start_matches(':').trim();
-    let cops = rest
-        .split("--")
+    rest.split("--")
         .next()
         .unwrap_or("")
         .split(',')
         .map(|c| c.trim().to_string())
         .filter(|c| !c.is_empty())
-        .collect::<Vec<_>>();
-    if cops.is_empty() {
-        vec!["all".into()]
-    } else {
-        cops
-    }
+        .collect()
 }
 
 fn open_block_key(open: &HashMap<String, DisableDirective>, name: String) -> String {
@@ -81,6 +75,10 @@ fn record_disable(
     line: &str,
     cops: Vec<String>,
 ) {
+    // Bare `# rubocop:disable` (no cop names) is Lint/CopDirectiveSyntax, not "all".
+    if cops.is_empty() {
+        return;
+    }
     if line.trim_start().starts_with('#') {
         for name in cops {
             open.insert(

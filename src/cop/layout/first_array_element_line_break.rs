@@ -12,6 +12,11 @@ pub struct FirstArrayElementLineBreak;
 
 impl Cop for FirstArrayElementLineBreak {
     fn name(&self) -> &'static str { "Layout/FirstArrayElementLineBreak" }
+
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn supports_autocorrect(&self) -> bool { true }
     fn interested_node_kinds(&self) -> &'static [&'static str] { &["array"] }
 

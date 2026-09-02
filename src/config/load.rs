@@ -29,7 +29,10 @@ fn merge_project_onto_defaults(
     let cops = project_layer.user_mentioned_cops.clone();
     let depts = project_layer.user_mentioned_depts.clone();
     let enabled = project_enabled_depts(&project_layer);
-    merge_layer_into(base, &project_layer, None);
+    merge_layer_into(base, &project_layer, Some(&project_layer.inherit_mode));
+    // Plugin excludes survive project replace; also keep them when merging onto defaults.
+    base.extend_plugin_excludes(&project_layer.plugin_excludes);
+    base.reapply_plugin_excludes();
     apply_disabled_by_default(base, &cops, &depts);
     Ok((cops, depts, enabled))
 }

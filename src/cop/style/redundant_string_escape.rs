@@ -14,6 +14,10 @@ impl Cop for RedundantStringEscape {
         "Style/RedundantStringEscape"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["escape_sequence", "string"]
     }

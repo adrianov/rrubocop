@@ -14,6 +14,10 @@ impl Cop for ScopeArgs {
         "Rails/ScopeArgs"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &["**/app/models/**/*.rb"]
     }

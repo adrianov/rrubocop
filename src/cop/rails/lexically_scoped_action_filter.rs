@@ -14,6 +14,10 @@ impl Cop for LexicallyScopedActionFilter {
         "Rails/LexicallyScopedActionFilter"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &["**/app/controllers/**/*.rb", "**/app/mailers/**/*.rb"]
     }

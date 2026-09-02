@@ -14,6 +14,10 @@ impl Cop for IfWithBooleanLiteralBranches {
         "Style/IfWithBooleanLiteralBranches"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["if", "unless", "conditional"]
     }

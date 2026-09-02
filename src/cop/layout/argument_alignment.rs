@@ -13,6 +13,11 @@ pub struct ArgumentAlignment;
 
 impl Cop for ArgumentAlignment {
     fn name(&self) -> &'static str { "Layout/ArgumentAlignment" }
+
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn supports_autocorrect(&self) -> bool { true }
     fn interested_node_kinds(&self) -> &'static [&'static str] { &["argument_list"] }
 

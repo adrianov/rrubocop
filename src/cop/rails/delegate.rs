@@ -14,6 +14,10 @@ impl Cop for Delegate {
         "Rails/Delegate"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_exclude(&self) -> &'static [&'static str] {
         &["**/app/controllers/**/*.rb"]
     }

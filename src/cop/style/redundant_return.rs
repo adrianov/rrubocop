@@ -14,6 +14,10 @@ impl Cop for RedundantReturn {
         "Style/RedundantReturn"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn supports_autocorrect(&self) -> bool {
         true
     }

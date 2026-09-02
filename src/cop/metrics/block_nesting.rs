@@ -19,6 +19,10 @@ impl Cop for BlockNesting {
         "Metrics/BlockNesting"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn uses_source_phase(&self) -> bool {
         true
     }

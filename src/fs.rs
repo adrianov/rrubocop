@@ -207,5 +207,17 @@ fn is_ruby_file(path: &Path) -> bool {
     {
         return true;
     }
-    false
+    // RuboCop: extensionless files with a Ruby shebang (e.g. bin/ scripts).
+    path.extension().is_none() && has_ruby_shebang(path)
+}
+
+fn has_ruby_shebang(path: &Path) -> bool {
+    let Ok(bytes) = std::fs::read(path) else {
+        return false;
+    };
+    let line = bytes.split(|&b| b == b'\n').next().unwrap_or(&[]);
+    let Ok(text) = std::str::from_utf8(line) else {
+        return false;
+    };
+    text.starts_with("#!") && (text.contains("ruby") || text.contains("jruby"))
 }

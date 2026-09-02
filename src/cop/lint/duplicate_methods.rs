@@ -51,6 +51,10 @@ impl Cop for DuplicateMethods {
         "Lint/DuplicateMethods"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_severity(&self) -> Severity {
         Severity::Warning
     }

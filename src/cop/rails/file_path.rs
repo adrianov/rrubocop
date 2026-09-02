@@ -14,6 +14,10 @@ impl Cop for FilePath {
         "Rails/FilePath"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

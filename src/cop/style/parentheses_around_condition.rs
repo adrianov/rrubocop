@@ -39,12 +39,43 @@ impl Cop for ParenthesesAroundCondition {
         if cond.kind() != "parenthesized_statements" {
             return;
         }
+        // RuboCop Parentheses#parens_required?: letter immediately before `(` —
+        // e.g. `while(false)` — keeps parens (not superfluous style parens).
+        if parens_required(source, cond) {
+            return;
+        }
+        // RuboCop only registers `on_while` / `on_if`, not `while_post`
+        // (`begin…end while cond`). Tree-sitter uses `while_modifier` for both.
+        if post_while_until(node) {
+            return;
+        }
         // RuboCop AllowSafeAssignment (default true): `if (x = y)` is allowed.
         if config.get_bool("AllowSafeAssignment", true) && condition_has_assignment(cond) {
             return;
         }
         report(self, source, node, cond, diagnostics, &mut corrections);
     }
+}
+
+fn parens_required(source: &SourceFile, cond: Node<'_>) -> bool {
+    let bytes = source.as_bytes();
+    let start = cond.start_byte();
+    let end = cond.end_byte();
+    let before = start.checked_sub(1).and_then(|i| bytes.get(i).copied());
+    let after = bytes.get(end).copied();
+    before.is_some_and(|b| b.is_ascii_alphabetic())
+        || after.is_some_and(|b| b.is_ascii_alphabetic())
+}
+
+fn post_while_until(node: Node<'_>) -> bool {
+    if !matches!(node.kind(), "while_modifier" | "until_modifier") {
+        return false;
+    }
+    let Some(body) = node.child_by_field_name("body") else {
+        return false;
+    };
+    // `begin … end while cond` — body is a `begin` block.
+    body.kind() == "begin"
 }
 
 fn condition_has_assignment(cond: Node<'_>) -> bool {

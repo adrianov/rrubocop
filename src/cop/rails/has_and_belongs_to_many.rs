@@ -14,6 +14,10 @@ impl Cop for HasAndBelongsToMany {
         "Rails/HasAndBelongsToMany"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &["**/app/models/**/*.rb"]
     }

@@ -13,6 +13,10 @@ impl Cop for RedundantCurrentDirectoryInPath {
         "Style/RedundantCurrentDirectoryInPath"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

@@ -14,6 +14,10 @@ impl Cop for HttpStatus {
         "Rails/HttpStatus"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

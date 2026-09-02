@@ -14,6 +14,10 @@ impl Cop for UndescriptiveLiteralsDescription {
         "RSpec/UndescriptiveLiteralsDescription"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &["**/*_spec.rb", "**/spec/**/*"]
     }

@@ -14,6 +14,10 @@ impl Cop for ReversibleMigration {
         "Rails/ReversibleMigration"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_include(&self) -> &'static [&'static str] {
         &["db/**/*.rb"]
     }

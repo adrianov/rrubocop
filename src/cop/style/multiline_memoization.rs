@@ -14,6 +14,10 @@ impl Cop for MultilineMemoization {
         "Style/MultilineMemoization"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["operator_assignment", "assignment"]
     }

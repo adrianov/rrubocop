@@ -16,15 +16,14 @@ pub fn matches_class_and_module_children(_source: &SourceFile, node: Node<'_>, c
     let Some(name) = node.child_by_field_name("name") else {
         return false;
     };
-    if name.kind() != "scope_resolution" || cbase_scope(name) {
+    // Compact style is `scope_resolution`. Skip only single-segment cbase (`::Foo`),
+    // matching RuboCop `namespace&.cbase_type?` — not `Admin::Members` / `::A::B`.
+    if name.kind() != "scope_resolution" || single_cbase(name) {
         return false;
     }
     config.get_str("EnforcedStyle", "nested") == "nested"
 }
 
-fn cbase_scope(name: Node<'_>) -> bool {
-    let mut cur = name.walk();
-    name.named_children(&mut cur)
-        .next()
-        .is_some_and(|n| n.kind() == "constant")
+fn single_cbase(name: Node<'_>) -> bool {
+    name.child_by_field_name("scope").is_none()
 }

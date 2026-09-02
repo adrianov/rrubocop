@@ -35,6 +35,10 @@ impl Cop for MixedCaseRange {
         "Lint/MixedCaseRange"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_severity(&self) -> Severity {
         Severity::Warning
     }

@@ -14,6 +14,10 @@ impl Cop for ContentTag {
         "Rails/ContentTag"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_exclude(&self) -> &'static [&'static str] {
         &["**/app/models/**/*.rb", "**/config/**/*.rb"]
     }

@@ -14,6 +14,10 @@ impl Cop for DoubleStartEndWith {
         "Performance/DoubleStartEndWith"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

@@ -13,6 +13,10 @@ impl Cop for RedundantRegexpConstructor {
         "Style/RedundantRegexpConstructor"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

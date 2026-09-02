@@ -46,3 +46,13 @@ def summaries
                end
 end
 
+def send_sms
+  begin
+    deliver
+  rescue Vonage::APIError,
+         Timeout::Error,
+         Net::OpenTimeout
+    retry_later
+  end
+end
+

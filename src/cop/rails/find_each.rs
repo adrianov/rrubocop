@@ -14,6 +14,10 @@ impl Cop for FindEach {
         "Rails/FindEach"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
 
     fn check_node(
         &self,

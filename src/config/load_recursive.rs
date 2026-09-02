@@ -65,6 +65,7 @@ fn merge_inherited_layer(base_layer: &mut ConfigLayer, layer: ConfigLayer) {
     base_layer
         .user_mentioned_depts
         .extend(layer.user_mentioned_depts.iter().cloned());
+    base_layer.extend_plugin_excludes(&layer.plugin_excludes);
     merge_layer_into(base_layer, &layer, None);
 }
 
@@ -135,6 +136,9 @@ fn merge_local_layer(base_layer: &mut ConfigLayer, raw: &Value) {
         &local_layer,
         Some(&local_layer.inherit_mode),
     );
+    // RuboCop plugins write Exclude into default_configuration; project
+    // Exclude replace never removes them.
+    base_layer.reapply_plugin_excludes();
 }
 
 fn process_inheritance_map(
@@ -174,7 +178,18 @@ pub(crate) fn load_config_recursive(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
 ) -> Result<ConfigLayer> {
-    load_config_recursive_inner(config_path, working_dir, visited, gem_cache, None)
+    // Inherited parents export only their own inherit_mode.
+    load_config_with_mode(config_path, working_dir, visited, gem_cache, None, true)
+}
+
+/// Load the project root config; keep accumulated inherit_mode for defaults merge.
+pub(crate) fn load_project_config_recursive(
+    config_path: &Path,
+    working_dir: &Path,
+    visited: &mut HashSet<PathBuf>,
+    gem_cache: Option<&HashMap<String, PathBuf>>,
+) -> Result<ConfigLayer> {
+    load_config_with_mode(config_path, working_dir, visited, gem_cache, None, false)
 }
 
 fn config_parent_dir(config_path: &Path) -> PathBuf {
@@ -190,7 +205,13 @@ fn build_layer_from_raw(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
     raw: &Value,
+    export_own_inherit_mode: bool,
 ) -> ConfigLayer {
+    // When this layer is an inherit_gem/from parent, only export inherit_mode
+    // declared in this file (RuboCop key-order: nested modes don't apply to
+    // how a child's Exclude replaces this file's Exclude). Root project keeps
+    // accumulated mode for merge_with_default.
+    let own_mode = parse_config_layer(raw).inherit_mode;
     let config_dir = config_parent_dir(config_path);
     let mut base_layer = ConfigLayer::empty();
     if let Value::Mapping(map) = raw {
@@ -205,6 +226,9 @@ fn build_layer_from_raw(
         );
     }
     merge_local_layer(&mut base_layer, raw);
+    if export_own_inherit_mode {
+        base_layer.inherit_mode = own_mode;
+    }
     base_layer
 }
 
@@ -215,6 +239,24 @@ pub(crate) fn load_config_recursive_inner(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
     override_contents: Option<&str>,
+) -> Result<ConfigLayer> {
+    load_config_with_mode(
+        config_path,
+        working_dir,
+        visited,
+        gem_cache,
+        override_contents,
+        true,
+    )
+}
+
+fn load_config_with_mode(
+    config_path: &Path,
+    working_dir: &Path,
+    visited: &mut HashSet<PathBuf>,
+    gem_cache: Option<&HashMap<String, PathBuf>>,
+    override_contents: Option<&str>,
+    export_own_inherit_mode: bool,
 ) -> Result<ConfigLayer> {
     if !visited.insert(abs_config_path(config_path)) {
         return Ok(ConfigLayer::empty());
@@ -227,5 +269,6 @@ pub(crate) fn load_config_recursive_inner(
         visited,
         gem_cache,
         &raw,
+        export_own_inherit_mode,
     ))
 }

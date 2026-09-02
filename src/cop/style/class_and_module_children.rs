@@ -38,3 +38,9 @@ impl Cop for ClassAndModuleChildren {
         ));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(ClassAndModuleChildren, "cops/style/class_and_module_children");
+}

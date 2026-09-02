@@ -26,13 +26,35 @@ pub fn matches_redundant_heredoc_delimiter_quotes(source: &SourceFile, node: Nod
 }
 
 pub fn matches_redundant_interpolation(_source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "string" { return false; }
-    let mut cur = node.walk();
-    let kids: Vec<_> = node.named_children(&mut cur).collect();
-    // only one interpolation and nothing else meaningful
-    let interps: Vec<_> = kids.iter().filter(|k| k.kind() == "interpolation").collect();
-    if interps.len() != 1 { return false; }
-    kids.iter().all(|k| k.kind() == "interpolation")
+    let Some(parent) = sole_interp_string(node) else {
+        return false;
+    };
+    !skip_redundant_interp_string(parent)
+}
+
+/// Cop visits `interpolation`; parent must be a string with only that interp.
+fn sole_interp_string(node: Node<'_>) -> Option<Node<'_>> {
+    if node.kind() != "interpolation" {
+        return None;
+    }
+    let parent = node.parent()?;
+    if parent.kind() != "string" {
+        return None;
+    }
+    let mut cur = parent.walk();
+    let kids: Vec<_> = parent.named_children(&mut cur).collect();
+    (kids.len() == 1 && kids[0].kind() == "interpolation").then_some(parent)
+}
+
+fn skip_redundant_interp_string(string: Node<'_>) -> bool {
+    // RuboCop skips parts of implicit concatenation (`"a" "b"` / line-continued).
+    if string.parent().is_some_and(|p| p.kind() == "chained_string") {
+        return true;
+    }
+    // `"#{x}": value` hash labels are not `dstr` in RuboCop's parser — don't flag.
+    string.parent().is_some_and(|p| {
+        p.kind() == "pair" && p.child_by_field_name("key").is_some_and(|k| k.id() == string.id())
+    })
 }
 
 /// RuboCop Style/RedundantPercentQ: `%q`/`%Q` only when `'`/`"` would work equally.

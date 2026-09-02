@@ -140,13 +140,38 @@ mod tests {
     }
 
     #[test]
-    fn allcops_exclude_merges_by_default() {
-        // RuboCop default inherit_mode merges Exclude for AllCops.
+    fn allcops_exclude_replaces_by_default() {
+        // RuboCop replaces AllCops.Exclude unless inherit_mode.merge lists it.
         let dir = tempfile::tempdir().unwrap();
         write_yaml(
             dir.path(),
             "parent.yml",
             "AllCops:\n  Exclude:\n    - 'vendor/**/*'\nLayout/TrailingWhitespace:\n  Enabled: true\n",
+        );
+        let path = write_yaml(
+            dir.path(),
+            ".rubocop.yml",
+            "inherit_from: parent.yml\nAllCops:\n  Exclude:\n    - 'tmp/**/*'\n",
+        );
+        let config = load_config(Some(&path), None, None).unwrap();
+        let excludes = config.global_excludes();
+        assert!(
+            !excludes.iter().any(|e| e == "vendor/**/*"),
+            "parent Exclude should be replaced: {excludes:?}"
+        );
+        assert!(
+            excludes.iter().any(|e| e == "tmp/**/*"),
+            "child Exclude should apply: {excludes:?}"
+        );
+    }
+
+    #[test]
+    fn allcops_exclude_merges_with_inherit_mode() {
+        let dir = tempfile::tempdir().unwrap();
+        write_yaml(
+            dir.path(),
+            "parent.yml",
+            "inherit_mode:\n  merge:\n    - Exclude\nAllCops:\n  Exclude:\n    - 'vendor/**/*'\n",
         );
         let path = write_yaml(
             dir.path(),

@@ -147,6 +147,10 @@ impl Cop for AssociationStyle {
         "FactoryBot/AssociationStyle"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn supports_autocorrect(&self) -> bool {
         true
     }

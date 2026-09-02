@@ -14,6 +14,10 @@ impl Cop for InvertibleUnlessCondition {
         "Style/InvertibleUnlessCondition"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["unless", "unless_modifier"]
     }

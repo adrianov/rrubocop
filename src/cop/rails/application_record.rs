@@ -15,6 +15,10 @@ impl Cop for ApplicationRecord {
         "Rails/ApplicationRecord"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn default_exclude(&self) -> &'static [&'static str] {
         &["db/**/*.rb"]
     }

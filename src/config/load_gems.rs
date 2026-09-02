@@ -78,6 +78,7 @@ fn merge_inherit_layers(base_layer: &mut ConfigLayer, layers: Vec<ConfigLayer>) 
         base_layer
             .user_mentioned_depts
             .extend(layer.user_mentioned_depts.iter().cloned());
+        base_layer.extend_plugin_excludes(&layer.plugin_excludes);
         merge_layer_into(base_layer, &layer, None);
     }
 }

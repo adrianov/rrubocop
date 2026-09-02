@@ -15,6 +15,10 @@ impl Cop for IdenticalConditionalBranches {
         "Style/IdenticalConditionalBranches"
     }
 
+    fn redundant_disable_audit(&self) -> bool {
+        false
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["if", "case", "unless", "conditional"]
     }

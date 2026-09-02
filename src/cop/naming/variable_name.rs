@@ -1,4 +1,8 @@
 //! Naming/VariableName — locals/ivars snake_case (EnforcedStyle).
+//!
+//! RuboCop aliases `on_lvar` → `on_lvasgn`, so reads of pattern-bound locals
+//! (`applyTime` after `=> { applyTime: }`) are flagged; intros via `match_var`
+//! are not.
 
 use std::sync::LazyLock;
 
@@ -8,6 +12,7 @@ use tree_sitter::Node;
 use crate::cop::shared::node_bytes;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
+use crate::model::IntroKind;
 use crate::parse::source::SourceFile;
 
 pub struct VariableName;
@@ -107,16 +112,16 @@ fn check_forbidden(
     }
 }
 
-fn check_name(
+fn check_name_str(
     cop: &VariableName,
     source: &SourceFile,
-    name_node: Node<'_>,
+    name: &str,
+    line: usize,
+    column: usize,
     config: &CopConfig,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let raw = String::from_utf8_lossy(node_bytes(source, name_node));
-    let name = bare_name(&raw);
-    let (line, column) = source.offset_to_line_col(name_node.start_byte());
+    let name = bare_name(name);
     check_forbidden(cop, source, name, line, column, config, diagnostics);
     if allowed(config, name) {
         return;
@@ -138,13 +143,77 @@ fn check_name(
     ));
 }
 
+fn check_name(
+    cop: &VariableName,
+    source: &SourceFile,
+    name_node: Node<'_>,
+    config: &CopConfig,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let raw = String::from_utf8_lossy(node_bytes(source, name_node));
+    let (line, column) = source.offset_to_line_col(name_node.start_byte());
+    check_name_str(cop, source, &raw, line, column, config, diagnostics);
+}
+
+fn check_entry(
+    cop: &VariableName,
+    source: &SourceFile,
+    file_model: &crate::model::FileModel<'_>,
+    name: &str,
+    entry: &crate::model::Entry,
+    config: &CopConfig,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    for byte in entry_check_bytes(entry) {
+        let (line, column) = file_model.line_col(byte);
+        check_name_str(cop, source, name, line, column, config, diagnostics);
+    }
+}
+
+fn entry_check_bytes(entry: &crate::model::Entry) -> Vec<usize> {
+    let mut bytes: Vec<_> = entry.reads.iter().map(|r| r.byte).collect();
+    if entry.writes.is_empty() {
+        if entry.intro_kind != IntroKind::Pattern {
+            bytes.push(entry.intro_byte);
+        }
+        return bytes;
+    }
+    for w in &entry.writes {
+        if entry.intro_kind == IntroKind::Pattern && w.byte == entry.intro_byte {
+            continue;
+        }
+        bytes.push(w.byte);
+    }
+    bytes
+}
+
 impl Cop for VariableName {
     fn name(&self) -> &'static str {
         "Naming/VariableName"
     }
 
+    fn needs_file_model(&self) -> bool {
+        true
+    }
+
     fn interested_node_kinds(&self) -> &'static [&'static str] {
+        // Locals via FileModel; ivars/cvars are not in the model.
         &["assignment", "operator_assignment"]
+    }
+
+    fn check_file_model(
+        &self,
+        source: &SourceFile,
+        file_model: &crate::model::FileModel<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        _corrections: Option<&mut Vec<crate::correction::Correction>>,
+    ) {
+        for scope in &file_model.scopes {
+            for (name, entry) in &scope.entries {
+                check_entry(self, source, file_model, name, entry, config, diagnostics);
+            }
+        }
     }
 
     fn check_node(
@@ -160,10 +229,7 @@ impl Cop for VariableName {
                 let Some(left) = node.child_by_field_name("left") else {
                     return;
                 };
-                if matches!(
-                    left.kind(),
-                    "identifier" | "instance_variable" | "class_variable"
-                ) {
+                if matches!(left.kind(), "instance_variable" | "class_variable") {
                     check_name(self, source, left, config, diagnostics);
                 }
             }
