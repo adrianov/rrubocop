@@ -144,7 +144,7 @@ fn whole_token(line: &str, byte: usize, len: usize) -> bool {
     before && after
 }
 
-pub(super) fn nth_cop_token(line: &str, cop: &str, occurrence: usize) -> Option<(usize, usize)> {
+pub(crate) fn nth_cop_token(line: &str, cop: &str, occurrence: usize) -> Option<(usize, usize)> {
     let lower = line.to_ascii_lowercase();
     let needle = cop.to_ascii_lowercase();
     let mut found = 0usize;

@@ -1,5 +1,5 @@
 use super::directives::{
-    collect_directives, cop_highlight, redundant_col, DisableDirective,
+    collect_directives, cop_highlight, cop_names, disable_marker, redundant_col, DisableDirective,
 };
 use super::removal::push_removal;
 use super::RedundantCopDisableDirective;
@@ -83,25 +83,80 @@ fn redundant_offense(
     diag
 }
 
+fn block_disable_cops(source: &SourceFile, line_no: usize) -> Option<Vec<String>> {
+    let line = source.line_text(line_no)?;
+    if !line.trim_start().starts_with('#') {
+        return None;
+    }
+    let (_, rest) = disable_marker(&line)?;
+    Some(cop_names(rest))
+}
+
+fn all_block_disable_cops_redundant(
+    source: &SourceFile,
+    dir: &DisableDirective,
+    offenses: &[Diagnostic],
+    active: &[(&dyn Cop, &CopConfig)],
+) -> bool {
+    block_disable_cops(source, dir.line).is_some_and(|cops| {
+        cops.iter()
+            .all(|name| cop_is_redundant(name, dir, offenses, active))
+    })
+}
+
+fn remove_entire_disable_line(
+    source: &SourceFile,
+    dir: &DisableDirective,
+    offenses: &[Diagnostic],
+    active: &[(&dyn Cop, &CopConfig)],
+    remove_entire: bool,
+) -> bool {
+    if !remove_entire {
+        return false;
+    }
+    if dir.range.0 == dir.range.1 {
+        return true;
+    }
+    all_block_disable_cops_redundant(source, dir, offenses, active)
+}
+
 fn apply_redundant_fix(
     source: &SourceFile,
-    line_no: usize,
+    dir: &DisableDirective,
     name: &str,
     remove_entire: bool,
     entire_fix: &mut bool,
-    corrections: Option<&mut Vec<Correction>>,
+    offenses: &[Diagnostic],
+    active: &[(&dyn Cop, &CopConfig)],
+    mut corrections: Option<&mut Vec<Correction>>,
     diag: &mut Diagnostic,
 ) {
-    if remove_entire {
+    let remove_line =
+        remove_entire_disable_line(source, dir, offenses, active, remove_entire);
+    if remove_line {
         if !*entire_fix {
-            push_removal(source, line_no, name, None, corrections, diag);
+            push_removal(
+                source,
+                dir.line,
+                name,
+                None,
+                corrections.as_deref_mut(),
+                diag,
+            );
             *entire_fix = true;
         } else if corrections.is_some() {
             diag.corrected = true;
         }
         return;
     }
-    push_removal(source, line_no, name, Some(1), corrections, diag);
+    push_removal(
+        source,
+        dir.line,
+        name,
+        Some(1),
+        corrections.as_deref_mut(),
+        diag,
+    );
 }
 
 fn report_directive_redundancies(
@@ -128,10 +183,12 @@ fn report_directive_redundancies(
         let mut diag = redundant_offense(cop, source, line, dir, name);
         apply_redundant_fix(
             source,
-            dir.line,
+            dir,
             name,
             remove_entire,
             &mut entire_fix,
+            offenses,
+            active,
             corrections.as_deref_mut(),
             &mut diag,
         );
