@@ -1,8 +1,10 @@
 //! Bundler/OrderedGems — alphabetical gem order within Gemfile sections.
 
+mod name;
+
 use tree_sitter::{Node, Tree};
 
-use crate::cop::shared::{argument_nodes, call_method_name, node_bytes, node_text};
+use crate::cop::shared::call_method_name;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::codemap::CodeMap;
@@ -81,7 +83,10 @@ fn check_pair(
     if !consecutive_gems(source, previous, current, treat_comments) {
         return;
     }
-    let (Some(prev_name), Some(curr_name)) = (gem_name(source, previous), gem_name(source, current)) else {
+    let (Some(prev_name), Some(curr_name)) = (
+        name::gem_name(source, previous),
+        name::gem_name(source, current),
+    ) else {
         return;
     };
     let prev_key = sort_key(&prev_name, consider_punct);
@@ -158,69 +163,6 @@ fn sort_key(name: &str, consider_punctuation: bool) -> String {
 fn is_gem_call(source: &SourceFile, node: Node<'_>) -> bool {
     matches!(node.kind(), "call" | "command" | "command_call")
         && call_method_name(source, node) == Some(b"gem")
-}
-
-fn gem_name(source: &SourceFile, node: Node<'_>) -> Option<String> {
-    let first = argument_nodes(node).into_iter().next()?;
-    gem_name_from_node(source, first)
-}
-
-fn gem_name_from_node(source: &SourceFile, mut node: Node<'_>) -> Option<String> {
-    loop {
-        match node.kind() {
-            "string" => {
-                let bytes = node_bytes(source, node);
-                return Some(String::from_utf8_lossy(strip_quotes(bytes)).into_owned());
-            }
-            "call" | "method_call" | "command_call" => {
-                node = node.child_by_field_name("receiver")?;
-            }
-            _ => {
-                let text = node_text(source, node);
-                return extract_gem_name_text(&text);
-            }
-        }
-    }
-}
-
-fn extract_gem_name_text(text: &str) -> Option<String> {
-    let s = text.trim();
-    if s.starts_with('\'') || s.starts_with('"') {
-        let quote = s.as_bytes()[0];
-        let rest = &s[1..];
-        let end = rest.find(|c: char| c as u8 == quote)?;
-        return Some(rest[..end].to_string());
-    }
-    parse_percent_string(s).map(|(name, _)| name)
-}
-
-fn parse_percent_string(s: &str) -> Option<(String, usize)> {
-    let rest = s.strip_prefix('%')?;
-    let (body, base) = match rest.as_bytes().first()? {
-        b'q' | b'Q' => (&rest[1..], 2),
-        _ => (rest, 1),
-    };
-    let (close, open_len) = match body.as_bytes().first()? {
-        b'<' => ('>', 1),
-        b'(' => (')', 1),
-        b'[' => (']', 1),
-        b'{' => ('}', 1),
-        _ => return None,
-    };
-    let inner = &body[open_len..];
-    let end = inner.find(close)?;
-    Some((inner[..end].to_string(), base + open_len + end + 1))
-}
-
-fn strip_quotes(bytes: &[u8]) -> &[u8] {
-    if bytes.len() >= 2
-        && ((bytes[0] == b'"' && bytes[bytes.len() - 1] == b'"')
-            || (bytes[0] == b'\'' && bytes[bytes.len() - 1] == b'\''))
-    {
-        &bytes[1..bytes.len() - 1]
-    } else {
-        bytes
-    }
 }
 
 #[cfg(test)]

@@ -35,6 +35,23 @@ impl Cop for StringLiteralsInInterpolation {
     }
 }
 
+fn string_style_bad(b: &[u8], style: &str) -> bool {
+    let dq = b.starts_with(b"\"");
+    let sq = b.starts_with(b"'");
+    match style {
+        "single_quotes" => dq && !double_quotes_required(b),
+        "double_quotes" => sq,
+        _ => false,
+    }
+}
+
+fn nested_interpolation(child: Node<'_>) -> bool {
+    let mut cur = child.walk();
+    child
+        .named_children(&mut cur)
+        .any(|c| c.kind() == "interpolation")
+}
+
 fn report_string(
     cop: &StringLiteralsInInterpolation,
     source: &SourceFile,
@@ -42,25 +59,11 @@ fn report_string(
     style: &str,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    if child.kind() != "string" {
-        return;
-    }
-    let mut cur = child.walk();
-    if child
-        .named_children(&mut cur)
-        .any(|c| c.kind() == "interpolation")
-    {
+    if child.kind() != "string" || nested_interpolation(child) {
         return;
     }
     let b = node_bytes(source, child);
-    let dq = b.starts_with(b"\"");
-    let sq = b.starts_with(b"'");
-    let bad = match style {
-        "single_quotes" => dq && !double_quotes_required(b),
-        "double_quotes" => sq,
-        _ => false,
-    };
-    if !bad {
+    if !string_style_bad(b, style) {
         return;
     }
     let (line, col) = source.offset_to_line_col(child.start_byte());

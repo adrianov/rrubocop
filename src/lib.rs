@@ -23,8 +23,8 @@ use cop::registry::CopRegistry;
 use diagnostic::Diagnostic;
 use formatter::color::Color;
 use formatter::{create_formatter, Formatter, ProgressSink};
-use linter::{run_linter, run_linter_with, should_fail};
-use parse::source::SourceFile;
+use cli::AutocorrectMode;
+use linter::{lint_bytes_autocorrect, run_linter, run_linter_with, should_fail};
 
 pub fn run() -> Result<ExitCode> {
     unsafe {
@@ -139,12 +139,7 @@ fn lint_stdin(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> R
     let path = args.stdin.as_ref().unwrap();
     let mut buf = Vec::new();
     std::io::stdin().read_to_end(&mut buf)?;
-    let diags = lint_stdin_source(
-        args,
-        config,
-        registry,
-        &SourceFile::from_bytes(path.clone(), buf),
-    )?;
+    let diags = lint_stdin_source(args, config, registry, path, &mut buf)?;
     Ok(print_results(args, &diags, std::slice::from_ref(path)))
 }
 
@@ -152,19 +147,25 @@ fn lint_stdin_source(
     args: &Args,
     config: &ResolvedConfig,
     registry: &CopRegistry,
-    source: &SourceFile,
+    path: &std::path::Path,
+    bytes: &mut Vec<u8>,
 ) -> Result<Vec<Diagnostic>> {
     let filters = CopFilterSet::build(config, registry);
     let only = (!args.only.is_empty()).then(|| args.only.clone());
-    linter::lint_source(
-        source,
+    let mode = args.autocorrect_mode();
+    let diags = lint_bytes_autocorrect(
+        path,
+        bytes,
         config,
         registry,
         &filters,
         only.as_deref(),
         &args.except,
-        args.autocorrect_mode(),
+        mode,
         args.ignore_disable_comments,
-        false,
-    )
+    )?;
+    if mode != AutocorrectMode::Off && path.is_file() {
+        std::fs::write(path, bytes)?;
+    }
+    Ok(diags)
 }

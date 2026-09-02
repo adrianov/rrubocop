@@ -187,7 +187,9 @@ impl ResolvedConfig {
             .filter(|(_name, config)| match config.enabled {
                 EnabledState::True => true,
                 EnabledState::Unset => !self.disabled_by_default,
-                EnabledState::Pending => self.new_cops == NewCopsPolicy::Enable,
+                EnabledState::Pending => {
+                    self.new_cops == NewCopsPolicy::Enable && !self.disabled_by_default
+                }
                 EnabledState::False => false,
             })
             .map(|(name, _)| name.clone())

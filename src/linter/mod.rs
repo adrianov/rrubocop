@@ -15,6 +15,8 @@ use crate::diagnostic::{Diagnostic, Severity};
 
 pub use engine::lint_source;
 
+pub(crate) use engine::lint_bytes_autocorrect;
+
 pub struct LintResult {
     pub diagnostics: Vec<Diagnostic>,
     pub files: Vec<PathBuf>,

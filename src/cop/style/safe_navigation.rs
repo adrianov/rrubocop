@@ -32,7 +32,10 @@ impl Cop for SafeNavigation {
             }
             return;
         }
-        if !is_and_safe_nav(source, node) || lhs_reassigned_in_method(source, node) {
+        if !is_and_safe_nav(source, node)
+            || lhs_reassigned_in_method(source, node)
+            || inside_block(node)
+        {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
@@ -96,6 +99,17 @@ fn is_and_safe_nav(source: &SourceFile, node: Node<'_>) -> bool {
         return false;
     };
     node_bytes(source, kids[0]) == node_bytes(source, recv)
+}
+
+fn inside_block(node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(n) = p {
+        if matches!(n.kind(), "block" | "do_block" | "lambda") {
+            return true;
+        }
+        p = n.parent();
+    }
+    false
 }
 
 fn lhs_reassigned_in_method(source: &SourceFile, node: Node<'_>) -> bool {
@@ -167,4 +181,11 @@ fn walk_assignments(
     for child in node.children(&mut cur) {
         walk_assignments(source, child, name, before, found);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    crate::cop_fixture_tests!(SafeNavigation, "cops/style/safe_navigation");
 }

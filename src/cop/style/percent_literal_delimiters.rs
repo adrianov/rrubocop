@@ -49,21 +49,31 @@ fn rubocop_default_delimiters(ty: &[u8]) -> &'static str {
     }
 }
 
-fn preferred_pair(config: &CopConfig, ty: &[u8]) -> (u8, u8) {
-    let key = std::str::from_utf8(ty).unwrap_or("default");
-    let map = config.options.get("PreferredDelimiters");
-    let pref = map
-        .and_then(|v| v.as_mapping())
-        .and_then(|m| {
-            m.get(&serde_yml::Value::String(key.to_string()))
-                .or_else(|| m.get(&serde_yml::Value::String("default".into())))
-        })
+fn mapping_pref<'a>(map: &'a serde_yml::Mapping, key: &str) -> Option<&'a str> {
+    map.get(&serde_yml::Value::String(key.to_string()))
+        .or_else(|| map.get(&serde_yml::Value::String("default".into())))
         .and_then(|v| v.as_str())
-        .unwrap_or_else(|| rubocop_default_delimiters(ty));
+}
+
+fn preferred_pair(config: &CopConfig, ty: &[u8]) -> (u8, u8) {
+    let default = rubocop_default_delimiters(ty);
+    let key = std::str::from_utf8(ty).unwrap_or("default");
+    let pref = config
+        .options
+        .get("PreferredDelimiters")
+        .and_then(|v| v.as_mapping())
+        .and_then(|m| mapping_pref(m, key))
+        .unwrap_or(default);
     let mut chars = pref.bytes();
     let open = chars.next().unwrap_or(b'(');
     let close = chars.next().unwrap_or(close_for(open));
     (open, close)
+}
+
+fn skip_delim_report(text: &[u8], ty: &[u8], used_open: u8, pref_open: u8, pref_close: u8) -> bool {
+    used_open == pref_open
+        || contains_delims(text, pref_open, pref_close)
+        || ((ty == b"%w" || ty == b"%i") && contains_delims(text, used_open, close_for(used_open)))
 }
 
 fn contains_delims(text: &[u8], open: u8, close: u8) -> bool {
@@ -125,13 +135,7 @@ impl Cop for PercentLiteralDelimiters {
             return;
         };
         let (pref_open, pref_close) = preferred_pair(config, ty);
-        if used_open == pref_open {
-            return;
-        }
-        if contains_delims(text, pref_open, pref_close) {
-            return;
-        }
-        if (ty == b"%w" || ty == b"%i") && contains_delims(text, used_open, close_for(used_open)) {
+        if skip_delim_report(text, ty, used_open, pref_open, pref_close) {
             return;
         }
         let ty_s = std::str::from_utf8(ty).unwrap_or("%");

@@ -367,13 +367,17 @@ mod tests {
         assert_eq!(a.cache_fingerprint(), b.cache_fingerprint());
     }
 
+    fn scan_root_project(home: &Path, name: &str) -> PathBuf {
+        let project = home.join(name);
+        fs::create_dir_all(&project).unwrap();
+        project
+    }
+
     #[test]
     fn cache_fingerprint_differs_by_scan_root() {
         let home = tempfile::tempdir().unwrap();
-        let project_a = home.path().join("a");
-        let project_b = home.path().join("b");
-        fs::create_dir_all(&project_a).unwrap();
-        fs::create_dir_all(&project_b).unwrap();
+        let project_a = scan_root_project(home.path(), "a");
+        let project_b = scan_root_project(home.path(), "b");
         write_config(home.path(), "Style/Foo:\n  Enabled: true\n");
         write_yaml(
             &project_a,
@@ -406,5 +410,28 @@ mod tests {
             config.disabled_by_dir_override("Style/RedundantPercentQ", rel),
             "relative guides path should disable Style/RedundantPercentQ"
         );
+    }
+
+    #[test]
+    fn puma_like_disabled_by_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = write_config(
+            dir.path(),
+            "plugins: rubocop-performance\n\nAllCops:\n  DisabledByDefault: true\n  NewCops: enable\n\nPerformance:\n  Enabled: true\n\nLayout/SpaceBeforeBlockBraces:\n  Enabled: true\n",
+        );
+        let config = load_config(Some(&path), Some(dir.path()), None).unwrap();
+        assert!(config.disabled_by_default);
+        assert!(config.is_cop_enabled(
+            "Layout/SpaceBeforeBlockBraces",
+            std::path::Path::new("a.rb"),
+            &[],
+            &[]
+        ));
+        assert!(!config.is_cop_enabled(
+            "Style/RedundantConstantBase",
+            std::path::Path::new("a.rb"),
+            &[],
+            &[]
+        ));
     }
 }

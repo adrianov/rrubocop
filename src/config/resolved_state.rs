@@ -64,7 +64,7 @@ pub(crate) fn state_to_enabled(
 ) -> bool {
     match state {
         EnabledState::False => false,
-        EnabledState::Pending => new_cops == NewCopsPolicy::Enable,
+        EnabledState::Pending => new_cops == NewCopsPolicy::Enable && !disabled_by_default,
         EnabledState::Unset => !disabled_by_default && default_enabled,
         EnabledState::True => true,
     }

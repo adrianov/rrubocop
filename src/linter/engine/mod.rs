@@ -1,5 +1,6 @@
 //! Per-file cop execution (line / source / AST phases).
 
+mod autocorrect;
 mod node_phase;
 mod offense;
 mod source_phase;
@@ -19,6 +20,13 @@ use crate::parse::source::SourceFile;
 
 type ActiveCop<'a> = syntax_gate::ActiveCop<'a>;
 
+pub struct LintOutput {
+    pub diagnostics: Vec<Diagnostic>,
+    pub corrections: Option<Vec<Correction>>,
+}
+
+pub(crate) use autocorrect::{lint_bytes_autocorrect, lint_file_autocorrect};
+
 pub fn lint_source(
     source: &SourceFile,
     config: &ResolvedConfig,
@@ -28,11 +36,13 @@ pub fn lint_source(
     except: &[String],
     mode: AutocorrectMode,
     ignore_disable: bool,
-    write_autocorrect: bool,
-) -> Result<Vec<Diagnostic>> {
+) -> Result<LintOutput> {
     let active = select_active(source, config, registry, filters, only, except);
     if active.is_empty() {
-        return Ok(Vec::new());
+        return Ok(LintOutput {
+            diagnostics: Vec::new(),
+            corrections: None,
+        });
     }
     let tree = parse::parse_ruby(source)?;
     let mut diagnostics = Vec::new();
@@ -57,10 +67,24 @@ pub fn lint_source(
         &mut diagnostics,
         &mut corrections,
     );
-    if write_autocorrect {
-        write_fixes(source, corrections.take())?;
-    }
-    Ok(diagnostics)
+    finalize_corrections(source, &mut diagnostics, &mut corrections);
+    Ok(LintOutput {
+        diagnostics,
+        corrections,
+    })
+}
+
+fn finalize_corrections(
+    source: &SourceFile,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
+    let Some(corrs) = corrections.as_mut() else {
+        return;
+    };
+    let set = CorrectionSet::from_vec(std::mem::take(corrs));
+    crate::correction::reconcile_corrected(diagnostics, source, &set);
+    *corrs = set.accepted().to_vec();
 }
 
 fn run_file_cops(
@@ -266,13 +290,3 @@ pub(super) fn finish_cop_pass(
     }
 }
 
-fn write_fixes(source: &SourceFile, corrections: Option<Vec<Correction>>) -> Result<()> {
-    let Some(corrs) = corrections.filter(|c| !c.is_empty()) else {
-        return Ok(());
-    };
-    let set = CorrectionSet::from_vec(corrs);
-    if !set.is_empty() {
-        std::fs::write(&source.path, set.apply(source.as_bytes()))?;
-    }
-    Ok(())
-}

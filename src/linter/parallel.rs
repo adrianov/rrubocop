@@ -278,17 +278,30 @@ fn lint_file(
     if let Some(hit) = cache_get(cache, cache_read, path, &source, settings) {
         return Ok(hit);
     }
-    let diags = lint_source(
-        &source,
-        config,
-        registry,
-        filters,
-        only,
-        except,
-        mode,
-        ignore_disable,
-        true,
-    )?;
+    let diags = if mode == AutocorrectMode::Off {
+        lint_source(
+            &source,
+            config,
+            registry,
+            filters,
+            only,
+            except,
+            mode,
+            ignore_disable,
+        )?
+        .diagnostics
+    } else {
+        super::engine::lint_file_autocorrect(
+            path,
+            config,
+            registry,
+            filters,
+            only,
+            except,
+            mode,
+            ignore_disable,
+        )?
+    };
     cache_put(cache, path, &source, settings, &diags);
     Ok(diags)
 }
