@@ -99,6 +99,27 @@ fn method_body(node: Node<'_>) -> Option<Node<'_>> {
     })
 }
 
+fn find_forwarding_call(
+    source: &SourceFile,
+    body: Node<'_>,
+    rest: &[u8],
+    block: &[u8],
+) -> Option<usize> {
+    let mut stack = vec![body];
+    while let Some(n) = stack.pop() {
+        if forwards_call(source, n, rest, block) && lvars_in_range(body, n.start_byte(), n.end_byte()) {
+            return Some(n.start_byte());
+        }
+        let mut cur = n.walk();
+        for child in n.named_children(&mut cur) {
+            if matches!(child.kind(), "call" | "command" | "body_statement" | "begin") {
+                stack.push(child);
+            }
+        }
+    }
+    None
+}
+
 impl Cop for ArgumentsForwarding {
     fn name(&self) -> &'static str {
         "Style/ArgumentsForwarding"
@@ -131,27 +152,16 @@ impl Cop for ArgumentsForwarding {
         let Some(body) = method_body(node) else {
             return;
         };
-        let mut stack = vec![body];
-        while let Some(n) = stack.pop() {
-            if forwards_call(source, n, rest, block)
-                && lvars_in_range(body, n.start_byte(), n.end_byte())
-            {
-                let (line, col) = source.offset_to_line_col(n.start_byte());
-                diagnostics.push(self.diagnostic(
-                    source,
-                    line,
-                    col,
-                    "Use arguments forwarding.".to_string(),
-                ));
-                return;
-            }
-            let mut cur = n.walk();
-            for child in n.named_children(&mut cur) {
-                if matches!(child.kind(), "call" | "command" | "body_statement" | "begin") {
-                    stack.push(child);
-                }
-            }
-        }
+        let Some(off) = find_forwarding_call(source, body, rest, block) else {
+            return;
+        };
+        let (line, col) = source.offset_to_line_col(off);
+        diagnostics.push(self.diagnostic(
+            source,
+            line,
+            col,
+            "Use arguments forwarding.".to_string(),
+        ));
     }
 }
 
