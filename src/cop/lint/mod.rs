@@ -59,6 +59,7 @@ mod underscore_prefixed_variable_name;
 mod unified_integer;
 mod unreachable_code;
 mod unused_block_argument;
+mod unused_method_argument;
 mod useless_access_modifier;
 mod useless_assignment;
 mod useless_else_without_rescue;
@@ -131,6 +132,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         unified_integer::UnifiedInteger,
         unreachable_code::UnreachableCode,
         unused_block_argument::UnusedBlockArgument,
+        unused_method_argument::UnusedMethodArgument,
         useless_access_modifier::UselessAccessModifier,
         useless_assignment::UselessAssignment,
         useless_else_without_rescue::UselessElseWithoutRescue,

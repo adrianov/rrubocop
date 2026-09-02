@@ -54,6 +54,7 @@ mod initial_indentation;
 mod keyword_space;
 mod leading_comment_space;
 mod leading_empty_lines;
+mod line_length;
 mod line_breaks;
 mod line_continuation_leading_space;
 mod line_continuation_spacing;
@@ -152,6 +153,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         initial_indentation::InitialIndentation,
         leading_comment_space::LeadingCommentSpace,
         leading_empty_lines::LeadingEmptyLines,
+        line_length::LineLength,
         line_continuation_leading_space::LineContinuationLeadingSpace,
         line_continuation_spacing::LineContinuationSpacing,
         line_end_string_concatenation_indentation::LineEndStringConcatenationIndentation,

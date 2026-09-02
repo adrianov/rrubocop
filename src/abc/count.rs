@@ -57,13 +57,11 @@ impl<'f> Calc<'f> {
     }
 
     fn count_operator_assignment(&mut self, n: Node) {
-        let lhs = n
-            .child_by_field_name("left")
-            .map(|l| self.asgn_child_score(l, true));
-        let rhs = n
-            .child_by_field_name("right")
-            .map(|r| self.asgn_child_score(r, false));
-        self.a += lhs.unwrap_or(0) + rhs.unwrap_or(0);
+        // RuboCop counts only the LHS (via the nested ivasgn/lvasgn/setter);
+        // the RHS is scored when walked (branches/conditions), not as assignment.
+        if let Some(l) = n.child_by_field_name("left") {
+            self.a += self.asgn_child_score(l, true);
+        }
         if matches!(self.field(n, "operator"), "||=" | "&&=") {
             self.c += 1;
         }
@@ -96,9 +94,11 @@ impl<'f> Calc<'f> {
         // `defined?` is a dedicated parser node type: neither branch nor
         // condition. `-1` folds into the literal. Others are one branch.
         let op = self.field(n, "operator");
+        // tree-sitter-ruby uses `integer`/`float` (not `*_literal`); folded
+        // signed literals are not branches (RuboCop parser emits them as int/float).
         let folded_number = matches!(op, "-" | "+")
             && n.child_by_field_name("operand")
-                .is_some_and(|o| matches!(o.kind(), "integer_literal" | "float_literal"));
+                .is_some_and(|o| matches!(o.kind(), "integer" | "float"));
         if op != "defined?" && !folded_number {
             self.b += 1;
         }

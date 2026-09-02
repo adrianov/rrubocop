@@ -78,19 +78,9 @@ fn check_comment(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let start = comment.start_byte();
-    let (line, col) = source.offset_to_line_col(start);
-    let ls = source.line_start(line).unwrap_or(0);
-    if !standalone_comment(bytes, ls, start) {
-        return;
-    }
-    let Some(next) = next_code_line(source, bytes, line) else {
+    let Some((start, col, ls, expected)) = bad_indent(source, bytes, comment, width) else {
         return;
     };
-    let expected = expected_col(next, width);
-    if col == expected || (two_alternatives(next) && col == expected + width) {
-        return;
-    }
     report::report_fix(
         cop,
         source,
@@ -102,6 +92,34 @@ fn check_comment(
         start,
         " ".repeat(expected),
     );
+}
+
+/// Standalone `#` comment site: (start, line, col, line_start).
+fn hash_comment_site(
+    source: &SourceFile,
+    bytes: &[u8],
+    comment: Node<'_>,
+) -> Option<(usize, usize, usize, usize)> {
+    let start = comment.start_byte();
+    if bytes.get(start) != Some(&b'#') {
+        return None;
+    }
+    let (line, col) = source.offset_to_line_col(start);
+    let ls = source.line_start(line).unwrap_or(0);
+    standalone_comment(bytes, ls, start).then_some((start, line, col, ls))
+}
+
+fn bad_indent(
+    source: &SourceFile,
+    bytes: &[u8],
+    comment: Node<'_>,
+    width: usize,
+) -> Option<(usize, usize, usize, usize)> {
+    let (start, line, col, ls) = hash_comment_site(source, bytes, comment)?;
+    let next = next_code_line(source, bytes, line)?;
+    let expected = expected_col(next, width);
+    let ok = col == expected || (two_alternatives(next) && col == expected + width);
+    (!ok).then_some((start, col, ls, expected))
 }
 
 impl Cop for CommentIndentation {
@@ -139,4 +157,10 @@ impl Cop for CommentIndentation {
             );
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(CommentIndentation, "cops/layout/comment_indentation");
 }

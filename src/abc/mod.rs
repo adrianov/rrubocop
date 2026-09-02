@@ -237,4 +237,22 @@ end
         assert_eq!(o.vector, "<3, 15, 5>");
         assert!((o.score - 16.09).abs() < 1e-9);
     }
+
+    #[test]
+    fn operator_assignment_counts_lhs_only() {
+        // RuboCop: RHS of ||= is not an extra assignment (only LHS + nested args).
+        let s = scores("def f\n  @x ||= g do |c|\n    c.h\n  end\nend\n");
+        assert_eq!(s[0].vector, "<2, 2, 1>", "got {}", s[0].vector);
+    }
+
+    #[test]
+    fn signed_integer_literal_not_a_branch() {
+        // RuboCop AbcSize scores method *body* only (own params excluded).
+        // tree-sitter emits `-1` as unary+integer; that must not be a branch.
+        let s = scores(
+            "def edit_draft(*mids)\n  allow(api).to receive(:send_message).and_return(*(mids.presence || [9]).map { |id| double(message_id: id) })\n  allow(api).to receive(:edit_message_text)\n  described_class.new(bot, chat_id: -1, transport: :edit, logger: null_log)\nend\n",
+        );
+        assert_eq!(s[0].vector, "<1, 16, 2>");
+        assert!((s[0].score - 16.16).abs() < 1e-9);
+    }
 }
