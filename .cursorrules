@@ -21,4 +21,5 @@
 - Parity on external projects: compare against `bundle exec rubocop` (project Gemfile), not bare `rubocop` from PATH — see `.cursor/rules/cop-parity-tests.mdc`
 - CI (`ci.yml`): `cargo test --locked` + [abcop](https://github.com/adrianov/abcop) `--full` (pinned `.deb` from Releases; AbcSize ≤17 / ModuleAbcSize ≤120; no Rust disable directives — split modules / extract fns)
 - Publish (`publish.yml`): tag `v*` → crates.io + Ubuntu 22.04 `.deb` + macOS `.tar.gz` GitHub Release; Homebrew tap `adrianov/rrubocop`
+- `.cursor/rules/abcop-diff-review.mdc` — before finishing code changes: `abcop --full` (AbcSize ≤17, ModuleAbcSize ≤120; refactor, no disables) + `git diff -w -W --histogram --no-prefix` for semantic review; smallest correct diff
 - `.cursor/rules/squash-merge-prs.mdc` — auto squash-merge every ready PR after `ci`, then delete the head branch; `.github/workflows/auto-merge.yml` lands them (do not `gh pr merge --auto` here — no required checks)
