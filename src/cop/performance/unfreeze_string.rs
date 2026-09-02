@@ -2,7 +2,7 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared::{call_method_name, call_receiver, is_const_named, node_text};
+use crate::cop::shared::{call_method_name, call_receiver, node_bytes, node_text};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -23,6 +23,10 @@ fn string_new_ok(node: Node<'_>) -> bool {
     }
 }
 
+fn is_bare_string_const(source: &SourceFile, node: Node<'_>) -> bool {
+    node.kind() == "constant" && node_bytes(source, node) == b"String"
+}
+
 fn is_unfreeze(source: &SourceFile, node: Node<'_>, ruby_ver: f64) -> bool {
     let Some(method) = call_method_name(source, node) else {
         return false;
@@ -31,8 +35,8 @@ fn is_unfreeze(source: &SourceFile, node: Node<'_>, ruby_ver: f64) -> bool {
         return false;
     };
     match method {
-        b"new" => is_const_named(source, recv, b"String") && string_new_ok(node),
-        b"to_s" | b"to_str" => is_const_named(source, recv, b"String"),
+        b"new" => is_bare_string_const(source, recv) && string_new_ok(node),
+        b"to_s" | b"to_str" => is_bare_string_const(source, recv),
         // RuboCop-performance skips `.dup` when TargetRubyVersion > 3.2.
         b"dup" | b"clone" => ruby_ver <= 3.2 && empty_string_literal(source, recv),
         _ => false,
