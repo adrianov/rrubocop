@@ -1,5 +1,7 @@
 //! Layout/LineLength — lines must not exceed Max columns.
 
+use std::sync::LazyLock;
+
 use regex::Regex;
 use tree_sitter::{Node, Tree};
 
@@ -9,10 +11,16 @@ use crate::parse::source::SourceFile;
 
 pub struct LineLength;
 
+static QUALIFIED_NAME_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\b(?:[A-Z][A-Za-z0-9_]*::)+[A-Za-z_][A-Za-z0-9_]*\b")
+        .expect("qualified name regex")
+});
+
 struct Settings {
     max: usize,
     allow_hdoc: bool,
     allow_uri: bool,
+    allow_qualified: bool,
     ignore_directives: bool,
     schemes: Vec<String>,
     patterns: Vec<Regex>,
@@ -38,18 +46,18 @@ fn allow_heredoc(config: &CopConfig) -> bool {
 }
 
 fn load_settings(config: &CopConfig, tree: &Tree) -> Settings {
-    let schemes = string_list(config, "URISchemes");
+    let mut schemes = string_list(config, "URISchemes");
+    if schemes.is_empty() {
+        schemes = vec!["http".into(), "https".into()];
+    }
     let allow_hdoc = allow_heredoc(config);
     Settings {
         max: config.get_usize("Max", 120),
         allow_hdoc,
         allow_uri: config.get_bool("AllowURI", true),
+        allow_qualified: config.get_bool("AllowQualifiedName", true),
         ignore_directives: config.get_bool("IgnoreCopDirectives", true),
-        schemes: if schemes.is_empty() {
-            vec!["http".into(), "https".into()]
-        } else {
-            schemes
-        },
+        schemes,
         patterns: string_list(config, "AllowedPatterns")
             .into_iter()
             .filter_map(|p| Regex::new(&p).ok())
@@ -114,6 +122,29 @@ fn uri_allows(cfg: &Settings, text: &str) -> bool {
         && uri_start(text, &cfg.schemes).is_some_and(|at| at < cfg.max)
 }
 
+/// RuboCop `extend_end_position`: absorb trailing non-space (e.g. `)`).
+fn extend_end(line: &str, end: usize) -> usize {
+    let rest = line.get(end..).unwrap_or("");
+    end + rest
+        .char_indices()
+        .take_while(|(_, c)| !c.is_whitespace())
+        .last()
+        .map(|(i, c)| i + c.len_utf8())
+        .unwrap_or(0)
+}
+
+/// RuboCop AllowQualifiedName: last `Foo::Bar` starts before Max and reaches EOL.
+fn qualified_allows(cfg: &Settings, text: &str) -> bool {
+    if !cfg.allow_qualified {
+        return false;
+    }
+    let Some(m) = QUALIFIED_NAME_RE.find_iter(text).last() else {
+        return false;
+    };
+    let end = extend_end(text, m.end());
+    m.start() < cfg.max && end == text.len()
+}
+
 fn check_line(
     cop: &LineLength,
     source: &SourceFile,
@@ -135,7 +166,11 @@ fn check_line(
     };
     let text = String::from_utf8_lossy(line);
     let len = display_len(line);
-    if patterns_match(&text, &cfg.patterns) || len <= cfg.max || uri_allows(cfg, &text) {
+    if patterns_match(&text, &cfg.patterns)
+        || len <= cfg.max
+        || uri_allows(cfg, &text)
+        || qualified_allows(cfg, &text)
+    {
         return;
     }
     diagnostics.push(cop.diagnostic(
