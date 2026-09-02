@@ -101,7 +101,26 @@ fn is_receiver_or_arg_ident(node: Node<'_>) -> bool {
 }
 
 fn skip_modifier(node: Node<'_>, name: &[u8]) -> bool {
-    !is_modifier(name) || is_receiver_or_arg_ident(node) || shared::call_receiver(node).is_some()
+    !is_modifier(name)
+        || is_receiver_or_arg_ident(node)
+        || shared::call_receiver(node).is_some()
+        || is_method_name_part(node)
+}
+
+fn is_method_name_part(node: Node<'_>) -> bool {
+    if node.kind() != "identifier" {
+        return false;
+    }
+    let mut p = node.parent();
+    while let Some(n) = p {
+        if matches!(n.kind(), "method" | "singleton_method") {
+            return n.child_by_field_name("name").is_some_and(|name| {
+                name.start_byte() <= node.start_byte() && name.end_byte() >= node.end_byte()
+            });
+        }
+        p = n.parent();
+    }
+    false
 }
 
 impl Cop for AccessModifierIndentation {

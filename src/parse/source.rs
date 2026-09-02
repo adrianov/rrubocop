@@ -19,6 +19,7 @@ impl SourceFile {
     }
 
     pub fn from_bytes(path: impl Into<PathBuf>, content: Vec<u8>) -> Self {
+        let content = truncate_at_end_marker(content);
         let line_starts = compute_line_starts(&content);
         Self {
             path: path.into(),
@@ -102,6 +103,27 @@ fn trim_line_ending(mut slice: &[u8]) -> &[u8] {
         slice = &slice[..slice.len() - 1];
     }
     slice
+}
+
+/// RuboCop ignores source after a lone `__END__` line (DATA section).
+fn truncate_at_end_marker(content: Vec<u8>) -> Vec<u8> {
+    let mut line_start = 0usize;
+    for (i, &b) in content.iter().enumerate() {
+        if b == b'\n' {
+            if &content[line_start..i] == b"__END__"
+                || content[line_start..i].strip_suffix(b"\r") == Some(b"__END__")
+            {
+                return content[..=i].to_vec();
+            }
+            line_start = i + 1;
+        }
+    }
+    if &content[line_start..] == b"__END__"
+        || content[line_start..].strip_suffix(b"\r") == Some(b"__END__")
+    {
+        return content[..line_start.saturating_add(7)].to_vec();
+    }
+    content
 }
 
 fn compute_line_starts(content: &[u8]) -> Vec<usize> {

@@ -2,7 +2,7 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared::{node_bytes, node_text};
+use crate::cop::shared::{call_method_name, call_receiver, node_bytes, node_text};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -15,7 +15,7 @@ impl Cop for SafeNavigation {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["binary"]
+        &["binary", "unless_modifier"]
     }
 
     fn check_node(
@@ -26,6 +26,12 @@ impl Cop for SafeNavigation {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
+        if node.kind() == "unless_modifier" {
+            if let Some(diag) = unless_nil_safe_nav(self, source, node) {
+                diagnostics.push(diag);
+            }
+            return;
+        }
         if !is_and_safe_nav(source, node) || lhs_reassigned_in_method(source, node) {
             return;
         }
@@ -37,6 +43,40 @@ impl Cop for SafeNavigation {
             "Use safe navigation (`&.`) instead of checking `nil` with `&&`.".to_string(),
         ));
     }
+}
+
+fn unless_nil_safe_nav(cop: &SafeNavigation, source: &SourceFile, node: Node<'_>) -> Option<Diagnostic> {
+    let cond = node.child_by_field_name("condition")?;
+    if !is_nil_check(source, cond) {
+        return None;
+    }
+    let body = node.child_by_field_name("body")?;
+    let recv = nil_check_receiver(source, cond)?;
+    if !call_on_receiver(source, body, recv) {
+        return None;
+    }
+    let (line, col) = source.offset_to_line_col(body.start_byte());
+    Some(cop.diagnostic(
+        source,
+        line,
+        col,
+        "Use safe navigation (`&.`) instead of checking if an object exists before calling the method.".to_string(),
+    ))
+}
+
+fn is_nil_check(source: &SourceFile, node: Node<'_>) -> bool {
+    node.kind() == "call" && call_method_name(source, node) == Some(b"nil?")
+}
+
+fn nil_check_receiver<'a>(_source: &'a SourceFile, node: Node<'a>) -> Option<Node<'a>> {
+    call_receiver(node).filter(|r| r.kind() == "identifier" || r.kind() == "call")
+}
+
+fn call_on_receiver(source: &SourceFile, node: Node<'_>, recv: Node<'_>) -> bool {
+    if node.kind() != "call" {
+        return false;
+    }
+    call_receiver(node).is_some_and(|r| node_bytes(source, r) == node_bytes(source, recv))
 }
 
 fn is_and_safe_nav(source: &SourceFile, node: Node<'_>) -> bool {

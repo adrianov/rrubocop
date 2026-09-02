@@ -31,7 +31,7 @@ fn line_at(source: &SourceFile, line: usize) -> Option<&[u8]> {
 
 /// RuboCop AllowForAlignment: same column has a non-space on a nearby line.
 fn aligned_elsewhere(source: &SourceFile, line: usize, col: usize) -> bool {
-    for delta in [-5isize, -4, -3, -2, -1, 1, 2, 3, 4, 5] {
+    for delta in [-1isize, 1] {
         let other = line as isize + delta;
         if other < 1 {
             continue;
