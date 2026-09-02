@@ -3,4 +3,6 @@ if status =~ /active/
   perform_action
 elsif status =~ /inactive/
   check_timeout
+elsif status =~ /invalid/
+  report_invalid
 end

@@ -59,6 +59,22 @@ fn should_check(node: Node<'_>) -> bool {
         && if_alternative(node).is_some_and(|a| a.kind() == "elsif")
 }
 
+fn convertible(source: &SourceFile, node: Node<'_>, min: usize) -> bool {
+    if !should_check(node) {
+        return false;
+    }
+    let conditions = branch_conditions(node);
+    if conditions.len() < min {
+        return false;
+    }
+    let Some(target) = target::find_target(source, conditions[0]) else {
+        return false;
+    };
+    conditions
+        .iter()
+        .all(|c| condition::collect_condition(source, *c, target))
+}
+
 impl Cop for CaseLikeIf {
     fn name(&self) -> &'static str {
         "Style/CaseLikeIf"
@@ -72,24 +88,12 @@ impl Cop for CaseLikeIf {
         &self,
         source: &SourceFile,
         node: Node<'_>,
-        _config: &CopConfig,
+        config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        if !should_check(node) {
-            return;
-        }
-        let conditions = branch_conditions(node);
-        if conditions.len() < 2 {
-            return;
-        }
-        let Some(target) = target::find_target(source, conditions[0]) else {
-            return;
-        };
-        if !conditions
-            .iter()
-            .all(|c| condition::collect_condition(source, *c, target))
-        {
+        let min = config.get_usize("MinBranchesCount", 3);
+        if !convertible(source, node, min) {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
