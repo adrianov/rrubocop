@@ -78,7 +78,7 @@ impl Builder<'_> {
         if let Some(name) = super::builder::declared_name(child, self.src)
             && !name.starts_with('_')
         {
-            self.bind_entry(scope, name, child.start_byte());
+            self.bind_param(scope, name, child.start_byte());
         }
     }
 
@@ -90,7 +90,7 @@ impl Builder<'_> {
             if inner.kind() == "identifier" {
                 let name = self.text(inner).to_string();
                 if !name.starts_with('_') {
-                    self.bind_entry(scope, name, inner.start_byte());
+                    self.bind_param(scope, name, inner.start_byte());
                 }
             }
         }

@@ -4,7 +4,7 @@
 use tree_sitter::Node;
 
 use super::builder::Builder;
-use super::{Read, ScopeId};
+use super::{IntroKind, Read, ScopeId, ScopeKind};
 
 impl Builder<'_> {
     /// Returns true when `kind` is a read-shaped construct.
@@ -26,6 +26,12 @@ impl Builder<'_> {
             }
             "identifier" => {
                 self.walk_identifier(n, scope, under_defined);
+                true
+            }
+            // RuboCop VariableForce `zsuper`: bare `super` forwards method
+            // arguments (including when nested in a block).
+            "super" => {
+                mark_zsuper_reads(self, scope, n.start_byte(), under_defined);
                 true
             }
             // Ruby 3 shorthand hash (`foo(user:)`): a pair with no value
@@ -177,12 +183,20 @@ fn is_binding_call(n: Node<'_>, method_slot: Option<Node<'_>>, src: &[u8]) -> bo
     m.utf8_text(src).unwrap_or("") == "binding"
 }
 
-fn mark_all_reads(b: &mut Builder<'_>, scope: ScopeId, byte: usize, under_defined: bool) {
-    let names: Vec<Box<str>> = b.scopes[scope].entries.keys().cloned().collect();
+fn mark_reads(
+    b: &mut Builder<'_>,
+    scope: ScopeId,
+    byte: usize,
+    under_defined: bool,
+    keep: impl Fn(&str, &super::Entry) -> bool,
+) {
+    let names: Vec<Box<str>> = b.scopes[scope]
+        .entries
+        .iter()
+        .filter(|(n, e)| keep(n, e))
+        .map(|(n, _)| n.clone())
+        .collect();
     for name in names {
-        if name.starts_with('_') {
-            continue;
-        }
         b.record_read(
             scope,
             &name,
@@ -191,5 +205,28 @@ fn mark_all_reads(b: &mut Builder<'_>, scope: ScopeId, byte: usize, under_define
                 under_defined,
             },
         );
+    }
+}
+
+fn mark_all_reads(b: &mut Builder<'_>, scope: ScopeId, byte: usize, under_defined: bool) {
+    mark_reads(b, scope, byte, under_defined, |n, _| !n.starts_with('_'));
+}
+
+/// RuboCop `process_zero_arity_super`: only method arguments, via enclosing method.
+fn mark_zsuper_reads(b: &mut Builder<'_>, scope: ScopeId, byte: usize, under_defined: bool) {
+    let Some(method) = method_scope(b, scope) else {
+        return;
+    };
+    mark_reads(b, method, byte, under_defined, |n, e| {
+        e.intro_kind == IntroKind::Param && !n.starts_with('_')
+    });
+}
+
+fn method_scope(b: &Builder<'_>, mut scope: ScopeId) -> Option<ScopeId> {
+    loop {
+        if b.scopes[scope].kind == ScopeKind::Method {
+            return Some(scope);
+        }
+        scope = b.scopes[scope].parent?;
     }
 }

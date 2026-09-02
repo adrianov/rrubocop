@@ -13,7 +13,7 @@
 - `src/parse/` — SourceFile, CodeMap, directives, tree-sitter parse
 - `src/linter/` — parallel lint + cache (`mod.rs`, `parallel.rs`) and per-file phases (`engine/` + `syntax_gate`); line/source opt-in, shared `FileModel` for variable/metrics cops, single AST `BatchedWalker` by `interested_node_kinds` (+ optional `interested_call_names` gate for `call`/`command`/`command_call`); `CodeMap` built once in source phase only when plain source cops run (syntax gate uses empty map)
 - `src/formatter/` — text/json/progress (live marks)/…
-- `src/abc/`, `src/model/` — Metrics/AbcSize (tree-sitter)
+- `src/abc/`, `src/model/` — Metrics/AbcSize (tree-sitter); bare `super` marks method params (`IntroKind::Param`); `binding` marks all locals
 - `vendor/tree-sitter-ruby/` — grammar
 - `testdata/cross_test_nitrocop.py` — offense compare vs local nitrocop
 - `tests/fixtures/cops/` — nitrocop-style `offense.rb` / `no_offense.rb` per cop (`src/testutil/` + `cop_fixture_tests!`); when fixing FPs/parity, always add fixtures (see `.cursor/rules/cop-parity-tests.mdc`)
