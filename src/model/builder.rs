@@ -75,14 +75,20 @@ impl<'m> Builder<'m> {
         e.reads.push(r);
     }
 
-    /// Bind a parameter-style entry only when no binding exists yet.
-    pub(super) fn bind_entry(&mut self, scope: ScopeId, name: String, pos: usize) {
+    /// Bind a callable parameter. Method scopes use [`IntroKind::Param`]
+    /// (RuboCop method_argument / bare-`super`); blocks use [`IntroKind::Binding`].
+    pub(super) fn bind_param(&mut self, scope: ScopeId, name: String, pos: usize) {
+        let intro_kind = if self.scopes[scope].kind == super::ScopeKind::Method {
+            super::IntroKind::Param
+        } else {
+            super::IntroKind::Binding
+        };
         self.scopes[scope]
             .entries
             .entry(name.into())
             .or_insert(Entry {
                 intro_byte: pos,
-                intro_kind: super::IntroKind::Binding,
+                intro_kind,
                 writes: Vec::new(),
                 reads: Vec::new(),
             });

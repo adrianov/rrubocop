@@ -25,3 +25,10 @@ def with_binding
   github_user = `whoami`.chomp
   binding
 end
+
+# Bare `super` uses method args only; reading `x` keeps the local clean.
+def with_zsuper(a)
+  x = 1
+  super
+  x
+end

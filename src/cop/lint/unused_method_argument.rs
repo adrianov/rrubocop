@@ -95,11 +95,11 @@ fn method_name(source: &SourceFile, tree: &tree_sitter::Tree, entered_at: usize)
         .map(|n| node_text(source, n))
 }
 
-fn all_bindings_unused(scope: &crate::model::ScopeData) -> bool {
+fn all_params_unused(scope: &crate::model::ScopeData) -> bool {
     scope
         .entries
         .values()
-        .filter(|e| e.intro_kind == IntroKind::Binding)
+        .filter(|e| e.intro_kind == IntroKind::Param)
         .all(|e| e.reads.is_empty())
 }
 
@@ -110,7 +110,7 @@ fn skip_entry(
     tree: &tree_sitter::Tree,
 ) -> bool {
     name.starts_with('_')
-        || entry.intro_kind != IntroKind::Binding
+        || entry.intro_kind != IntroKind::Param
         || !entry.reads.is_empty()
         || (allow_kw && is_keyword_param(tree, entry.intro_byte))
 }
@@ -123,7 +123,7 @@ fn report_scope(
     allow_kw: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let all_unused = all_bindings_unused(scope);
+    let all_unused = all_params_unused(scope);
     let meth = method_name(source, &fm.tree, scope.entered_at);
     for (name, entry) in &scope.entries {
         if skip_entry(name, entry, allow_kw, &fm.tree) {

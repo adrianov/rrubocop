@@ -2,6 +2,10 @@
 //! writes and reads. Shared by the ABC calculator (safe-nav receiver
 //! classification) and the used-once detector.
 //!
+//! Method parameters use [`IntroKind::Param`] (see `Builder::bind_param`); bare
+//! `super` marks those params used (`reads::mark_zsuper_reads`). Block params
+//! stay [`IntroKind::Binding`].
+//!
 //! Submodules: [`builder`] (the tree-walking model constructor) with its
 //! [`writes`] / [`reads`] / [`scopes`] handler groups, plus [`masgn`] for
 //! multiple-assignment target lists.
@@ -26,6 +30,8 @@ pub enum IntroKind {
     Assign,
     /// `x op= ...` / masgn target / block param etc.
     Binding,
+    /// Method parameter (`def foo(a)` / kwargs / splats).
+    Param,
     /// Pattern-match bind (`=> { applyTime: }`). RuboCop `match_var` — no
     /// style check at intro; reads still use `on_lvar`.
     Pattern,
