@@ -1,0 +1,52 @@
+---
+description: Run abcop and a whitespace-neutral git diff before finishing code changes
+alwaysApply: true
+---
+
+# Complexity and diff review
+
+Before you commit or open a PR on **substantive code changes**, run these two checks. They catch implementation defects and complexity bloat that tests alone often miss.
+
+## 1. abcop — complexity gate
+
+```sh
+abcop --full
+```
+
+Match CI (`.github/workflows/ci.yml`). Fix every offense before finishing:
+
+| Rule | Limit | Fix |
+|---|---|---|
+| `Metrics/AbcSize` | ≤ 17 per function | Extract helpers; simplify control flow |
+| `Metrics/ModuleAbcSize` | ≤ 120 per module | Split into a coherent sub-module |
+
+Do **not** silence abcop with disable comments or raised thresholds. Refactor until clean.
+
+Treat `UsedOnce` / `NeverUsed` warnings as inline opportunities — remove dead locals and fold one-shot bindings when it clarifies the code.
+
+## 2. git diff — semantic review
+
+```sh
+git diff -w -W --histogram --no-prefix
+```
+
+Read the diff as a reviewer would:
+
+- **`-w`** — ignore whitespace so you see logic, not formatting churn
+- **`-W`** — show whole functions so edits stay coherent in context
+- **`--histogram`** — emphasize the changed lines
+- **`--no-prefix`** — drop `a/` / `b/` noise
+
+Look for defects and unnecessary growth:
+
+- Redundant branches, duplicated logic, or helpers used once
+- Over-abstraction (new types or layers that do not pay for themselves)
+- Missed simplifications — can the same behavior be shorter and clearer?
+- Changes unrelated to the task (drive-by refactors, debug code, commented-out blocks)
+
+Prefer the **smallest correct diff**. If abcop or the diff review exposes a problem, fix it in the same PR — do not leave complexity or slop for a follow-up.
+
+## When to skip
+
+- Docs-only, config-only, or fixture-only changes with no production logic
+- The user explicitly asks to skip review (`/no-test` or equivalent)
