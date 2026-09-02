@@ -118,10 +118,9 @@ fn collect_corrected_passes(
             bail!("Infinite loop detected in {}", ctx.path.display());
         }
         match next_pass(ctx, bytes)? {
-            PassOutcome::Finished(mut diags) => {
-                corrected.append(&mut diags);
-                return Ok(corrected);
-            }
+            // Remaining offenses come only from `final_pass` — do not return them
+            // here or they are duplicated in the `-A` report.
+            PassOutcome::Finished => return Ok(corrected),
             PassOutcome::Applied { mut diags, set } => {
                 corrected.extend(diags.drain(..).filter(|d| d.corrected));
                 *bytes = set.apply(bytes);
@@ -132,7 +131,7 @@ fn collect_corrected_passes(
 }
 
 enum PassOutcome {
-    Finished(Vec<Diagnostic>),
+    Finished,
     Applied {
         diags: Vec<Diagnostic>,
         set: CorrectionSet,
@@ -149,7 +148,7 @@ fn next_pass(ctx: &LintCtx<'_>, bytes: &[u8]) -> Result<PassOutcome> {
         .map(CorrectionSet::from_vec)
         .filter(|s| !s.is_empty())
     else {
-        return Ok(PassOutcome::Finished(diagnostics));
+        return Ok(PassOutcome::Finished);
     };
     Ok(PassOutcome::Applied {
         diags: diagnostics,
@@ -179,21 +178,20 @@ mod tests {
     use crate::config::ResolvedConfig;
     use crate::cop::registry::CopRegistry;
 
-    fn lint_sample(bytes: &mut Vec<u8>, mode: AutocorrectMode) -> Vec<Diagnostic> {
-        let path = Path::new("sample.rb");
+    fn lint_only(path: &str, bytes: &mut Vec<u8>, only: &str) -> Vec<Diagnostic> {
         let config = ResolvedConfig::empty();
         let registry = CopRegistry::default_registry();
         let filters = CopFilterSet::build(&config, &registry);
-        let only = ["Layout/TrailingWhitespace".to_string()];
+        let only = [only.to_string()];
         lint_bytes_autocorrect(
-            path,
+            Path::new(path),
             bytes,
             &config,
             &registry,
             &filters,
             Some(&only),
             &[],
-            mode,
+            AutocorrectMode::All,
             false,
         )
         .expect("lint")
@@ -202,8 +200,35 @@ mod tests {
     #[test]
     fn loop_applies_multiple_passes() {
         let mut bytes = b"x = 1  \n  y = 2  \n".to_vec();
-        let diags = lint_sample(&mut bytes, AutocorrectMode::All);
+        let diags = lint_only("sample.rb", &mut bytes, "Layout/TrailingWhitespace");
         assert_eq!(bytes, b"x = 1\n  y = 2\n");
+        assert!(diags.iter().all(|d| d.corrected));
+    }
+
+    #[test]
+    fn no_duplicate_remaining_offenses() {
+        let mut bytes = b"gem 'b'\ngem 'a'\n".to_vec();
+        let diags = lint_only("Gemfile", &mut bytes, "Bundler/OrderedGems");
+        let n = diags
+            .iter()
+            .filter(|d| d.cop_name == "Bundler/OrderedGems")
+            .count();
+        assert_eq!(n, 1, "remaining offenses must not be duplicated: {diags:?}");
+    }
+
+    #[test]
+    fn string_literals_autocorrect() {
+        let mut bytes = b"x = \"hello\"\n".to_vec();
+        let diags = lint_only("sample.rb", &mut bytes, "Style/StringLiterals");
+        assert_eq!(bytes, b"x = 'hello'\n");
+        assert!(diags.iter().all(|d| d.corrected));
+    }
+
+    #[test]
+    fn regexp_literal_autocorrect() {
+        let mut bytes = b"x = /\\/foo$/i\n".to_vec();
+        let diags = lint_only("sample.rb", &mut bytes, "Style/RegexpLiteral");
+        assert_eq!(bytes, b"x = %r{/foo$}i\n");
         assert!(diags.iter().all(|d| d.corrected));
     }
 
