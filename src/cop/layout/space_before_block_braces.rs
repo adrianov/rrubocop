@@ -29,7 +29,7 @@ fn ws_before(bytes: &[u8], start: usize) -> usize {
     ws
 }
 
-fn empty_braces(bytes: &[u8], lbrace: Node<'_>, rbrace: Node<'_>) -> bool {
+fn empty_braces(_bytes: &[u8], lbrace: Node<'_>, rbrace: Node<'_>) -> bool {
     lbrace.end_byte() == rbrace.start_byte()
 }
 

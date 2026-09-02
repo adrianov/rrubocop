@@ -1,0 +1,238 @@
+//! RuboCop-style autocorrect loop: re-lint until no corrections apply.
+
+use std::collections::HashSet;
+use std::path::Path;
+
+use anyhow::{bail, Result};
+use sha2::{Digest, Sha256};
+
+use crate::cli::AutocorrectMode;
+use crate::config::{CopFilterSet, ResolvedConfig};
+use crate::cop::registry::CopRegistry;
+use crate::correction::CorrectionSet;
+use crate::diagnostic::Diagnostic;
+use crate::parse::source::SourceFile;
+
+use super::{lint_source, LintOutput};
+
+pub(crate) const MAX_ITERATIONS: usize = 200;
+
+struct LintCtx<'a> {
+    path: &'a Path,
+    config: &'a ResolvedConfig,
+    registry: &'a CopRegistry,
+    filters: &'a CopFilterSet,
+    only: Option<&'a [String]>,
+    except: &'a [String],
+    mode: AutocorrectMode,
+    ignore_disable: bool,
+}
+
+impl<'a> LintCtx<'a> {
+    fn lint_bytes(&self, bytes: &[u8]) -> Result<LintOutput> {
+        let source = SourceFile::from_bytes(self.path, bytes.to_vec());
+        lint_source(
+            &source,
+            self.config,
+            self.registry,
+            self.filters,
+            self.only,
+            self.except,
+            self.mode,
+            self.ignore_disable,
+        )
+    }
+}
+
+pub(crate) fn lint_file_autocorrect(
+    path: &Path,
+    config: &ResolvedConfig,
+    registry: &CopRegistry,
+    filters: &CopFilterSet,
+    only: Option<&[String]>,
+    except: &[String],
+    mode: AutocorrectMode,
+    ignore_disable: bool,
+) -> Result<Vec<Diagnostic>> {
+    let mut bytes = std::fs::read(path)?;
+    let diags = lint_bytes_autocorrect(
+        path,
+        &mut bytes,
+        config,
+        registry,
+        filters,
+        only,
+        except,
+        mode,
+        ignore_disable,
+    )?;
+    if mode != AutocorrectMode::Off {
+        std::fs::write(path, &bytes)?;
+    }
+    Ok(diags)
+}
+
+pub(crate) fn lint_bytes_autocorrect(
+    path: &Path,
+    bytes: &mut Vec<u8>,
+    config: &ResolvedConfig,
+    registry: &CopRegistry,
+    filters: &CopFilterSet,
+    only: Option<&[String]>,
+    except: &[String],
+    mode: AutocorrectMode,
+    ignore_disable: bool,
+) -> Result<Vec<Diagnostic>> {
+    let ctx = LintCtx {
+        path,
+        config,
+        registry,
+        filters,
+        only,
+        except,
+        mode,
+        ignore_disable,
+    };
+    if mode == AutocorrectMode::Off {
+        return Ok(ctx.lint_bytes(bytes)?.diagnostics);
+    }
+    run_autocorrect_loop(&ctx, bytes)
+}
+
+fn run_autocorrect_loop(ctx: &LintCtx<'_>, bytes: &mut Vec<u8>) -> Result<Vec<Diagnostic>> {
+    let mut checksums = HashSet::new();
+    let mut corrected = collect_corrected_passes(ctx, bytes, &mut checksums)?;
+    corrected.append(&mut final_pass(ctx, bytes)?);
+    corrected.sort_by(|a, b| a.sort_key().cmp(&b.sort_key()));
+    Ok(corrected)
+}
+
+fn collect_corrected_passes(
+    ctx: &LintCtx<'_>,
+    bytes: &mut Vec<u8>,
+    checksums: &mut HashSet<[u8; 32]>,
+) -> Result<Vec<Diagnostic>> {
+    let mut corrected = Vec::new();
+    for _ in 0..MAX_ITERATIONS {
+        if !checksums.insert(sha256(bytes)) {
+            bail!("Infinite loop detected in {}", ctx.path.display());
+        }
+        match next_pass(ctx, bytes)? {
+            PassOutcome::Finished(mut diags) => {
+                corrected.append(&mut diags);
+                return Ok(corrected);
+            }
+            PassOutcome::Applied { mut diags, set } => {
+                corrected.extend(diags.drain(..).filter(|d| d.corrected));
+                *bytes = set.apply(bytes);
+            }
+        }
+    }
+    Ok(corrected)
+}
+
+enum PassOutcome {
+    Finished(Vec<Diagnostic>),
+    Applied {
+        diags: Vec<Diagnostic>,
+        set: CorrectionSet,
+    },
+}
+
+fn next_pass(ctx: &LintCtx<'_>, bytes: &[u8]) -> Result<PassOutcome> {
+    let LintOutput {
+        mut diagnostics,
+        corrections,
+    } = ctx.lint_bytes(bytes)?;
+    let Some(set) = corrections
+        .filter(|c| !c.is_empty())
+        .map(CorrectionSet::from_vec)
+        .filter(|s| !s.is_empty())
+    else {
+        return Ok(PassOutcome::Finished(diagnostics));
+    };
+    Ok(PassOutcome::Applied {
+        diags: diagnostics,
+        set,
+    })
+}
+
+fn final_pass(ctx: &LintCtx<'_>, bytes: &[u8]) -> Result<Vec<Diagnostic>> {
+    let off = LintCtx {
+        mode: AutocorrectMode::Off,
+        ..*ctx
+    };
+    Ok(off.lint_bytes(bytes)?.diagnostics)
+}
+
+fn sha256(bytes: &[u8]) -> [u8; 32] {
+    let mut h = Sha256::new();
+    h.update(bytes);
+    h.finalize().into()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+    use crate::config::ResolvedConfig;
+    use crate::cop::registry::CopRegistry;
+
+    fn lint_sample(bytes: &mut Vec<u8>, mode: AutocorrectMode) -> Vec<Diagnostic> {
+        let path = Path::new("sample.rb");
+        let config = ResolvedConfig::empty();
+        let registry = CopRegistry::default_registry();
+        let filters = CopFilterSet::build(&config, &registry);
+        let only = ["Layout/TrailingWhitespace".to_string()];
+        lint_bytes_autocorrect(
+            path,
+            bytes,
+            &config,
+            &registry,
+            &filters,
+            Some(&only),
+            &[],
+            mode,
+            false,
+        )
+        .expect("lint")
+    }
+
+    #[test]
+    fn loop_applies_multiple_passes() {
+        let mut bytes = b"x = 1  \n  y = 2  \n".to_vec();
+        let diags = lint_sample(&mut bytes, AutocorrectMode::All);
+        assert_eq!(bytes, b"x = 1\n  y = 2\n");
+        assert!(diags.iter().all(|d| d.corrected));
+    }
+
+    #[test]
+    fn reconcile_clears_false_corrected_flags() {
+        use crate::correction::{reconcile_corrected, Correction, CorrectionSet};
+        use crate::diagnostic::{Diagnostic, Location, Severity};
+        use crate::parse::source::SourceFile;
+
+        let source = SourceFile::from_bytes(Path::new("a.rb"), b"foo  \n".to_vec());
+        let mut diags = vec![Diagnostic {
+            path: "a.rb".into(),
+            cop_name: "Layout/TrailingWhitespace".into(),
+            message: "m".into(),
+            location: Location { line: 1, column: 4 },
+            severity: Severity::Convention,
+            corrected: true,
+            correctable: true,
+            source_line: String::new(),
+            highlight_length: 1,
+        }];
+        let set = CorrectionSet::from_vec(vec![Correction {
+            start: 3,
+            end: 5,
+            replacement: String::new(),
+            cop_name: "Layout/Other",
+            cop_index: 0,
+        }]);
+        reconcile_corrected(&mut diags, &source, &set);
+        assert!(!diags[0].corrected);
+    }
+}
