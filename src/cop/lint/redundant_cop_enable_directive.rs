@@ -1,9 +1,12 @@
 use std::collections::HashSet;
 
 use crate::cop::{Cop, CopConfig};
+use crate::correction::Correction;
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::codemap::CodeMap;
 use crate::parse::source::SourceFile;
+
+use super::redundant_cop_disable_directive::nth_cop_token;
 
 /// Lint/RedundantCopEnableDirective — enable without matching disable.
 pub struct RedundantCopEnableDirective;
@@ -38,6 +41,115 @@ fn config_disabled(config: &CopConfig) -> HashSet<String> {
     }
 }
 
+fn ws_comma_right(line: &str, mut end: usize) -> usize {
+    while end < line.len() && line.as_bytes()[end].is_ascii_whitespace() {
+        end += 1;
+    }
+    if end < line.len() && line.as_bytes()[end] == b',' {
+        end += 1;
+    }
+    while end < line.len() && line.as_bytes()[end].is_ascii_whitespace() {
+        end += 1;
+    }
+    end
+}
+
+fn partial_token_span(line: &str, byte: usize, len: usize) -> (usize, usize) {
+    let mut left = byte;
+    while left > 0 && line.as_bytes()[left - 1].is_ascii_whitespace() {
+        left -= 1;
+    }
+    if left > 0 && line.as_bytes()[left - 1] == b',' {
+        return (left - 1, byte + len);
+    }
+    (byte, ws_comma_right(line, byte + len))
+}
+
+fn partial_enable_cop_range(source: &SourceFile, line_no: usize, cop: &str) -> Option<(usize, usize)> {
+    let line_start = source.line_start(line_no)?;
+    let line = source.line_text(line_no)?;
+    nth_cop_token(&line, cop, 1).map(|(start, end)| {
+        let (rs, re) = partial_token_span(&line, start, end - start);
+        (line_start + rs, line_start + re)
+    })
+}
+
+fn entire_enable_line_range(source: &SourceFile, line_no: usize, line: &str) -> Option<(usize, usize)> {
+    let start = source.line_start(line_no)?;
+    let bytes = source.as_bytes();
+    Some((
+        start,
+        start + line.len() + usize::from(start + line.len() < bytes.len()),
+    ))
+}
+
+fn push_enable_fix(
+    source: &SourceFile,
+    line_no: usize,
+    line: &str,
+    cop: &str,
+    remove_entire: bool,
+    entire_fix: &mut bool,
+    corr: &mut Vec<Correction>,
+) -> bool {
+    let range = if remove_entire {
+        if *entire_fix {
+            return true;
+        }
+        *entire_fix = true;
+        entire_enable_line_range(source, line_no, line)
+    } else {
+        partial_enable_cop_range(source, line_no, cop)
+    };
+    let Some((start, end)) = range else {
+        return false;
+    };
+    corr.push(Correction {
+        start,
+        end,
+        replacement: String::new(),
+        cop_name: "Lint/RedundantCopEnableDirective",
+        cop_index: 0,
+    });
+    true
+}
+
+fn collect_orphaned<'a>(disabled: &mut HashSet<String>, names: &'a [String]) -> Vec<&'a str> {
+    let mut out = Vec::new();
+    for name in names {
+        if disabled.remove(name) || disabled.contains("all") {
+            continue;
+        }
+        out.push(name.as_str());
+    }
+    out
+}
+
+fn report_orphaned_enable(
+    cop: &RedundantCopEnableDirective,
+    source: &SourceFile,
+    line: &str,
+    line_no: usize,
+    name: &str,
+    remove_entire: bool,
+    entire_fix: &mut bool,
+    corrections: &mut Option<&mut Vec<Correction>>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut diag = cop.diagnostic(
+        source,
+        line_no,
+        0,
+        format!("Unnecessary enabling of {name}."),
+    );
+    if let Some(corr) = corrections.as_deref_mut()
+        && push_enable_fix(source, line_no, line, name, remove_entire, entire_fix, corr)
+    {
+        diag.corrected = true;
+    }
+    diagnostics.push(diag);
+}
+
 fn check_enable(
     cop: &RedundantCopEnableDirective,
     source: &SourceFile,
@@ -45,6 +157,7 @@ fn check_enable(
     line: &str,
     line_no: usize,
     diagnostics: &mut Vec<Diagnostic>,
+    mut corrections: Option<&mut Vec<Correction>>,
 ) {
     let Some(rest) = line.split("# rubocop:enable").nth(1) else {
         return;
@@ -52,16 +165,25 @@ fn check_enable(
     if !line.trim_start().starts_with('#') {
         return;
     }
-    for name in directive_names(rest) {
-        if disabled.remove(&name) || disabled.contains("all") {
-            continue;
-        }
-        diagnostics.push(cop.diagnostic(
+    let names = directive_names(rest);
+    let orphaned = collect_orphaned(disabled, &names);
+    if orphaned.is_empty() {
+        return;
+    }
+    let remove_entire = orphaned.len() == names.len();
+    let mut entire_fix = false;
+    for name in orphaned {
+        report_orphaned_enable(
+            cop,
             source,
+            line,
             line_no,
-            0,
-            format!("Unnecessary enabling of {name}."),
-        ));
+            name,
+            remove_entire,
+            &mut entire_fix,
+            &mut corrections,
+            diagnostics,
+        );
     }
 }
 
@@ -72,6 +194,10 @@ impl Cop for RedundantCopEnableDirective {
 
     fn default_severity(&self) -> Severity {
         Severity::Warning
+    }
+
+    fn supports_autocorrect(&self) -> bool {
+        true
     }
 
     fn uses_source_phase(&self) -> bool {
@@ -85,7 +211,7 @@ impl Cop for RedundantCopEnableDirective {
         _code_map: &CodeMap,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
-        _corrections: Option<&mut Vec<crate::correction::Correction>>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         // RuboCop seeds disable counts with cops disabled in config.
         let mut disabled = config_disabled(config);
@@ -96,7 +222,15 @@ impl Cop for RedundantCopEnableDirective {
                     disabled.insert(name);
                 }
             }
-            check_enable(self, source, &mut disabled, &s, i + 1, diagnostics);
+            check_enable(
+                self,
+                source,
+                &mut disabled,
+                &s,
+                i + 1,
+                diagnostics,
+                corrections.as_deref_mut(),
+            );
         }
     }
 }
@@ -122,6 +256,38 @@ mod tests {
             &RedundantCopEnableDirective,
             b"x = 1\n# rubocop:enable Layout/LineLength\n",
             config,
+        );
+    }
+
+    fn fixed(src: &[u8]) -> Vec<u8> {
+        let source = SourceFile::from_bytes("test.rb", src.to_vec());
+        let tree = crate::parse::parse_ruby(&source).unwrap();
+        let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
+        let mut corrs = Vec::new();
+        RedundantCopEnableDirective.check_source(
+            &source,
+            &tree,
+            &code_map,
+            &CopConfig::default(),
+            &mut Vec::new(),
+            Some(&mut corrs),
+        );
+        crate::correction::CorrectionSet::from_vec(corrs).apply(src)
+    }
+
+    #[test]
+    fn autocorrect_removes_orphan_enable_line() {
+        assert_eq!(
+            fixed(b"x = 1\n# rubocop:enable Style/StringLiterals\n"),
+            b"x = 1\n"
+        );
+    }
+
+    #[test]
+    fn autocorrect_partial_multi_enable() {
+        assert_eq!(
+            fixed(b"# rubocop:disable Layout/LineLength\nx = 1\n# rubocop:enable Layout/LineLength, Style/StringLiterals\n"),
+            b"# rubocop:disable Layout/LineLength\nx = 1\n# rubocop:enable Layout/LineLength\n"
         );
     }
 }

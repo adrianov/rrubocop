@@ -83,7 +83,6 @@ fn check_binary(
 fn binary_spaces_ok(bytes: &[u8], left: Node<'_>, right: Node<'_>, op: Node<'_>) -> bool {
     let before = &bytes[left.end_byte()..op.start_byte()];
     let after = &bytes[op.end_byte()..right.start_byte()];
-    // Line-continuation `\` before the operator (next-line `||`) — RuboCop allows.
     if before.contains(&b'\\') || after.contains(&b'\\') {
         return true;
     }

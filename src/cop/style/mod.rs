@@ -1,6 +1,7 @@
 pub(crate) mod heuristics;
 mod alias;
 mod and_or;
+mod arguments_forwarding;
 mod array_intersect;
 mod array_join;
 mod attr;
@@ -9,6 +10,7 @@ mod begin_block;
 mod block_comments;
 mod block_delimiters;
 mod case_equality;
+mod case_like_if;
 mod character_literal;
 mod class_and_module_children;
 mod class_check;
@@ -30,6 +32,7 @@ mod each_with_object;
 mod empty_case_condition;
 mod empty_else;
 mod empty_heredoc;
+mod empty_lambda_parameter;
 mod empty_literal;
 mod end_block;
 mod endless_method;
@@ -51,6 +54,7 @@ mod if_with_semicolon;
 mod in_pattern_then;
 mod infinite_loop;
 mod invertible_unless_condition;
+mod lambda;
 mod lambda_call;
 mod line_end_concatenation;
 mod magic_comment_format;
@@ -60,6 +64,7 @@ mod method_def_parentheses;
 mod min_max_comparison;
 mod missing_respond_to_missing;
 mod module_function;
+mod multiline_if_modifier;
 mod multiline_if_then;
 mod multiline_memoization;
 mod multiline_ternary_operator;
@@ -80,6 +85,7 @@ mod operator_method_call;
 mod optional_arguments;
 mod parallel_assignment;
 mod parentheses_around_condition;
+mod percent_literal_delimiters;
 mod percent_q_literals;
 mod perl_backrefs;
 mod preferred_hash_methods;
@@ -109,6 +115,7 @@ mod redundant_sort_by;
 mod redundant_string_escape;
 mod regexp_literal;
 mod rescue_modifier;
+mod rescue_standard_error;
 mod return_nil;
 mod return_nil_in_predicate_method_definition;
 mod safe_navigation;
@@ -150,6 +157,7 @@ pub fn register_all(registry: &mut CopRegistry) {
     crate::register_cops!(registry;
         alias::Alias,
         and_or::AndOr,
+        arguments_forwarding::ArgumentsForwarding,
         array_intersect::ArrayIntersect,
         array_join::ArrayJoin,
         attr::Attr,
@@ -158,6 +166,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         block_comments::BlockComments,
         block_delimiters::BlockDelimiters,
         case_equality::CaseEquality,
+        case_like_if::CaseLikeIf,
         character_literal::CharacterLiteral,
         class_and_module_children::ClassAndModuleChildren,
         class_check::ClassCheck,
@@ -179,6 +188,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         empty_case_condition::EmptyCaseCondition,
         empty_else::EmptyElse,
         empty_heredoc::EmptyHeredoc,
+        empty_lambda_parameter::EmptyLambdaParameter,
         empty_literal::EmptyLiteral,
         end_block::EndBlock,
         endless_method::EndlessMethod,
@@ -200,6 +210,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         in_pattern_then::InPatternThen,
         infinite_loop::InfiniteLoop,
         invertible_unless_condition::InvertibleUnlessCondition,
+        lambda::Lambda,
         lambda_call::LambdaCall,
         line_end_concatenation::LineEndConcatenation,
         magic_comment_format::MagicCommentFormat,
@@ -209,6 +220,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         min_max_comparison::MinMaxComparison,
         missing_respond_to_missing::MissingRespondToMissing,
         module_function::ModuleFunction,
+        multiline_if_modifier::MultilineIfModifier,
         multiline_if_then::MultilineIfThen,
         multiline_memoization::MultilineMemoization,
         multiline_ternary_operator::MultilineTernaryOperator,
@@ -229,6 +241,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         optional_arguments::OptionalArguments,
         parallel_assignment::ParallelAssignment,
         parentheses_around_condition::ParenthesesAroundCondition,
+        percent_literal_delimiters::PercentLiteralDelimiters,
         percent_q_literals::PercentQLiterals,
         perl_backrefs::PerlBackrefs,
         preferred_hash_methods::PreferredHashMethods,
@@ -258,6 +271,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         redundant_string_escape::RedundantStringEscape,
         regexp_literal::RegexpLiteral,
         rescue_modifier::RescueModifier,
+        rescue_standard_error::RescueStandardError,
         return_nil::ReturnNil,
         return_nil_in_predicate_method_definition::ReturnNilInPredicateMethodDefinition,
         safe_navigation::SafeNavigation,

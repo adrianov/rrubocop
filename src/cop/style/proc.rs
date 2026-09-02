@@ -23,10 +23,6 @@ impl Cop for Proc {
         &["call"]
     }
 
-    fn interested_call_names(&self) -> &'static [&'static [u8]] {
-        &[b"new"]
-    }
-
     fn check_node(
         &self,
         source: &SourceFile,
@@ -44,6 +40,13 @@ impl Cop for Proc {
 
 fn detect<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
     if call_method_name(source, node) != Some(b"new") {
+        return None;
+    }
+    let parent = node.parent()?;
+    if parent.kind() != "block" {
+        return None;
+    }
+    if parent.child_by_field_name("method")? != node {
         return None;
     }
     let recv = call_receiver(node)?;

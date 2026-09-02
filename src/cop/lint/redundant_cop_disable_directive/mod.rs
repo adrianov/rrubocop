@@ -2,6 +2,8 @@ mod audit;
 mod directives;
 mod removal;
 
+pub(crate) use directives::nth_cop_token;
+
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::{Diagnostic, Severity};
@@ -324,6 +326,54 @@ mod tests {
         assert!(diags[0].corrected);
         let fixed = crate::correction::CorrectionSet::from_vec(corrs).apply(source.as_bytes());
         assert_eq!(fixed, b"x = 1\n");
+    }
+
+    #[test]
+    fn autocorrect_removes_block_disable_leaves_enable() {
+        let source = SourceFile::from_bytes(
+            "test.rb",
+            b"# rubocop:disable Rails/Output\nRails.logger.debug 'x'\n# rubocop:enable Rails/Output\n"
+                .to_vec(),
+        );
+        let mut corrs = Vec::new();
+        let (cops, cfgs) = active_cops(&["Rails/Output"]);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut Vec::new(),
+            Some(&mut corrs),
+        );
+        let fixed = crate::correction::CorrectionSet::from_vec(corrs).apply(source.as_bytes());
+        assert_eq!(
+            fixed,
+            b"Rails.logger.debug 'x'\n# rubocop:enable Rails/Output\n"
+        );
+    }
+
+    #[test]
+    fn autocorrect_keeps_block_disable_when_one_cop_still_needed() {
+        let source = SourceFile::from_bytes(
+            "test.rb",
+            b"# rubocop:disable Rails/Output, Layout/LineLength\nx = 1\n# rubocop:enable Rails/Output, Layout/LineLength\n"
+                .to_vec(),
+        );
+        let mut corrs = Vec::new();
+        let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[offense("Layout/LineLength", 2)],
+            &active_refs(&cops, &cfgs),
+            &mut Vec::new(),
+            Some(&mut corrs),
+        );
+        let fixed = crate::correction::CorrectionSet::from_vec(corrs).apply(source.as_bytes());
+        assert_eq!(
+            fixed,
+            b"# rubocop:disable Layout/LineLength\nx = 1\n# rubocop:enable Rails/Output, Layout/LineLength\n"
+        );
     }
 
     #[test]

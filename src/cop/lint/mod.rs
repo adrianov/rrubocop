@@ -49,6 +49,7 @@ mod require_parentheses;
 mod require_range_parentheses;
 mod require_relative_self_path;
 mod rescue_exception;
+mod script_permission;
 mod safe_navigation_chain;
 mod shadowed_exception;
 mod suppressed_exception;
@@ -121,6 +122,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         require_range_parentheses::RequireRangeParentheses,
         require_relative_self_path::RequireRelativeSelfPath,
         rescue_exception::RescueException,
+        script_permission::ScriptPermission,
         safe_navigation_chain::SafeNavigationChain,
         shadowed_exception::ShadowedException,
         suppressed_exception::SuppressedException,

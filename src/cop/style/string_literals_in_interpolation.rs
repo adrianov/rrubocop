@@ -3,6 +3,7 @@
 use tree_sitter::Node;
 
 use crate::cop::shared::node_bytes;
+use crate::cop::style::heuristics::double_quotes_required;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -44,10 +45,21 @@ fn report_string(
     if child.kind() != "string" {
         return;
     }
+    let mut cur = child.walk();
+    if child
+        .named_children(&mut cur)
+        .any(|c| c.kind() == "interpolation")
+    {
+        return;
+    }
     let b = node_bytes(source, child);
     let dq = b.starts_with(b"\"");
     let sq = b.starts_with(b"'");
-    let bad = (style == "single_quotes" && dq) || (style == "double_quotes" && sq);
+    let bad = match style {
+        "single_quotes" => dq && !double_quotes_required(b),
+        "double_quotes" => sq,
+        _ => false,
+    };
     if !bad {
         return;
     }
