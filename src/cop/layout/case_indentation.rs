@@ -54,11 +54,11 @@ fn end_and_last_conditional_same_line(source: &SourceFile, case_node: Node<'_>) 
     };
     let end_line = shared::node_line(source, end_kw);
     let mut cur = case_node.walk();
-    let last_branch = case_node
+    case_node
         .named_children(&mut cur)
         .filter(|c| matches!(c.kind(), "when" | "else" | "in"))
-        .last();
-    last_branch.is_some_and(|b| shared::node_line(source, b) == end_line)
+        .last()
+        .is_some_and(|b| shared::node_line(source, b) == end_line)
 }
 
 impl Cop for CaseIndentation {
@@ -78,15 +78,12 @@ impl Cop for CaseIndentation {
         node: Node<'_>,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
-        mut corrections: Option<&mut Vec<Correction>>,
+        corrections: Option<&mut Vec<Correction>>,
     ) {
-        if !is_case_branch(node) {
+        if !should_check_branch(source, node, config) {
             return;
         }
         let parent = node.parent().unwrap();
-        if skip_case_branch(source, parent, config) {
-            return;
-        }
         let style = config.get_str("EnforcedStyle", "case");
         let expected = expected_col(
             source,
@@ -97,30 +94,69 @@ impl Cop for CaseIndentation {
         if shared::node_col(source, node) == expected {
             return;
         }
-        report::fix_indent(
-            self,
-            source,
-            node.start_byte(),
-            branch_msg(style, node.kind()),
-            diagnostics,
-            &mut corrections,
-            shared::line_indent(source, node.start_byte()),
-            expected,
-        );
+        report_branch(self, source, node, parent, style, expected, diagnostics, corrections);
     }
+}
+
+fn report_branch(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    parent: Node<'_>,
+    style: &str,
+    expected: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: Option<&mut Vec<Correction>>,
+) {
+    // Same-line `when` — mid-line indent autocorrect is not meaningful.
+    let same_line = shared::node_line(source, node) == shared::node_line(source, parent);
+    let mut corr = if same_line { None } else { corrections };
+    report::fix_indent(
+        cop,
+        source,
+        node.start_byte(),
+        branch_msg(style, node.kind()),
+        diagnostics,
+        &mut corr,
+        shared::line_indent(source, node.start_byte()),
+        expected,
+    );
+}
+
+fn should_check_branch(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
+    if !is_case_branch(node) {
+        return false;
+    }
+    let parent = node.parent().unwrap();
+    if skip_case_branch(source, parent, config) {
+        return false;
+    }
+    // Compact `case n when …` — RuboCop only flags the same-line `when`,
+    // not the following `else` (ElseAlignment owns that).
+    !(node.kind() == "else" && case_has_same_line_when(source, parent))
+}
+
+fn case_has_same_line_when(source: &SourceFile, case_node: Node<'_>) -> bool {
+    let case_line = shared::node_line(source, case_node);
+    let mut cur = case_node.walk();
+    case_node
+        .named_children(&mut cur)
+        .filter(|c| c.kind() == "when")
+        .any(|w| shared::node_line(source, w) == case_line)
 }
 
 /// RuboCop skips single-line `case … when … end` and same-line end/last when.
 fn skip_case_branch(source: &SourceFile, parent: Node<'_>, config: &CopConfig) -> bool {
     let case_line = shared::node_line(source, parent);
-    let end_line = shared::end_keyword(parent)
-        .map(|e| shared::node_line(source, e))
-        .unwrap_or(case_line);
-    if case_line == end_line {
+    if case_line
+        == shared::end_keyword(parent)
+            .map(|e| shared::node_line(source, e))
+            .unwrap_or(case_line)
+    {
         return true;
     }
-    let style = config.get_str("EnforcedStyle", "case");
-    style == "end" && end_and_last_conditional_same_line(source, parent)
+    config.get_str("EnforcedStyle", "case") == "end"
+        && end_and_last_conditional_same_line(source, parent)
 }
 
 #[cfg(test)]

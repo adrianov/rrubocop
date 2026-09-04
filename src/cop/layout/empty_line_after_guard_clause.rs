@@ -2,7 +2,6 @@
 
 use tree_sitter::Node;
 
-use crate::cop::layout::report;
 use crate::cop::shared;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
@@ -143,15 +142,39 @@ impl Cop for EmptyLineAfterGuardClause {
         if skip_empty_line_after(source, node, next) {
             return;
         }
-        report::insert_newline(
-            self,
-            source,
-            next,
-            "Add empty line after guard clause.".into(),
-            diagnostics,
-            &mut corrections,
-        );
+        report_missing_blank(self, source, node, next, diagnostics, &mut corrections);
     }
+}
+
+/// RuboCop reports on the guard node; autocorrect inserts a blank before `next`.
+fn report_missing_blank(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    next: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    let (line, column) = source.offset_to_line_col(node.start_byte());
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        column,
+        "Add empty line after guard clause.".into(),
+    );
+    if let Some(corr) = corrections {
+        if let Some(offset) = source.line_start(next) {
+            corr.push(Correction {
+                start: offset,
+                end: offset,
+                replacement: "\n".into(),
+                cop_name: cop.name(),
+                cop_index: 0,
+            });
+            diag.corrected = true;
+        }
+    }
+    diagnostics.push(diag);
 }
 
 fn skip_empty_line_after(source: &SourceFile, node: Node<'_>, next: usize) -> bool {

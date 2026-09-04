@@ -63,8 +63,9 @@ fn find_do_keyword(node: Node<'_>) -> Option<Node<'_>> {
         if is_do_token(ch) {
             return Some(ch);
         }
-        if let Some(inner) = nested_do(ch) {
-            return Some(inner);
+        // Named `do` wraps the body in some grammar versions — find the keyword token.
+        if let Some(tok) = do_keyword_in(ch) {
+            return Some(tok);
         }
     }
     None
@@ -74,10 +75,16 @@ fn is_do_token(ch: Node<'_>) -> bool {
     !ch.is_named() && ch.kind() == "do"
 }
 
-fn nested_do(ch: Node<'_>) -> Option<Node<'_>> {
+fn do_keyword_in(ch: Node<'_>) -> Option<Node<'_>> {
     if ch.kind() != "do" {
         return None;
     }
     let mut c2 = ch.walk();
-    ch.children(&mut c2).find(|t| is_do_token(*t)).map(|_| ch)
+    ch.children(&mut c2).find(|t| is_do_token(*t))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(WhileUntilDo, "cops/style/while_until_do");
 }

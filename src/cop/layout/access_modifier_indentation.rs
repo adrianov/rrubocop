@@ -105,6 +105,22 @@ fn skip_modifier(node: Node<'_>, name: &[u8]) -> bool {
         || is_receiver_or_arg_ident(node)
         || shared::call_receiver(node).is_some()
         || is_method_name_part(node)
+        || !is_access_modifier_form(node)
+}
+
+/// Bare `private`/`public` as a statement, or `private def` / `private :sym` calls —
+/// not kwargs (`private: false`) or ordinary identifiers.
+fn is_access_modifier_form(node: Node<'_>) -> bool {
+    match node.kind() {
+        "call" | "command" | "command_call" => true,
+        "identifier" => node.parent().is_some_and(|p| {
+            matches!(
+                p.kind(),
+                "body_statement" | "begin" | "program" | "then" | "else" | "ensure" | "rescue"
+            )
+        }),
+        _ => false,
+    }
 }
 
 fn is_method_name_part(node: Node<'_>) -> bool {
@@ -170,4 +186,10 @@ impl Cop for AccessModifierIndentation {
             &mut corrections,
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(AccessModifierIndentation, "cops/layout/access_modifier_indentation");
 }

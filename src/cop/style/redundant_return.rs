@@ -77,6 +77,11 @@ fn report(
 }
 
 fn push_remove_return(cop: &RedundantReturn, node: Node<'_>, corr: &mut Vec<Correction>) {
+    if returns_multiple(node) {
+        // RuboCop: `return a, b` → `[a, b]` (bare `a, b` is invalid Ruby).
+        wrap_multi_return_as_array(cop, node, corr);
+        return;
+    }
     let mut cur = node.walk();
     let named: Vec<_> = node.named_children(&mut cur).collect();
     let end = if named.is_empty() {
@@ -88,6 +93,30 @@ fn push_remove_return(cop: &RedundantReturn, node: Node<'_>, corr: &mut Vec<Corr
         start: node.start_byte(),
         end,
         replacement: String::new(),
+        cop_name: cop.name(),
+        cop_index: 0,
+    });
+}
+
+fn wrap_multi_return_as_array(cop: &RedundantReturn, node: Node<'_>, corr: &mut Vec<Correction>) {
+    let mut cur = node.walk();
+    let named: Vec<_> = node.named_children(&mut cur).collect();
+    let Some(first) = named.first() else {
+        return;
+    };
+    let last = named.last().unwrap_or(first);
+    // Remove `return` (+ following space) and wrap values in `[…]`.
+    corr.push(Correction {
+        start: node.start_byte(),
+        end: first.start_byte(),
+        replacement: "[".into(),
+        cop_name: cop.name(),
+        cop_index: 0,
+    });
+    corr.push(Correction {
+        start: last.end_byte(),
+        end: last.end_byte(),
+        replacement: "]".into(),
         cop_name: cop.name(),
         cop_index: 0,
     });
@@ -116,8 +145,7 @@ fn is_trailing_return(node: Node<'_>) -> bool {
         return false;
     };
     let mut cur = body.walk();
-    let named: Vec<_> = body.named_children(&mut cur).collect();
-    named.last().map(|n| n.id()) == Some(node.id())
+    body.named_children(&mut cur).last().map(|n| n.id()) == Some(node.id())
 }
 
 fn return_body<'a>(parent: Node<'a>, container: Node<'a>) -> Option<Node<'a>> {
