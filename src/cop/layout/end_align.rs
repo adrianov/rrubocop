@@ -120,12 +120,30 @@ fn first_non_ws_if_shovel(before: &[u8]) -> Option<usize> {
 fn align_col(source: &SourceFile, node: Node<'_>, style: &str) -> usize {
     match style {
         "start_of_line" => shared::line_indent(source, node.start_byte()),
-        // RuboCop: variable style falls back to keyword unless same-line assignment RHS.
+        // RuboCop: variable style falls back to keyword unless same-line assignment /
+        // `case` method-argument RHS (`on_case` + `argument?`).
         "variable" => same_line_assign_col(source, node)
             .or_else(|| assignment_context_base_col(source, node.start_byte()))
+            .or_else(|| same_line_case_arg_col(source, node))
             .unwrap_or_else(|| shared::node_col(source, node)),
         _ => shared::node_col(source, node),
     }
+}
+
+/// RuboCop `Layout/EndAlignment` `on_case` when `node.argument?`: same-line `case`
+/// as a call arg aligns `end` with the call (`foo(case` / `test case`), not `case`.
+fn same_line_case_arg_col(source: &SourceFile, node: Node<'_>) -> Option<usize> {
+    if node.kind() != "case" {
+        return None;
+    }
+    let args = node
+        .parent()
+        .filter(|p| matches!(p.kind(), "argument_list" | "command_argument_list"))?;
+    let call = args
+        .parent()
+        .filter(|p| matches!(p.kind(), "call" | "command" | "command_call"))?;
+    (shared::node_line(source, call) == shared::node_line(source, node))
+        .then(|| shared::node_col(source, call))
 }
 
 /// Column of a same-line `=` / `||=` / `+=` assignment that has `node` on its RHS

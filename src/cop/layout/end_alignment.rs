@@ -110,4 +110,48 @@ mod tests {
             diags
         );
     }
+
+    #[test]
+    fn variable_style_case_method_arg_no_offense() {
+        // RuboCop omakase / EnforcedStyleAlignWith: variable — yeah_dogg FP pattern.
+        let diags = run_cop_full_with_config(
+            &EndAlignment,
+            b"def sorted(key = DEFAULT_SORT, shares: nil, pin: nil)\n  pin_first(case self.class.sort_key(key)\n  when \"name\" then 1\n  else 2\n  end, pin)\nend\n",
+            variable_config(),
+        );
+        assert!(
+            diags.is_empty(),
+            "variable style should align end with call for case arg: {:?}",
+            diags
+        );
+    }
+
+    #[test]
+    fn variable_style_case_command_arg_no_offense() {
+        let diags = run_cop_full_with_config(
+            &EndAlignment,
+            b"test case a when b\nend\n",
+            variable_config(),
+        );
+        assert!(
+            diags.is_empty(),
+            "variable style should align end with command for case arg: {:?}",
+            diags
+        );
+    }
+
+    #[test]
+    fn variable_style_case_arg_keyword_aligned_is_offense() {
+        let diags = run_cop_full_with_config(
+            &EndAlignment,
+            b"test case a when b\n end\n",
+            variable_config(),
+        );
+        assert_eq!(
+            diags.len(),
+            1,
+            "end aligned with case is bad under variable: {:?}",
+            diags
+        );
+    }
 }
