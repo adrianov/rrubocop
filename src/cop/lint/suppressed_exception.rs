@@ -20,8 +20,17 @@ fn stmts_of(body: Node<'_>) -> Vec<Node<'_>> {
 
 fn classify_stmts(stmts: &[Node<'_>]) -> RescueBody {
     if stmts.is_empty() {
+        return RescueBody::Empty;
+    }
+    // `;` alone / empty statements count as empty rescue bodies.
+    let meaningful: Vec<_> = stmts
+        .iter()
+        .copied()
+        .filter(|n| !matches!(n.kind(), "empty_statement" | ";"))
+        .collect();
+    if meaningful.is_empty() {
         RescueBody::Empty
-    } else if stmts.len() == 1 && stmts[0].kind() == "nil" {
+    } else if meaningful.len() == 1 && meaningful[0].kind() == "nil" {
         RescueBody::OnlyNil
     } else {
         RescueBody::Other
@@ -82,4 +91,10 @@ impl Cop for SuppressedException {
     fn redundant_disable_audit(&self) -> bool {
         false
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(SuppressedException, "cops/lint/suppressed_exception");
 }

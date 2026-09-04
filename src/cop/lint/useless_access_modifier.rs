@@ -5,27 +5,64 @@ use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::source::SourceFile;
 
-/// Lint/UselessAccessModifier — access modifier with no following methods.
+/// Lint/UselessAccessModifier — access modifier with no effect.
 pub struct UselessAccessModifier;
 
-const MODS: &[&[u8]] = &[b"private", b"protected", b"public", b"module_function"];
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Vis {
+    Public,
+    Private,
+    Protected,
+    ModuleFunction,
+}
+
+impl Vis {
+    fn from_name(name: &[u8]) -> Option<Self> {
+        match name {
+            b"public" => Some(Self::Public),
+            b"private" => Some(Self::Private),
+            b"protected" => Some(Self::Protected),
+            b"module_function" => Some(Self::ModuleFunction),
+            _ => None,
+        }
+    }
+}
 
 fn is_mod_id(source: &SourceFile, node: Node<'_>) -> bool {
-    node.kind() == "identifier" && MODS.contains(&node_bytes(source, node))
+    node.kind() == "identifier" && Vis::from_name(node_bytes(source, node)).is_some()
 }
 
 fn is_bare_mod_call(source: &SourceFile, node: Node<'_>) -> bool {
-    node.kind() == "call"
-        && matches!(
-            call_method_name(source, node),
-            Some(b"private" | b"protected" | b"public" | b"module_function")
-        )
-        && node.child_by_field_name("receiver").is_none()
-        && node.child_by_field_name("arguments").is_none()
+    if node.kind() != "call" {
+        return false;
+    }
+    if !matches!(
+        call_method_name(source, node),
+        Some(b"private" | b"protected" | b"public" | b"module_function")
+    ) {
+        return false;
+    }
+    if node.child_by_field_name("receiver").is_some() {
+        return false;
+    }
+    match node.child_by_field_name("arguments") {
+        None => true,
+        Some(args) => {
+            let mut cur = args.walk();
+            args.named_children(&mut cur).next().is_none()
+        }
+    }
 }
 
 fn is_modifier(source: &SourceFile, node: Node<'_>) -> bool {
     is_mod_id(source, node) || is_bare_mod_call(source, node)
+}
+
+fn modifier_vis(source: &SourceFile, node: Node<'_>) -> Option<Vis> {
+    if node.kind() == "identifier" {
+        return Vis::from_name(node_bytes(source, node));
+    }
+    call_method_name(source, node).and_then(Vis::from_name)
 }
 
 fn is_attr_call(source: &SourceFile, node: Node<'_>) -> bool {
@@ -36,7 +73,6 @@ fn is_attr_call(source: &SourceFile, node: Node<'_>) -> bool {
 }
 
 fn call_wraps_method(node: Node<'_>) -> bool {
-    // e.g. `memoize def foo` / `decorate def bar` — RuboCop walks into the call.
     if !matches!(node.kind(), "call" | "command" | "command_call") {
         return false;
     }
@@ -45,26 +81,18 @@ fn call_wraps_method(node: Node<'_>) -> bool {
     }
     let mut found = false;
     crate::cop::shared::for_each_descendant(node, |n| {
-        if matches!(n.kind(), "method" | "singleton_method") {
+        // Instance `def` only — `def self.x` does not consume access modifiers.
+        if n.kind() == "method" {
             found = true;
         }
     });
     found
 }
 
-fn has_following_method(source: &SourceFile, children: &[Node<'_>], from: usize) -> bool {
-    for next in &children[from..] {
-        if is_mod_id(source, *next) || is_bare_mod_call(source, *next) {
-            return false;
-        }
-        if matches!(next.kind(), "method" | "singleton_method") {
-            return true;
-        }
-        if is_attr_call(source, *next) || call_wraps_method(*next) {
-            return true;
-        }
-    }
-    false
+fn is_methodish(source: &SourceFile, node: Node<'_>) -> bool {
+    // Access modifiers apply to instance methods / attrs. Singleton defs do
+    // not consume a pending modifier (RuboCop skips `defs`).
+    node.kind() == "method" || is_attr_call(source, node) || call_wraps_method(node)
 }
 
 fn mod_name(source: &SourceFile, node: Node<'_>) -> String {
@@ -98,11 +126,28 @@ fn scan_modifiers(
     children: &[Node<'_>],
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    for (i, child) in children.iter().enumerate() {
-        if !is_modifier(source, *child) || has_following_method(source, children, i + 1) {
+    let mut cur = Vis::Public;
+    let mut unused: Option<Node<'_>> = None;
+    for child in children {
+        if let Some(v) = modifier_vis(source, *child).filter(|_| is_modifier(source, *child)) {
+            if let Some(prev) = unused.take() {
+                report_useless(cop, source, prev, diagnostics);
+            }
+            if v == cur {
+                // Same visibility as current — useless even if methods follow.
+                report_useless(cop, source, *child, diagnostics);
+            } else {
+                unused = Some(*child);
+                cur = v;
+            }
             continue;
         }
-        report_useless(cop, source, *child, diagnostics);
+        if is_methodish(source, *child) {
+            unused = None;
+        }
+    }
+    if let Some(prev) = unused {
+        report_useless(cop, source, prev, diagnostics);
     }
 }
 
@@ -145,7 +190,9 @@ mod tests {
     fn no_offense_memoize_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &UselessAccessModifier,
-            include_bytes!("../../../tests/fixtures/cops/lint/useless_access_modifier/no_offense_memoize.rb"),
+            include_bytes!(
+                "../../../tests/fixtures/cops/lint/useless_access_modifier/no_offense_memoize.rb"
+            ),
         );
     }
 }

@@ -125,7 +125,9 @@ fn check_format(
         return;
     }
     let args = argument_nodes(node);
-    if args.is_empty() || has_splat_arg(&args[1..]) {
+    // RuboCop only checks Kernel-style format/sprintf with a format string plus
+    // at least one value arg (`arguments.size > 1`). Skip `obj.format("...")`.
+    if args.len() < 2 || has_splat_arg(&args[1..]) {
         return;
     }
     let Some(fmt) = string_content(source, args[0]) else {

@@ -46,6 +46,56 @@ fn report_dup(
     ));
 }
 
+fn record_method(
+    cop: &DuplicateMethods,
+    source: &SourceFile,
+    child: Node<'_>,
+    seen: &mut HashMap<(String, bool), usize>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some((name, singleton, line)) = method_key(source, child) else {
+        return;
+    };
+    if let Some(prev) = seen.insert((name.clone(), singleton), line) {
+        report_dup(
+            cop,
+            source,
+            child,
+            &name,
+            singleton,
+            prev,
+            line,
+            diagnostics,
+        );
+    }
+}
+
+/// Walk body: `case`/`when` duplicates count; `if`/`unless` branches do not.
+fn walk_body(
+    cop: &DuplicateMethods,
+    source: &SourceFile,
+    node: Node<'_>,
+    seen: &mut HashMap<(String, bool), usize>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if matches!(node.kind(), "method" | "singleton_method") {
+        record_method(cop, source, node, seen, diagnostics);
+        return;
+    }
+    // Conditional defs: each branch is exclusive — do not cross-check.
+    if matches!(node.kind(), "if" | "unless") {
+        return;
+    }
+    // Nested class/module scopes are visited separately via interested kinds.
+    if matches!(node.kind(), "class" | "module" | "singleton_class") {
+        return;
+    }
+    let mut cur = node.walk();
+    for child in node.named_children(&mut cur) {
+        walk_body(cop, source, child, seen, diagnostics);
+    }
+}
+
 impl Cop for DuplicateMethods {
     fn name(&self) -> &'static str {
         "Lint/DuplicateMethods"
@@ -75,14 +125,12 @@ impl Cop for DuplicateMethods {
             return;
         };
         let mut seen: HashMap<(String, bool), usize> = HashMap::new();
-        let mut cur = body.walk();
-        for child in body.named_children(&mut cur) {
-            let Some((name, singleton, line)) = method_key(source, child) else {
-                continue;
-            };
-            if let Some(prev) = seen.insert((name.clone(), singleton), line) {
-                report_dup(self, source, child, &name, singleton, prev, line, diagnostics);
-            }
-        }
+        walk_body(self, source, body, &mut seen, diagnostics);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(DuplicateMethods, "cops/lint/duplicate_methods");
 }

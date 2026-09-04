@@ -12,3 +12,7 @@ sprintf('%s %s', *args)
 format('%*d', 8, 42)
 format('%*.*f', 2, 3, 1.5)
 format('%5.2f', 1.234)
+
+# Receiver method named format with only a format string — not Kernel#format
+ets = job.measure
+ets.format("total: %tsec")
