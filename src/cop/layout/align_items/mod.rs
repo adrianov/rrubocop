@@ -140,11 +140,58 @@ pub fn check_align(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let items = items::alignment_items(source, node, style);
-    if items.len() < 2 || !items_span_lines(source, &items) {
+    check_align_items(
+        cop,
+        source,
+        node,
+        &items::alignment_items(source, node, style),
+        style,
+        width,
+        message,
+        diagnostics,
+        corrections,
+    );
+}
+
+/// Align `Layout/HashAlignment` entries (`hash` braces or trailing kwargs).
+pub fn check_hash_align(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    style: &str,
+    width: usize,
+    message: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    check_align_items(
+        cop,
+        source,
+        node,
+        &items::hash_alignment_items(node),
+        style,
+        width,
+        message,
+        diagnostics,
+        corrections,
+    );
+}
+
+fn check_align_items(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    items: &[Node<'_>],
+    style: &str,
+    width: usize,
+    message: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
+) {
+    if items.len() < 2 || !items_span_lines(source, items) {
         return;
     }
-    let (first_line, base_col, fixed_col) = align_cols(source, node, &items, width, style);
+    let (first_line, base_col, fixed_col) = align_cols(source, node, items, width, style);
     for item in items.iter().skip(1) {
         check_one(
             cop,
