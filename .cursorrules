@@ -18,7 +18,7 @@
 - `testdata/cross_test_nitrocop.py` — offense compare vs local nitrocop
 - `testdata/cross_test_rubocop.py` (+ `_json` / `_cmp`) — offense compare vs `bundle exec rubocop` (skips if unavailable)
 - `tests/fixtures/cops/` — nitrocop-style `offense.rb` / `no_offense.rb` per cop (`src/testutil/` + `cop_fixture_tests!`); when fixing FPs/parity, always add fixtures (see `.cursor/rules/cop-parity-tests.mdc`)
-- Reference clones (outside repo): `/home/crexus/nitrocop`, `/home/crexus/rubocop`, `/home/crexus/abcop`
+- Reference clones (outside repo): local `nitrocop`, `rubocop`, `abcop` checkouts (set `NITROCOP` for `testdata/cross_test_nitrocop.py`)
 - Parity on external projects: compare against `bundle exec rubocop` (project Gemfile), not bare `rubocop` from PATH — see `.cursor/rules/cop-parity-tests.mdc`
 - CI (`ci.yml`): `cargo test --locked` + [abcop](https://github.com/adrianov/abcop) `--full` (pinned `.deb` from Releases; AbcSize ≤17 / ModuleAbcSize ≤120; no Rust disable directives — split modules / extract fns)
 - Publish (`publish.yml`): tag `v*` → crates.io + Ubuntu 22.04 `.deb` + macOS `.tar.gz` GitHub Release; Homebrew tap `adrianov/rrubocop`

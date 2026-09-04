@@ -32,7 +32,7 @@ mod tests {
 }
 ```
 
-3. **Prefer copying** matching fixtures from `/home/crexus/nitrocop/tests/fixtures/cops/...` or RuboCop `spec/rubocop/cop/..._spec.rb` examples; keep nitrocop `^` annotation format (also accepts `# nitrocop-expect:` / `# rrubocop-expect:`).
+3. **Prefer copying** matching fixtures from a local nitrocop `tests/fixtures/cops/...` tree or RuboCop `spec/rubocop/cop/..._spec.rb` examples; keep nitrocop `^` annotation format (also accepts `# nitrocop-expect:` / `# rrubocop-expect:`).
 4. **Run** `cargo test -q --lib <module>::tests` (or the cop’s fixture tests) before finishing.
 5. Do **not** “fix” parity by only changing production code without a fixture that would have failed before the fix.
 
