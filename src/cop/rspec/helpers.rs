@@ -132,6 +132,22 @@ fn is_spec_group_call(source: &SourceFile, node: Node<'_>) -> bool {
     bare_rspec_call(source, node).is_some_and(is_group) && call_block(node).is_some()
 }
 
+/// True when `node` sits inside an RSpec example-group `do`/`{ }` block.
+pub fn inside_spec_group(source: &SourceFile, node: Node<'_>) -> bool {
+    let mut p = node.parent();
+    while let Some(cur) = p {
+        if matches!(cur.kind(), "do_block" | "block")
+            && cur
+                .parent()
+                .is_some_and(|call| is_spec_group_call(source, call))
+        {
+            return true;
+        }
+        p = cur.parent();
+    }
+    false
+}
+
 fn named_code_children(node: Node<'_>) -> impl Iterator<Item = Node<'_>> {
     (0..node.named_child_count() as u32)
         .filter_map(move |i| node.named_child(i).filter(|c| c.kind() != "comment"))
