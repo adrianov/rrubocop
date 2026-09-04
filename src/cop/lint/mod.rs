@@ -15,6 +15,7 @@ mod duplicate_methods;
 mod each_with_object_argument;
 mod else_layout;
 mod empty_ensure;
+mod empty_file;
 mod empty_interpolation;
 mod ensure_return;
 mod flip_flop;
@@ -89,6 +90,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         each_with_object_argument::EachWithObjectArgument,
         else_layout::ElseLayout,
         empty_ensure::EmptyEnsure,
+        empty_file::EmptyFile,
         empty_interpolation::EmptyInterpolation,
         ensure_return::EnsureReturn,
         flip_flop::FlipFlop,
