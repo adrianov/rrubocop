@@ -145,6 +145,7 @@ pub(crate) fn inject_redundant_line_break(
 
 const AS_EXTENSION_COPS: &[&str] = &[
     "Lint/DuplicateMethods",
+    "Lint/UselessAccessModifier",
     "Style/ArrayIntersect",
     "Style/CollectionQuerying",
     "Style/RedundantFilterChain",
