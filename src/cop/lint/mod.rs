@@ -4,6 +4,7 @@ mod assignment_in_condition;
 mod big_decimal_new;
 mod binary_operator_with_identical_operands;
 mod circular_argument_reference;
+mod constant_definition_in_block;
 mod constant_overwritten_in_rescue;
 mod debugger;
 mod deprecated_class_methods;
@@ -80,6 +81,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         big_decimal_new::BigDecimalNew,
         binary_operator_with_identical_operands::BinaryOperatorWithIdenticalOperands,
         circular_argument_reference::CircularArgumentReference,
+        constant_definition_in_block::ConstantDefinitionInBlock,
         constant_overwritten_in_rescue::ConstantOverwrittenInRescue,
         debugger::Debugger,
         deprecated_class_methods::DeprecatedClassMethods,

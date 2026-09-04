@@ -86,6 +86,16 @@ pub fn is_const_named(source: &SourceFile, node: Node<'_>, name: &[u8]) -> bool 
     }
 }
 
+/// `FOO = …` / `Foo::BAR = …` assignment (not a plain local).
+pub fn is_const_assign(node: Node<'_>) -> bool {
+    if node.kind() != "assignment" {
+        return false;
+    }
+    node.child_by_field_name("left")
+        .or_else(|| node.named_child(0))
+        .is_some_and(|lhs| matches!(lhs.kind(), "constant" | "scope_resolution"))
+}
+
 /// Direct named children (field `arguments` or positional).
 pub fn argument_nodes<'a>(node: Node<'a>) -> Vec<Node<'a>> {
     if let Some(args) = node.child_by_field_name("arguments") {
