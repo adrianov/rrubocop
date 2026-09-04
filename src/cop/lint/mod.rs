@@ -44,6 +44,7 @@ mod rand_one;
 mod redundant_cop_disable_directive;
 mod redundant_cop_enable_directive;
 mod redundant_regexp_quantifiers;
+mod redundant_require_statement;
 mod redundant_splat_expansion;
 mod redundant_string_coercion;
 mod require_parentheses;
@@ -119,6 +120,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         redundant_cop_disable_directive::RedundantCopDisableDirective,
         redundant_cop_enable_directive::RedundantCopEnableDirective,
         redundant_regexp_quantifiers::RedundantRegexpQuantifiers,
+        redundant_require_statement::RedundantRequireStatement,
         redundant_splat_expansion::RedundantSplatExpansion,
         redundant_string_coercion::RedundantStringCoercion,
         require_parentheses::RequireParentheses,
