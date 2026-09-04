@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use tree_sitter::Node;
 
-use crate::cop::shared::node_text;
+use crate::cop::shared::{call_method_name, call_receiver, is_const_named, node_text};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::source::SourceFile;
@@ -70,6 +70,61 @@ fn record_method(
     }
 }
 
+fn block_call(block: Node<'_>) -> Option<Node<'_>> {
+    let p = block.parent()?;
+    matches!(p.kind(), "call" | "command" | "command_call").then_some(p)
+}
+
+fn walk_named(
+    cop: &DuplicateMethods,
+    source: &SourceFile,
+    node: Node<'_>,
+    seen: &mut HashMap<(String, bool), usize>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let mut cur = node.walk();
+    for child in node.named_children(&mut cur) {
+        walk_body(cop, source, child, seen, diagnostics);
+    }
+}
+
+/// RuboCop tracks defs in bare `class_eval`, `Const.class_eval`, and
+/// `Class`/`Module.new` blocks; other blocks (`included`, `class_methods`,
+/// `each`, `self.class_eval`, …) leave `parent_module_name` nil.
+fn walk_block(
+    cop: &DuplicateMethods,
+    source: &SourceFile,
+    block: Node<'_>,
+    seen: &mut HashMap<(String, bool), usize>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(call) = block_call(block) else {
+        return;
+    };
+    let Some(name) = call_method_name(source, call) else {
+        return;
+    };
+    let recv = call_receiver(call);
+    match name {
+        b"class_eval" if recv.is_none() => {
+            walk_named(cop, source, block, seen, diagnostics);
+        }
+        b"class_eval"
+            if recv.is_some_and(|r| matches!(r.kind(), "constant" | "scope_resolution")) =>
+        {
+            walk_named(cop, source, block, &mut HashMap::new(), diagnostics);
+        }
+        b"new"
+            if recv.is_some_and(|r| {
+                is_const_named(source, r, b"Class") || is_const_named(source, r, b"Module")
+            }) =>
+        {
+            walk_named(cop, source, block, &mut HashMap::new(), diagnostics);
+        }
+        _ => {}
+    }
+}
+
 /// Walk body: `case`/`when` duplicates count; `if`/`unless` branches do not.
 fn walk_body(
     cop: &DuplicateMethods,
@@ -82,18 +137,17 @@ fn walk_body(
         record_method(cop, source, node, seen, diagnostics);
         return;
     }
-    // Conditional defs: each branch is exclusive — do not cross-check.
     if matches!(node.kind(), "if" | "unless") {
         return;
     }
-    // Nested class/module scopes are visited separately via interested kinds.
     if matches!(node.kind(), "class" | "module" | "singleton_class") {
         return;
     }
-    let mut cur = node.walk();
-    for child in node.named_children(&mut cur) {
-        walk_body(cop, source, child, seen, diagnostics);
+    if matches!(node.kind(), "do_block" | "block" | "lambda") {
+        walk_block(cop, source, node, seen, diagnostics);
+        return;
     }
+    walk_named(cop, source, node, seen, diagnostics);
 }
 
 impl Cop for DuplicateMethods {
@@ -124,8 +178,7 @@ impl Cop for DuplicateMethods {
         let Some(body) = node.child_by_field_name("body") else {
             return;
         };
-        let mut seen: HashMap<(String, bool), usize> = HashMap::new();
-        walk_body(self, source, body, &mut seen, diagnostics);
+        walk_body(self, source, body, &mut HashMap::new(), diagnostics);
     }
 }
 

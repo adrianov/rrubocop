@@ -18,3 +18,11 @@ class CaseVariant
     ^^^^^^^^^^^^^^^ Lint/DuplicateMethods: Method `#bar` is defined at both test.rb:14 and test.rb:16.
   end
 end
+
+class EvalDup
+  class_eval do
+    def baz; 1; end
+    def baz; 2; end
+    ^^^^^^^^^^^^^^^ Lint/DuplicateMethods: Method `#baz` is defined at both test.rb:22 and test.rb:23.
+  end
+end
