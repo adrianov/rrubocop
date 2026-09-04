@@ -103,7 +103,26 @@ pub(crate) fn walk_up_for(start_dir: &Path, filename: &str) -> Option<PathBuf> {
     walk_up_once(&canonical, filename)
 }
 
-/// Prefer `.rubocop.yml`, else `.standard.yml`.
+/// Prefer `.rubocop.yml`, else `.standard.yml`, else user home / XDG (RuboCop).
 pub(crate) fn find_config(start_dir: &Path) -> Option<PathBuf> {
-    walk_up_for(start_dir, ".rubocop.yml").or_else(|| walk_up_for(start_dir, ".standard.yml"))
+    walk_up_for(start_dir, ".rubocop.yml")
+        .or_else(|| walk_up_for(start_dir, ".standard.yml"))
+        .or_else(find_user_dotfile)
+        .or_else(find_user_xdg_config)
+}
+
+fn find_user_dotfile() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    let file = PathBuf::from(home).join(".rubocop.yml");
+    file.is_file().then_some(file)
+}
+
+fn find_user_xdg_config() -> Option<PathBuf> {
+    let base = std::env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config"))
+        })?;
+    let file = base.join("rubocop").join("config.yml");
+    file.is_file().then_some(file)
 }

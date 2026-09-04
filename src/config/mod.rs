@@ -477,4 +477,36 @@ mod tests {
             "Enabled: true in default.yml must stay on under --force-default-config"
         );
     }
+
+    #[test]
+    fn style_department_disabled_keeps_explicit_cops() {
+        // Mirrors ~/.rubocop.yml-style: dept off, selected cops still on.
+        let dir = tempfile::tempdir().unwrap();
+        let config = load_config(
+            Some(&write_config(
+                dir.path(),
+                "Layout/LineLength:\n  Enabled: true\n  Max: 120\n\
+                 Lint/UselessAssignment:\n  Enabled: true\n\
+                 Style:\n  Enabled: false\n\
+                 Layout:\n  Enabled: false\n\
+                 Metrics:\n  Enabled: false\n",
+            )),
+            Some(dir.path()),
+            None,
+        )
+        .unwrap();
+        assert!(!config.is_cop_enabled(
+            "Style/FrozenStringLiteralComment",
+            Path::new("x.rb"),
+            &[],
+            &[]
+        ));
+        assert!(config.is_cop_enabled(
+            "Lint/UselessAssignment",
+            Path::new("x.rb"),
+            &[],
+            &[]
+        ));
+        assert!(config.is_cop_enabled("Layout/LineLength", Path::new("x.rb"), &[], &[]));
+    }
 }
