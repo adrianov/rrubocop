@@ -40,7 +40,7 @@ mod resolved_effective;
 mod resolved_fingerprint;
 
 pub use filter::{CopFilter, CopFilterSet};
-pub use load::load_config;
+pub use load::{load_config, load_default_config};
 pub use resolved::ResolvedConfig;
 pub use types::NewCopsPolicy;
 
@@ -458,5 +458,23 @@ mod tests {
             &[],
             &[]
         ));
+    }
+
+    #[test]
+    fn force_default_respects_enabled_false() {
+        let config = load_default_config(None, None);
+        let path = std::path::Path::new("a.rb");
+        assert!(
+            !config.is_cop_enabled("Layout/MultilineArrayLineBreaks", path, &[], &[]),
+            "Enabled: false in default.yml must stay off under --force-default-config"
+        );
+        assert!(
+            !config.is_cop_enabled("Layout/MultilineMethodArgumentLineBreaks", path, &[], &[]),
+            "Enabled: false in default.yml must stay off under --force-default-config"
+        );
+        assert!(
+            config.is_cop_enabled("Layout/ArrayAlignment", path, &[], &[]),
+            "Enabled: true in default.yml must stay on under --force-default-config"
+        );
     }
 }

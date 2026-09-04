@@ -1,17 +1,13 @@
 //! Gemfile.lock / gems.locked version metadata for config resolution.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use super::discover::load_dir_overrides;
-use super::load_defaults::fallback_default_excludes;
-use super::resolved::ResolvedConfig;
 use super::ruby_ver::parse_gem_version_from_lockfile;
 use super::types::ConfigLayer;
 
 pub(crate) fn lockfile_gem_version(lockfile_dir: &Path, gem_name: &str) -> Option<f64> {
     for lock_name in &["Gemfile.lock", "gems.locked"] {
-        let lock_path = lockfile_dir.join(lock_name);
-        if let Ok(content) = std::fs::read_to_string(&lock_path) {
+        if let Ok(content) = std::fs::read_to_string(lockfile_dir.join(lock_name)) {
             if let Some(ver) = parse_gem_version_from_lockfile(&content, gem_name) {
                 return Some(ver);
             }
@@ -51,24 +47,5 @@ pub(crate) fn resolve_lockfile_meta(base: &ConfigLayer, lockfile_dir: &Path) -> 
         railties_in_lockfile,
         railties_version,
         rack_version: lockfile_gem_version(lockfile_dir, "rack"),
-    }
-}
-
-pub(crate) fn empty_resolved_no_config(config_dir: PathBuf) -> ResolvedConfig {
-    let base_dir = std::env::current_dir().unwrap_or_else(|_| config_dir.clone());
-    let defaults = fallback_default_excludes();
-    let railties_version = lockfile_gem_version(&base_dir, "railties");
-    let rack_version = lockfile_gem_version(&base_dir, "rack");
-    ResolvedConfig {
-        config_dir: Some(config_dir.clone()),
-        scan_root: Some(config_dir.clone()),
-        dir_overrides: load_dir_overrides(&config_dir),
-        base_dir: Some(base_dir),
-        global_excludes: defaults.global_excludes,
-        target_rails_version: railties_version,
-        railties_in_lockfile: railties_version.is_some(),
-        railties_version,
-        rack_version,
-        ..ResolvedConfig::empty()
     }
 }

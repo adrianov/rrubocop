@@ -8,6 +8,7 @@ use anyhow::Result;
 use crate::cop::EnabledState;
 
 use super::discover::find_config;
+use super::load_defaults::try_load_rubocop_defaults;
 use super::load_lockfile::LockfileMeta;
 use super::load_recursive::{load_config_recursive_inner, load_project_config_recursive};
 use super::resolved::ResolvedConfig;
@@ -15,7 +16,7 @@ use super::ruby_ver::resolve_ruby_version_from_gemspec;
 use super::standard::convert_standard_yml;
 use super::types::{ConfigLayer, NewCopsPolicy};
 
-pub(crate) use super::load_lockfile::{empty_resolved_no_config, resolve_lockfile_meta};
+pub(crate) use super::load_lockfile::resolve_lockfile_meta;
 
 pub(crate) fn resolve_start_dir(target_dir: Option<&Path>) -> Option<PathBuf> {
     let raw = target_dir.map(|p| {
@@ -205,4 +206,27 @@ pub(crate) fn build_resolved(parts: ResolvedParts) -> ResolvedConfig {
         extra_details: parts.base.extra_details.unwrap_or(false),
         style_guide_base_url: parts.base.style_guide_base_url,
     }
+}
+
+/// Built-in RuboCop `default.yml` only (no project layer).
+pub(crate) fn defaults_only_resolved(
+    config_dir: PathBuf,
+    scan_root: Option<PathBuf>,
+    gem_cache: Option<&HashMap<String, PathBuf>>,
+) -> ResolvedConfig {
+    let base_dir = std::env::current_dir().unwrap_or_else(|_| config_dir.clone());
+    let (base, rubocop_known_cops) = try_load_rubocop_defaults(&config_dir, gem_cache);
+    build_resolved(ResolvedParts {
+        target_ruby_version: resolve_target_ruby_version(&base, &config_dir),
+        lock: resolve_lockfile_meta(&base, &base_dir),
+        dir_overrides: Vec::new(),
+        base,
+        config_dir,
+        scan_root,
+        base_dir,
+        rubocop_known_cops,
+        project_mentioned_cops: HashSet::new(),
+        project_mentioned_depts: HashSet::new(),
+        project_enabled_depts: HashSet::new(),
+    })
 }

@@ -18,7 +18,7 @@ use std::process::ExitCode;
 
 use anyhow::Result;
 use cli::Args;
-use config::{CopFilterSet, ResolvedConfig, load_config};
+use config::{CopFilterSet, ResolvedConfig, load_config, load_default_config};
 use cop::registry::CopRegistry;
 use diagnostic::Diagnostic;
 use formatter::color::Color;
@@ -45,13 +45,17 @@ pub fn run() -> Result<ExitCode> {
 }
 
 fn resolved_config(args: &Args) -> Result<ResolvedConfig> {
-    if args.force_default_config {
-        let mut cfg = ResolvedConfig::empty();
-        cfg.apply_display_cli(args.display_cop_names_override());
-        return Ok(cfg);
-    }
     let target = args.paths.first().map(|p| p.as_path());
-    let mut config = load_config(args.config.as_deref(), target, None)?;
+    let mut config = if args.force_default_config {
+        let mut cfg = load_default_config(target, None);
+        // `--only` may name plugin cops; register departments so filters allow them.
+        if !args.only.is_empty() {
+            cfg.register_departments_from_only(&args.only);
+        }
+        cfg
+    } else {
+        load_config(args.config.as_deref(), target, None)?
+    };
     config.apply_display_cli(args.display_cop_names_override());
     Ok(config)
 }

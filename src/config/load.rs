@@ -8,7 +8,7 @@ use anyhow::Result;
 use super::discover::load_dir_overrides;
 use super::load_defaults::try_load_rubocop_defaults;
 use super::load_resolve::{
-    apply_disabled_by_default, build_resolved, empty_resolved_no_config, load_project_layer,
+    apply_disabled_by_default, build_resolved, defaults_only_resolved, load_project_layer,
     project_enabled_depts, resolve_config_load, resolve_lockfile_meta, resolve_path_base_dir,
     resolve_start_dir, resolve_target_ruby_version, ConfigLoadPath, ResolvedParts,
 };
@@ -91,4 +91,26 @@ pub fn load_config(
             scan_root,
         } => assemble_resolved(path.is_some(), config_path, scan_root, gem_cache),
     }
+}
+
+fn empty_resolved_no_config(config_dir: PathBuf) -> ResolvedConfig {
+    // No project `.rubocop.yml`: still apply RuboCop's built-in default.yml.
+    let mut cfg = defaults_only_resolved(config_dir.clone(), Some(config_dir.clone()), None);
+    cfg.dir_overrides = load_dir_overrides(&config_dir);
+    cfg
+}
+
+/// RuboCop built-in defaults only (`--force-default-config`).
+///
+/// Loads vendored `config/default.yml` so `Enabled: false` cops stay off —
+/// matching RuboCop, not an empty config that enables every registered cop.
+pub fn load_default_config(
+    target_dir: Option<&Path>,
+    gem_cache: Option<&HashMap<String, PathBuf>>,
+) -> ResolvedConfig {
+    defaults_only_resolved(
+        resolve_start_dir(target_dir).unwrap_or_else(|| PathBuf::from(".")),
+        None,
+        gem_cache,
+    )
 }
