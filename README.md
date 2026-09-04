@@ -8,6 +8,8 @@ Drop-in parity: reads your existing `.rubocop.yml`, emits RuboCop-like text/JSON
 
 **Baseline** (shown in `--help` / `--version`): rubocop `1.84.2` with rubocop-rails `2.34.3`, rubocop-performance `1.26.1`, rubocop-rspec `3.9.0`, rubocop-rspec_rails `2.32.0`, rubocop-factory_bot `2.28.0` — pinned in `src/resources/baseline.json`.
 
+Parity runs have been verified over **600+** installed Ruby gem projects (RuboCop vs rrubocop on the same trees).
+
 ## Install
 
 ```sh
@@ -60,8 +62,8 @@ Departments grow breadth-first from common RuboCop plugin sets (nitrocop / gem s
 | Department | Notes |
 |---|---|
 | `Layout/*` | 90 layout cops (alignment, spacing, empty lines, indentation; all with autocorrect) |
-| `Lint/*`, `Style/*`, `Naming/*`, `Security/*` | 66 / 143 / 9 / 4 |
-| `Metrics/*` | `AbcSize`, `BlockNesting`, `CollectionLiteralLength`, `ParameterLists` |
+| `Lint/*`, `Style/*`, `Naming/*`, `Security/*` | 69 / 143 / 9 / 4 |
+| `Metrics/*` | `AbcSize`, `BlockNesting`, `ClassLength`, `CollectionLiteralLength`, `ModuleLength`, `ParameterLists` |
 | `Rails/*` | 62 rails cops |
 | `Performance/*` | 24 performance cops |
 | `RSpec/*` | 104 rspec cops |
