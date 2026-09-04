@@ -8,7 +8,7 @@ use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 use super::syntax_gate::ActiveCop;
-use super::{corr_bucket, merge_corrections};
+use super::{allow_corr, corr_bucket, merge_corrections};
 
 pub(super) fn run_node_phase(
     source: &SourceFile,
@@ -29,6 +29,14 @@ pub(super) fn run_node_phase(
     walk_ast_cops(source, tree, &ast, registry, mode, diagnostics, corrections);
 }
 
+fn ast_walker<'a>(ast: &[&'a ActiveCop<'a>], mode: AutocorrectMode) -> BatchedWalker<'a> {
+    BatchedWalker::with_corr_ok(
+        ast.iter().map(|(c, _, _)| *c).collect(),
+        ast.iter().map(|(_, c, _)| c).collect(),
+        ast.iter().map(|(c, _, _)| allow_corr(mode, *c)).collect(),
+    )
+}
+
 fn walk_ast_cops(
     source: &SourceFile,
     tree: &tree_sitter::Tree,
@@ -38,12 +46,8 @@ fn walk_ast_cops(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) {
-    let walker = BatchedWalker::new(
-        ast.iter().map(|(c, _, _)| *c).collect(),
-        ast.iter().map(|(_, c, _)| c).collect(),
-    );
     let mut node_corr = corr_bucket(mode);
-    walker.walk(source, tree.root_node(), diagnostics, node_corr.as_mut());
+    ast_walker(ast, mode).walk(source, tree.root_node(), diagnostics, node_corr.as_mut());
     stamp_node_corrections(registry, &mut node_corr);
     merge_corrections(corrections, node_corr);
 }

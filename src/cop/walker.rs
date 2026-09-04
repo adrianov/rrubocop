@@ -17,6 +17,8 @@ fn is_call_kind(kind: &str) -> bool {
 pub struct BatchedWalker<'a> {
     cops: Vec<&'a dyn Cop>,
     configs: Vec<&'a CopConfig>,
+    /// Per-cop: pass a corrections buffer (`-a`/`-A` gating).
+    corr_ok: Vec<bool>,
     /// Non-call kinds → cop indices.
     kinds: HashMap<&'static str, Vec<usize>>,
     /// Call-like cops with empty `interested_call_names` (every call/command).
@@ -27,6 +29,17 @@ pub struct BatchedWalker<'a> {
 
 impl<'a> BatchedWalker<'a> {
     pub fn new(cops: Vec<&'a dyn Cop>, configs: Vec<&'a CopConfig>) -> Self {
+        let corr_ok = vec![true; cops.len()];
+        Self::with_corr_ok(cops, configs, corr_ok)
+    }
+
+    pub fn with_corr_ok(
+        cops: Vec<&'a dyn Cop>,
+        configs: Vec<&'a CopConfig>,
+        corr_ok: Vec<bool>,
+    ) -> Self {
+        debug_assert_eq!(cops.len(), configs.len());
+        debug_assert_eq!(cops.len(), corr_ok.len());
         let mut kinds: HashMap<&'static str, Vec<usize>> = HashMap::new();
         let mut call_all = Vec::new();
         let mut call_by_name: HashMap<&'static [u8], Vec<usize>> = HashMap::new();
@@ -36,6 +49,7 @@ impl<'a> BatchedWalker<'a> {
         Self {
             cops,
             configs,
+            corr_ok,
             kinds,
             call_all,
             call_by_name,
@@ -116,13 +130,12 @@ impl<'a> BatchedWalker<'a> {
         diagnostics: &mut Vec<Diagnostic>,
         corrections: &mut Option<&mut Vec<Correction>>,
     ) {
-        self.cops[i].check_node(
-            source,
-            node,
-            self.configs[i],
-            diagnostics,
-            corrections.as_deref_mut(),
-        );
+        let corr = if self.corr_ok[i] {
+            corrections.as_deref_mut()
+        } else {
+            None
+        };
+        self.cops[i].check_node(source, node, self.configs[i], diagnostics, corr);
     }
 }
 
@@ -206,7 +219,50 @@ mod tests {
         let walker = BatchedWalker::new(vec![gated, ungated], vec![&cfg, &cfg]);
         let sf = SourceFile::from_bytes(PathBuf::from("t.rb"), b"foo.each {}; bar.map {}".to_vec());
         let tree = crate::parse::parse_ruby(&sf).unwrap();
+        assert!(!tree.root_node().has_error());
         walker.walk(&sf, tree.root_node(), &mut Vec::new(), None);
+    }
+
+    struct CorrCop;
+
+    impl Cop for CorrCop {
+        fn name(&self) -> &'static str {
+            "Test/Corr"
+        }
+        fn interested_node_kinds(&self) -> &'static [&'static str] {
+            &["call"]
+        }
+        fn check_node(
+            &self,
+            _source: &SourceFile,
+            node: Node<'_>,
+            _config: &CopConfig,
+            _diagnostics: &mut Vec<Diagnostic>,
+            corrections: Option<&mut Vec<Correction>>,
+        ) {
+            if let Some(corr) = corrections {
+                corr.push(Correction {
+                    start: node.start_byte(),
+                    end: node.end_byte(),
+                    replacement: String::new(),
+                    cop_name: self.name(),
+                    cop_index: 0,
+                });
+            }
+        }
+    }
+
+    fn walk_with_corr(cop: &CorrCop, corr_ok: bool, corr: &mut Vec<Correction>) {
+        let cfg = CopConfig::default();
+        let sf = SourceFile::from_bytes(PathBuf::from("t.rb"), b"foo()\n".to_vec());
+        let tree = crate::parse::parse_ruby(&sf).unwrap();
+        assert!(!tree.root_node().has_error());
+        BatchedWalker::with_corr_ok(vec![cop], vec![&cfg], vec![corr_ok]).walk(
+            &sf,
+            tree.root_node(),
+            &mut Vec::new(),
+            Some(corr),
+        );
     }
 
     #[test]
@@ -216,5 +272,15 @@ mod tests {
         walk_sample(&gated, &ungated);
         assert_eq!(hit_count(&gated), 1);
         assert_eq!(hit_count(&ungated), 2);
+    }
+
+    #[test]
+    fn corr_ok_false_does_not_collect_corrections() {
+        let cop = CorrCop;
+        let mut corr = Vec::new();
+        walk_with_corr(&cop, false, &mut corr);
+        assert!(corr.is_empty(), "disallowed cops must not push corrections");
+        walk_with_corr(&cop, true, &mut corr);
+        assert!(!corr.is_empty());
     }
 }
