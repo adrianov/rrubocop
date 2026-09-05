@@ -123,6 +123,10 @@ pub struct Args {
     /// Autocorrect offenses (all cops, including unsafe)
     #[arg(short = 'A', long = "autocorrect-all")]
     pub autocorrect_all: bool,
+
+    /// Start an MCP (Model Context Protocol) server on stdio
+    #[arg(long)]
+    pub mcp: bool,
 }
 
 impl Args {

@@ -9,6 +9,7 @@ pub mod diagnostic;
 pub mod formatter;
 pub mod fs;
 pub mod linter;
+pub mod mcp;
 pub mod model;
 pub mod parse;
 pub mod testutil;
@@ -32,6 +33,9 @@ pub fn run() -> Result<ExitCode> {
     }
 
     let args = Args::parse_cli();
+    if args.mcp {
+        return mcp::run();
+    }
     let registry = CopRegistry::default_registry();
     if let Some(code) = list_and_exit(&args, &registry) {
         return Ok(code);
