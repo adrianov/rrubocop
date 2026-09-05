@@ -24,19 +24,19 @@ macOS (`.tar.gz` from [GitHub Releases](https://github.com/adrianov/rrubocop/rel
 
 ```sh
 # Apple Silicon — use the *-x86_64-apple-darwin.tar.gz asset on Intel Macs
-curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.2/rrubocop-0.8.2-aarch64-apple-darwin.tar.gz
-tar -xzf rrubocop-0.8.2-aarch64-apple-darwin.tar.gz
-sudo cp rrubocop-0.8.2-aarch64-apple-darwin/rrubocop /usr/local/bin/
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.3/rrubocop-0.8.3-aarch64-apple-darwin.tar.gz
+tar -xzf rrubocop-0.8.3-aarch64-apple-darwin.tar.gz
+sudo cp rrubocop-0.8.3-aarch64-apple-darwin/rrubocop /usr/local/bin/
 sudo mkdir -p /usr/local/share/man/man1
-sudo cp rrubocop-0.8.2-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
+sudo cp rrubocop-0.8.3-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
 ```
 
 Ubuntu / Debian (`.deb` from [GitHub Releases](https://github.com/adrianov/rrubocop/releases); amd64, Ubuntu 22.04+ / Debian bookworm+):
 
 ```sh
-# example for v0.8.2 — use the asset name from the release page
-curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.2/rrubocop_0.8.2-1_amd64.deb
-sudo dpkg -i rrubocop_0.8.2-1_amd64.deb
+# example for v0.8.3 — use the asset name from the release page
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.3/rrubocop_0.8.3-1_amd64.deb
+sudo dpkg -i rrubocop_0.8.3-1_amd64.deb
 man rrubocop
 ```
 
@@ -101,6 +101,10 @@ Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
 |---|---|
 | `rubocop_inspection` | Lint via `path` and/or inline `source_code`; returns LSP-shaped offense JSON |
 | `rubocop_autocorrection` | Autocorrect (`safety: true` = safe only; `false` = all); writes files when `path` is set |
+
+- MCP Registry name: `mcp-name: io.github.adrianov/rrubocop`
+
+Metadata lives in [`server.json`](./server.json) (Cargo package on crates.io). Each `v*` tag publishes that listing to the [MCP Registry](https://registry.modelcontextprotocol.io/).
 
 Example client config (Cursor / VS Code / Windsurf):
 
