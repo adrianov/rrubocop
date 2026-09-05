@@ -1,4 +1,4 @@
-.TH RRUBOCOP 1 "September 2026" "rrubocop 0.8.1" "User Commands"
+.TH RRUBOCOP 1 "September 2026" "rrubocop 0.8.2" "User Commands"
 .SH NAME
 rrubocop \- 10x faster RuboCop drop-in
 .SH SYNOPSIS
@@ -49,6 +49,14 @@ List registered cop names.
 \fB\-C\fR, \fB\-\-cache\fR \fIFLAG\fR
 Use result caching (\fItrue\fR) or don't (\fIfalse\fR). Default: \fItrue\fR.
 Cache lives under $RRUBOCOP_CACHE_DIR or ~/.cache/rrubocop.
+.TP
+\fB\-\-mcp\fR
+Start an MCP (Model Context Protocol) server on stdio for AI clients.
+Exposes
+.B rubocop_inspection
+and
+.B rubocop_autocorrection
+(same tools as RuboCop 1.85+).
 .TP
 \fB\-\-fail\-level\fR \fISEVERITY\fR
 Minimum severity for exit code 1 (default: convention).

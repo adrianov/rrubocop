@@ -3,7 +3,8 @@
 10x faster RuboCop drop-in for Ruby (tree-sitter). Same CLI, configs, and output — no RuboCop gems to maintain.
 
 ## Layout
-- `src/cli.rs` — RuboCop-compatible CLI
+- `src/cli.rs` — RuboCop-compatible CLI (`--mcp` starts MCP server)
+- `src/mcp/` — MCP stdio server via official `rmcp` (`offense`, `tools`; `rubocop_inspection` / `rubocop_autocorrection`)
 - `src/baseline.rs` + `src/resources/baseline.json` — RuboCop/gem versions for `--help`/`--version`
 - `src/resources/gem_configs/` + `gem_configs_manifest.json` (+ optional `same_as` identical-YAML aliases) + `scripts/fetch_gem_configs.py` — vendored public gem YAML (by version from GitHub) compiled in via `build.rs`; `Gemfile.lock` selects version / alias; parsed in memory
 - `src/config/` — RuboCop-parity YAML (`mod.rs` re-exports; `gem_path`/`gem_path_local`/`gem_path_version`/`gem_configs` — embed first, else `bundle info --path` for private/unlisted gems, `yaml_read` ERB (native simple-ERB: literals/vars/`ENV`; ruby fallback), `types`, `globutil`, `filter`/`filter_match`/`filter_path`, `discover` (incl. `~/.rubocop.yml` / XDG fallback), `standard`/`standard_convert`, `merge`/`merge_cop`, `parse`/`parse_{allcops,cop}`, `load`/`load_{defaults,require,gems,recursive,lockfile,resolve}`, `ruby_ver`, `resolved`/`resolved_{state,enabled,inject,cop_cfg,filters,effective,fingerprint}`)

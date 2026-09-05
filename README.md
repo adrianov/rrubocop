@@ -24,19 +24,19 @@ macOS (`.tar.gz` from [GitHub Releases](https://github.com/adrianov/rrubocop/rel
 
 ```sh
 # Apple Silicon — use the *-x86_64-apple-darwin.tar.gz asset on Intel Macs
-curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.1/rrubocop-0.8.1-aarch64-apple-darwin.tar.gz
-tar -xzf rrubocop-0.8.1-aarch64-apple-darwin.tar.gz
-sudo cp rrubocop-0.8.1-aarch64-apple-darwin/rrubocop /usr/local/bin/
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.2/rrubocop-0.8.2-aarch64-apple-darwin.tar.gz
+tar -xzf rrubocop-0.8.2-aarch64-apple-darwin.tar.gz
+sudo cp rrubocop-0.8.2-aarch64-apple-darwin/rrubocop /usr/local/bin/
 sudo mkdir -p /usr/local/share/man/man1
-sudo cp rrubocop-0.8.1-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
+sudo cp rrubocop-0.8.2-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
 ```
 
 Ubuntu / Debian (`.deb` from [GitHub Releases](https://github.com/adrianov/rrubocop/releases); amd64, Ubuntu 22.04+ / Debian bookworm+):
 
 ```sh
-# example for v0.8.1 — use the asset name from the release page
-curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.1/rrubocop_0.8.1-1_amd64.deb
-sudo dpkg -i rrubocop_0.8.1-1_amd64.deb
+# example for v0.8.2 — use the asset name from the release page
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.2/rrubocop_0.8.2-1_amd64.deb
+sudo dpkg -i rrubocop_0.8.2-1_amd64.deb
 man rrubocop
 ```
 
@@ -52,6 +52,7 @@ rrubocop [OPTIONS] [PATH]...
 - **Directives** — `# rubocop:disable` / `enable`
 - **Parser** — tree-sitter-ruby (no Prism / no CRuby)
 - **Cache** — content-addressed `cache.redb` under `$RRUBOCOP_CACHE_DIR` or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop` (same style as abcop); `--cache false` skips reads but still writes
+- **MCP** — `rrubocop --mcp` starts a [Model Context Protocol](https://modelcontextprotocol.io/) server (official Rust [`rmcp`](https://crates.io/crates/rmcp) SDK) with the same tools as RuboCop 1.85+: `rubocop_inspection` and `rubocop_autocorrection`
 
 Reference implementations: [nitrocop](https://github.com/6/nitrocop) (architecture & fixtures), upstream [RuboCop](https://github.com/rubocop/rubocop).
 
@@ -87,9 +88,42 @@ rrubocop --list-cops
 rrubocop -L                      # list target files
 rrubocop -F 10                   # stop after 10 offenses (off by default; `-F` = 1)
                                  # with `-a`/`-A`, N is non-autocorrectable offenses only
+rrubocop --mcp                   # MCP server on stdio (for AI clients)
 ```
 
 Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
+
+## MCP (Model Context Protocol)
+
+`rrubocop --mcp` runs a long-lived MCP server on stdio — same idea as [RuboCop’s MCP](https://docs.rubocop.org/rubocop/latest/usage/mcp.html), with no Ruby `mcp` gem. Tools:
+
+| Tool | Purpose |
+|---|---|
+| `rubocop_inspection` | Lint via `path` and/or inline `source_code`; returns LSP-shaped offense JSON |
+| `rubocop_autocorrection` | Autocorrect (`safety: true` = safe only; `false` = all); writes files when `path` is set |
+
+Example client config (Cursor / VS Code / Windsurf):
+
+```json
+{
+  "mcpServers": {
+    "rrubocop": {
+      "type": "stdio",
+      "command": "rrubocop",
+      "args": ["--mcp"],
+      "cwd": "/path/to/your/project"
+    }
+  }
+}
+```
+
+Claude Code:
+
+```sh
+claude mcp add rrubocop -- rrubocop --mcp
+```
+
+Intended for MCP clients, not interactive use.
 
 ## Caching
 
