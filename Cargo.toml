@@ -1,6 +1,6 @@
 [package]
 name = "rrubocop"
-version = "0.8.2"
+version = "0.8.3"
 edition = "2024"
 rust-version = "1.88"
 authors = ["Peter Adrianov"]
@@ -10,7 +10,7 @@ homepage = "https://github.com/adrianov/rrubocop"
 documentation = "https://github.com/adrianov/rrubocop"
 description = "10x faster RuboCop drop-in. Same output format and configs, without maintaining RuboCop gems."
 readme = "README.md"
-keywords = ["ruby", "linter", "rubocop", "static-analysis"]
+keywords = ["ruby", "linter", "rubocop", "static-analysis", "mcp"]
 categories = ["command-line-utilities", "development-tools"]
 include = [
     "src/**",
@@ -21,6 +21,7 @@ include = [
     "LICENSE",
     "NOTICE",
     "man/**",
+    "server.json",
 ]
 
 [[bin]]
