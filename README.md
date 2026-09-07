@@ -52,7 +52,7 @@ rrubocop [OPTIONS] [PATH]...
 - **Directives** — `# rubocop:disable` / `enable`
 - **Parser** — tree-sitter-ruby (no Prism / no CRuby)
 - **Cache** — content-addressed `cache.redb` under `$RRUBOCOP_CACHE_DIR` or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop` (same style as abcop); `--cache false` skips reads but still writes
-- **MCP** — `rrubocop --mcp` starts a [Model Context Protocol](https://modelcontextprotocol.io/) server (official Rust [`rmcp`](https://crates.io/crates/rmcp) SDK) with the same tools as RuboCop 1.85+: `rubocop_inspection` and `rubocop_autocorrection`
+- **Prefer MCP with LLMs.** `rrubocop --mcp` is the best way to use rrubocop from an agent: the model gets offenses as soon as it writes, so it can fix and autocorrect in the same turn and ship effective code right away — not after a later CLI/CI pass. Official Rust [`rmcp`](https://crates.io/crates/rmcp) SDK; same tools as RuboCop 1.85+: `rubocop_inspection` and `rubocop_autocorrection`
 
 Reference implementations: [nitrocop](https://github.com/6/nitrocop) (architecture & fixtures), upstream [RuboCop](https://github.com/rubocop/rubocop).
 
@@ -94,6 +94,8 @@ rrubocop --mcp                   # MCP server on stdio (for AI clients)
 Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
 
 ## MCP (Model Context Protocol)
+
+**Preferred for LLM / agent workflows.** Wire rrubocop as an MCP server so the model can call `rubocop_inspection` / `rubocop_autocorrection` while it edits: feedback arrives in the same turn, the agent corrects soon, and it writes clean code on the first pass instead of discovering offenses only in CI.
 
 `rrubocop --mcp` runs a long-lived MCP server on stdio — same idea as [RuboCop’s MCP](https://docs.rubocop.org/rubocop/latest/usage/mcp.html), with no Ruby `mcp` gem. Tools:
 
