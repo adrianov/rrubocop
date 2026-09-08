@@ -9,6 +9,7 @@ use crate::fs;
 use crate::linter::lint_bytes_autocorrect;
 
 use super::state::State;
+use super::targets;
 
 pub(super) fn lint_once(
     state: &State,
@@ -42,16 +43,15 @@ pub(super) fn lint_mut(
     .map_err(|e| e.to_string())
 }
 
-pub(super) fn target_files(filters: &CopFilterSet, path: Option<&str>) -> Result<Vec<PathBuf>, String> {
-    let root = path
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."));
-    if !root.exists() {
-        return Err(format!("No such file or directory: {}", root.display()));
-    }
-    fs::discover_files_filtered(&[root], filters, false)
-        .map(|d| d.files)
-        .map_err(|e| e.to_string())
+pub(super) fn target_files(filters: &CopFilterSet, targets: &[String]) -> Result<Vec<PathBuf>, String> {
+    targets::validate_roots(targets)?;
+    fs::discover_files_filtered(
+        &targets.iter().map(PathBuf::from).collect::<Vec<_>>(),
+        filters,
+        false,
+    )
+    .map(|d| d.files)
+    .map_err(|e| e.to_string())
 }
 
 pub(super) fn read_file(path: &Path) -> Result<Vec<u8>, String> {

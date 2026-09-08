@@ -101,10 +101,10 @@ Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
 
 | Tool | Purpose |
 |---|---|
-| `rubocop_inspection` | Lint via `path` (required for project config) and/or inline `source_code`; returns LSP-shaped offense JSON |
-| `rubocop_autocorrection` | Autocorrect (`safety: true` = safe only; `false` = all); writes files when `path` is set |
+| `rubocop_inspection` | Lint via `path` / `paths` (string or array; required for filesystem inspect) and/or inline `source_code`; returns LSP-shaped offense JSON |
+| `rubocop_autocorrection` | Same targets as inspection; `safety: true` = safe only; writes files when a filesystem `path` is set |
 
-Always pass `path` (absolute file or directory). The server walks up from that path to find `.rubocop.yml`. A long-lived global MCP started from `$HOME` otherwise inherits `~/.rubocop.yml` (`AllCops: Enabled: false` is common) and misses project cops such as `RSpec/ExampleLength`. `cwd` in the client config is only a fallback when `path` is omitted.
+Always pass `path` or `paths` (absolute file or directory preferred; `path` may be a string **or** an array). The server walks up from the first target to find `.rubocop.yml`. Omitting targets for filesystem ops errors out (avoids scanning `$HOME` when MCP `cwd` is mis-set). A long-lived global MCP started from `$HOME` otherwise inherits `~/.rubocop.yml` (`AllCops: Enabled: false` is common) and misses project cops such as `RSpec/ExampleLength`.
 
 - MCP Registry name: `mcp-name: io.github.adrianov/rrubocop`
 

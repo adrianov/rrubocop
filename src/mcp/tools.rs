@@ -5,20 +5,24 @@ use std::path::{Path, PathBuf};
 use serde_json::{json, Value};
 
 use crate::cli::AutocorrectMode;
-use crate::config::{load_config, CopFilterSet, ResolvedConfig};
+use crate::config::{load_config, load_default_config, CopFilterSet, ResolvedConfig};
 use crate::diagnostic::{smart_path, Diagnostic};
 
 use super::io::{lint_mut, lint_once, read_file, target_files, write_file};
 use super::offense;
 use super::state::State;
+use super::targets;
 
 pub(crate) fn inspect(
     state: &State,
-    path: Option<String>,
+    targets: Vec<String>,
     source: Option<String>,
 ) -> Result<String, String> {
-    with_resolved(state, path.as_deref(), |cfg, filters| {
-        inspect_resolved(state, cfg, filters, path.as_deref(), source)
+    if source.is_none() {
+        targets::validate_roots(&targets)?;
+    }
+    with_resolved(state, targets.first().map(String::as_str), |cfg, filters| {
+        inspect_resolved(state, cfg, filters, &targets, source)
     })
 }
 
@@ -26,7 +30,7 @@ fn inspect_resolved(
     state: &State,
     cfg: &ResolvedConfig,
     filters: &CopFilterSet,
-    path: Option<&str>,
+    targets: &[String],
     source: Option<String>,
 ) -> Result<String, String> {
     if let Some(code) = source {
@@ -34,18 +38,18 @@ fn inspect_resolved(
             state,
             cfg,
             filters,
-            Path::new(path.unwrap_or("example.rb")),
+            Path::new(targets.first().map(String::as_str).unwrap_or("example.rb")),
             code.as_bytes(),
         )?;
         return Ok(offense::offenses_json(&diags));
     }
-    let files = target_files(filters, path)?;
+    let files = target_files(filters, targets)?;
     Ok(pack_offenses(&files, &lint_paths(state, cfg, filters, &files)?))
 }
 
 pub(crate) fn autocorrect(
     state: &State,
-    path: Option<String>,
+    targets: Vec<String>,
     source: Option<String>,
     safety: bool,
 ) -> Result<String, String> {
@@ -54,11 +58,14 @@ pub(crate) fn autocorrect(
     } else {
         AutocorrectMode::All
     };
-    with_resolved(state, path.as_deref(), |cfg, filters| {
+    if source.is_none() {
+        targets::validate_roots(&targets)?;
+    }
+    with_resolved(state, targets.first().map(String::as_str), |cfg, filters| {
         if let Some(code) = source {
-            return correct_inline(state, cfg, filters, path.as_deref(), code, mode);
+            return correct_inline(state, cfg, filters, &targets, code, mode);
         }
-        correct_files(state, cfg, filters, path.as_deref(), mode)
+        correct_files(state, cfg, filters, &targets, mode)
     })
 }
 
@@ -70,23 +77,35 @@ fn with_resolved<T>(
     if let Some(fixed) = &state.fixed {
         return f(&fixed.config, &fixed.filters);
     }
-    let config = load_config(None, path.map(Path::new), None).map_err(|e| e.to_string())?;
-    let filters = CopFilterSet::build(&config, &state.registry);
-    f(&config, &filters)
+    // No target path: built-in defaults only. Never walk MCP cwd (often $HOME).
+    let config = match path {
+        None => load_default_config(None, None),
+        Some(p) => {
+            targets::refuse_home_walk(Path::new(p))?;
+            load_config(None, Some(Path::new(p)), None).map_err(|e| e.to_string())?
+        }
+    };
+    f(&config, &CopFilterSet::build(&config, &state.registry))
 }
 
 fn correct_inline(
     state: &State,
     cfg: &ResolvedConfig,
     filters: &CopFilterSet,
-    path: Option<&str>,
+    targets: &[String],
     code: String,
     mode: AutocorrectMode,
 ) -> Result<String, String> {
-    let display = path.unwrap_or("example.rb");
     let mut bytes = code.into_bytes();
-    lint_mut(state, cfg, filters, Path::new(display), &mut bytes, mode)?;
-    if let Some(p) = path {
+    lint_mut(
+        state,
+        cfg,
+        filters,
+        Path::new(targets.first().map(String::as_str).unwrap_or("example.rb")),
+        &mut bytes,
+        mode,
+    )?;
+    if let Some(p) = targets.first() {
         write_file(Path::new(p), &bytes)?;
     }
     Ok(String::from_utf8_lossy(&bytes).into_owned())
@@ -96,10 +115,10 @@ fn correct_files(
     state: &State,
     cfg: &ResolvedConfig,
     filters: &CopFilterSet,
-    path: Option<&str>,
+    targets: &[String],
     mode: AutocorrectMode,
 ) -> Result<String, String> {
-    let files = target_files(filters, path)?;
+    let files = target_files(filters, targets)?;
     let results: Vec<Value> = files
         .iter()
         .map(|file| correct_one(state, cfg, filters, file, mode))
@@ -171,4 +190,3 @@ fn pack_offenses(targets: &[PathBuf], all: &[(String, Vec<Diagnostic>)]) -> Stri
     })
     .to_string()
 }
-

@@ -6,6 +6,7 @@
 mod io;
 mod offense;
 mod state;
+mod targets;
 mod tools;
 
 use std::process::ExitCode;
@@ -38,10 +39,13 @@ pub struct RuboCopMcp {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct InspectionArgs {
-    /// File or directory to inspect. Walks up from this path for `.rubocop.yml`
+    /// File/dir string, or array of paths. Walks up for `.rubocop.yml`
     /// (do not rely on the MCP process cwd).
     #[serde(default)]
-    path: Option<String>,
+    path: Option<targets::OneOrMany>,
+    /// Multiple files or directories (same as an array in `path`).
+    #[serde(default)]
+    paths: Vec<String>,
     /// Inline Ruby source (skips filesystem discovery). Pass `path` with it
     /// so Include filters and project config still apply.
     #[serde(default)]
@@ -50,9 +54,12 @@ struct InspectionArgs {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct AutocorrectArgs {
-    /// File or directory to correct. Walks up from this path for `.rubocop.yml`.
+    /// File/dir string, or array of paths. Walks up for `.rubocop.yml`.
     #[serde(default)]
-    path: Option<String>,
+    path: Option<targets::OneOrMany>,
+    /// Multiple files or directories (same as an array in `path`).
+    #[serde(default)]
+    paths: Vec<String>,
     /// Inline Ruby source to correct.
     #[serde(default)]
     source_code: Option<String>,
@@ -79,11 +86,13 @@ impl RuboCopMcp {
 
         let registry = CopRegistry::default_registry();
         let config = load_default_config(None, None);
-        let filters = CopFilterSet::build(&config, &registry);
         Self {
             state: Arc::new(State {
+                fixed: Some(FixedLint {
+                    filters: CopFilterSet::build(&config, &registry),
+                    config,
+                }),
                 registry,
-                fixed: Some(FixedLint { config, filters }),
             }),
             tool_router: Self::tool_router(),
         }
@@ -91,7 +100,7 @@ impl RuboCopMcp {
 
     #[tool(
         name = "rubocop_inspection",
-        description = "Inspect Ruby code for offenses. Always pass `path` so the nearest `.rubocop.yml` is used. Optionally pass `source_code` for unsaved buffers together with `path`.",
+        description = "Inspect Ruby code for offenses. Pass `path` (string or array) and/or `paths`, preferably absolute, so the nearest `.rubocop.yml` is used. Optionally pass `source_code` for unsaved buffers together with `path`.",
         annotations(
             title = "RuboCop's inspection",
             read_only_hint = true,
@@ -106,14 +115,14 @@ impl RuboCopMcp {
     ) -> Result<CallToolResult, McpError> {
         Ok(tool_result(tools::inspect(
             &self.state,
-            args.path,
+            targets::merge(args.path, args.paths),
             args.source_code,
         )))
     }
 
     #[tool(
         name = "rubocop_autocorrection",
-        description = "Autocorrect RuboCop offenses. Always pass `path` so the nearest `.rubocop.yml` is used. Set `safety` to false to include unsafe corrections.",
+        description = "Autocorrect RuboCop offenses. Pass `path` (string or array) and/or `paths`, preferably absolute. Set `safety` to false to include unsafe corrections.",
         annotations(
             title = "RuboCop's autocorrection",
             read_only_hint = false,
@@ -128,7 +137,7 @@ impl RuboCopMcp {
     ) -> Result<CallToolResult, McpError> {
         Ok(tool_result(tools::autocorrect(
             &self.state,
-            args.path,
+            targets::merge(args.path, args.paths),
             args.source_code,
             args.safety,
         )))
@@ -153,8 +162,9 @@ impl ServerHandler for RuboCopMcp {
             .with_protocol_version(ProtocolVersion::V_2025_06_18)
             .with_instructions(
                 "RuboCop-compatible lint tools: rubocop_inspection, rubocop_autocorrection. \
-                 Always pass `path` (absolute file or directory). Config is resolved by \
-                 walking up from that path, not from the MCP process cwd."
+                 Always pass `path` or `paths` (absolute file/dir; `path` may be a string or \
+                 array). Config is resolved by walking up from the first target, not from the \
+                 MCP process cwd."
                     .to_string(),
             )
     }
@@ -287,6 +297,81 @@ mod tests {
                 .unwrap()
                 .iter()
                 .any(|o| o["code"] == "Style/CharacterLiteral"));
+            let _ = client.cancel().await;
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn inspect_without_targets_errors() {
+        with_client(|client| async move {
+            let result = client
+                .call_tool(
+                    CallToolRequestParams::new("rubocop_inspection")
+                        .with_arguments(args_map(serde_json::json!({}))),
+                )
+                .await
+                .expect("call");
+            assert!(result.is_error == Some(true));
+            let text = result.content[0].as_text().unwrap().text.clone();
+            assert!(text.contains("`path` or `paths`"), "{text}");
+            let _ = client.cancel().await;
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn inspect_path_array_accepted() {
+        with_client(|client| async move {
+            let result = client
+                .call_tool(
+                    CallToolRequestParams::new("rubocop_inspection").with_arguments(args_map(
+                        serde_json::json!({ "path": ["/no/such/rrubocop_mcp.rb"] }),
+                    )),
+                )
+                .await
+                .expect("call");
+            assert!(result.is_error == Some(true));
+            let text = result.content[0].as_text().unwrap().text.clone();
+            assert!(text.contains("No such file"), "{text}");
+            let _ = client.cancel().await;
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn inspect_paths_key_accepted() {
+        with_client(|client| async move {
+            let result = client
+                .call_tool(
+                    CallToolRequestParams::new("rubocop_inspection").with_arguments(args_map(
+                        serde_json::json!({ "paths": ["/no/such/rrubocop_mcp.rb"] }),
+                    )),
+                )
+                .await
+                .expect("call");
+            assert!(result.is_error == Some(true));
+            let text = result.content[0].as_text().unwrap().text.clone();
+            assert!(text.contains("No such file"), "{text}");
+            let _ = client.cancel().await;
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn autocorrect_without_targets_errors() {
+        with_client(|client| async move {
+            let result = client
+                .call_tool(
+                    CallToolRequestParams::new("rubocop_autocorrection").with_arguments(args_map(
+                        serde_json::json!({ "safety": true }),
+                    )),
+                )
+                .await
+                .expect("call");
+            assert!(result.is_error == Some(true));
+            let text = result.content[0].as_text().unwrap().text.clone();
+            assert!(text.contains("`path` or `paths`"), "{text}");
             let _ = client.cancel().await;
         })
         .await;
