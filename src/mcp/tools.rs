@@ -5,35 +5,42 @@ use std::path::{Path, PathBuf};
 use serde_json::{json, Value};
 
 use crate::cli::AutocorrectMode;
-use crate::config::{CopFilterSet, ResolvedConfig};
-use crate::cop::registry::CopRegistry;
+use crate::config::{load_config, CopFilterSet, ResolvedConfig};
 use crate::diagnostic::{smart_path, Diagnostic};
-use crate::fs;
-use crate::linter::lint_bytes_autocorrect;
 
+use super::io::{lint_mut, lint_once, read_file, target_files, write_file};
 use super::offense;
-
-pub(crate) struct State {
-    pub(crate) config: ResolvedConfig,
-    pub(crate) registry: CopRegistry,
-    pub(crate) filters: CopFilterSet,
-}
+use super::state::State;
 
 pub(crate) fn inspect(
     state: &State,
     path: Option<String>,
     source: Option<String>,
 ) -> Result<String, String> {
+    with_resolved(state, path.as_deref(), |cfg, filters| {
+        inspect_resolved(state, cfg, filters, path.as_deref(), source)
+    })
+}
+
+fn inspect_resolved(
+    state: &State,
+    cfg: &ResolvedConfig,
+    filters: &CopFilterSet,
+    path: Option<&str>,
+    source: Option<String>,
+) -> Result<String, String> {
     if let Some(code) = source {
         let diags = lint_once(
             state,
-            Path::new(path.as_deref().unwrap_or("example.rb")),
+            cfg,
+            filters,
+            Path::new(path.unwrap_or("example.rb")),
             code.as_bytes(),
         )?;
         return Ok(offense::offenses_json(&diags));
     }
-    let files = target_files(state, path)?;
-    Ok(pack_offenses(&files, &lint_paths(state, &files)?))
+    let files = target_files(filters, path)?;
+    Ok(pack_offenses(&files, &lint_paths(state, cfg, filters, &files)?))
 }
 
 pub(crate) fn autocorrect(
@@ -47,22 +54,39 @@ pub(crate) fn autocorrect(
     } else {
         AutocorrectMode::All
     };
-    if let Some(code) = source {
-        return correct_inline(state, path, code, mode);
+    with_resolved(state, path.as_deref(), |cfg, filters| {
+        if let Some(code) = source {
+            return correct_inline(state, cfg, filters, path.as_deref(), code, mode);
+        }
+        correct_files(state, cfg, filters, path.as_deref(), mode)
+    })
+}
+
+fn with_resolved<T>(
+    state: &State,
+    path: Option<&str>,
+    f: impl FnOnce(&ResolvedConfig, &CopFilterSet) -> Result<T, String>,
+) -> Result<T, String> {
+    if let Some(fixed) = &state.fixed {
+        return f(&fixed.config, &fixed.filters);
     }
-    correct_files(state, path, mode)
+    let config = load_config(None, path.map(Path::new), None).map_err(|e| e.to_string())?;
+    let filters = CopFilterSet::build(&config, &state.registry);
+    f(&config, &filters)
 }
 
 fn correct_inline(
     state: &State,
-    path: Option<String>,
+    cfg: &ResolvedConfig,
+    filters: &CopFilterSet,
+    path: Option<&str>,
     code: String,
     mode: AutocorrectMode,
 ) -> Result<String, String> {
-    let display = path.clone().unwrap_or_else(|| "example.rb".into());
+    let display = path.unwrap_or("example.rb");
     let mut bytes = code.into_bytes();
-    lint_mut(state, Path::new(&display), &mut bytes, mode)?;
-    if let Some(p) = path.as_ref() {
+    lint_mut(state, cfg, filters, Path::new(display), &mut bytes, mode)?;
+    if let Some(p) = path {
         write_file(Path::new(p), &bytes)?;
     }
     Ok(String::from_utf8_lossy(&bytes).into_owned())
@@ -70,13 +94,15 @@ fn correct_inline(
 
 fn correct_files(
     state: &State,
-    path: Option<String>,
+    cfg: &ResolvedConfig,
+    filters: &CopFilterSet,
+    path: Option<&str>,
     mode: AutocorrectMode,
 ) -> Result<String, String> {
-    let files = target_files(state, path)?;
+    let files = target_files(filters, path)?;
     let results: Vec<Value> = files
         .iter()
-        .map(|file| correct_one(state, file, mode))
+        .map(|file| correct_one(state, cfg, filters, file, mode))
         .collect::<Result<_, _>>()?;
     let corrected_n = results.iter().filter(|r| r["corrected"] == true).count();
     Ok(json!({
@@ -89,10 +115,16 @@ fn correct_files(
     .to_string())
 }
 
-fn correct_one(state: &State, file: &Path, mode: AutocorrectMode) -> Result<Value, String> {
+fn correct_one(
+    state: &State,
+    cfg: &ResolvedConfig,
+    filters: &CopFilterSet,
+    file: &Path,
+    mode: AutocorrectMode,
+) -> Result<Value, String> {
     let original = read_file(file)?;
     let mut bytes = original.clone();
-    lint_mut(state, file, &mut bytes, mode)?;
+    lint_mut(state, cfg, filters, file, &mut bytes, mode)?;
     let changed = bytes != original;
     if changed {
         write_file(file, &bytes)?;
@@ -105,12 +137,14 @@ fn correct_one(state: &State, file: &Path, mode: AutocorrectMode) -> Result<Valu
 
 fn lint_paths(
     state: &State,
+    cfg: &ResolvedConfig,
+    filters: &CopFilterSet,
     files: &[PathBuf],
 ) -> Result<Vec<(String, Vec<Diagnostic>)>, String> {
     files
         .iter()
         .map(|file| {
-            let diags = lint_once(state, file, &read_file(file)?)?;
+            let diags = lint_once(state, cfg, filters, file, &read_file(file)?)?;
             Ok((smart_path(&file.to_string_lossy()), diags))
         })
         .collect()
@@ -138,58 +172,3 @@ fn pack_offenses(targets: &[PathBuf], all: &[(String, Vec<Diagnostic>)]) -> Stri
     .to_string()
 }
 
-fn lint_once(state: &State, path: &Path, bytes: &[u8]) -> Result<Vec<Diagnostic>, String> {
-    lint_mut(state, path, &mut bytes.to_vec(), AutocorrectMode::Off)
-}
-
-fn lint_mut(
-    state: &State,
-    path: &Path,
-    bytes: &mut Vec<u8>,
-    mode: AutocorrectMode,
-) -> Result<Vec<Diagnostic>, String> {
-    lint_bytes_autocorrect(
-        path,
-        bytes,
-        &state.config,
-        &state.registry,
-        &state.filters,
-        None,
-        &[],
-        mode,
-        false,
-    )
-    .map_err(|e| e.to_string())
-}
-
-fn target_files(state: &State, path: Option<String>) -> Result<Vec<PathBuf>, String> {
-    let root = path
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."));
-    if !root.exists() {
-        return Err(format!("No such file or directory: {}", root.display()));
-    }
-    fs::discover_files_filtered(&[root], &state.filters, false)
-        .map(|d| d.files)
-        .map_err(|e| e.to_string())
-}
-
-fn read_file(path: &Path) -> Result<Vec<u8>, String> {
-    std::fs::read(path).map_err(|_| format!("No such file or directory: {}", path.display()))
-}
-
-fn write_file(path: &Path, content: &[u8]) -> Result<(), String> {
-    std::fs::write(path, content).map_err(|e| write_err(path, &e))
-}
-
-fn write_err(path: &Path, e: &std::io::Error) -> String {
-    use std::io::ErrorKind;
-    match e.kind() {
-        ErrorKind::PermissionDenied => format!("Permission denied: {}", path.display()),
-        ErrorKind::StorageFull => format!("No space left on device: {}", path.display()),
-        _ if e.raw_os_error() == Some(libc::EROFS) => {
-            format!("Read-only file system: {}", path.display())
-        }
-        _ => format!("{}: {}", e, path.display()),
-    }
-}

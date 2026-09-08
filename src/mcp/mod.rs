@@ -3,7 +3,9 @@
 //! Uses the official [`rmcp`] SDK. Tools match RuboCop 1.85+:
 //! `rubocop_inspection` and `rubocop_autocorrection`.
 
+mod io;
 mod offense;
+mod state;
 mod tools;
 
 use std::process::ExitCode;
@@ -19,10 +21,12 @@ use rmcp::{tool, tool_handler, tool_router, ErrorData as McpError, ServerHandler
 use serde::Deserialize;
 use tokio::runtime::Runtime;
 
-use crate::config::{load_config, load_default_config, CopFilterSet};
 use crate::cop::registry::CopRegistry;
 
-use tools::State;
+use state::State;
+
+#[cfg(test)]
+use state::FixedLint;
 
 /// MCP session: shared lint state + tool router.
 #[derive(Clone)]
@@ -34,17 +38,19 @@ pub struct RuboCopMcp {
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct InspectionArgs {
-    /// File or directory to inspect (default: current directory).
+    /// File or directory to inspect. Walks up from this path for `.rubocop.yml`
+    /// (do not rely on the MCP process cwd).
     #[serde(default)]
     path: Option<String>,
-    /// Inline Ruby source (skips filesystem discovery).
+    /// Inline Ruby source (skips filesystem discovery). Pass `path` with it
+    /// so Include filters and project config still apply.
     #[serde(default)]
     source_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 struct AutocorrectArgs {
-    /// File or directory to correct (default: current directory).
+    /// File or directory to correct. Walks up from this path for `.rubocop.yml`.
     #[serde(default)]
     path: Option<String>,
     /// Inline Ruby source to correct.
@@ -57,31 +63,35 @@ struct AutocorrectArgs {
 #[tool_router]
 impl RuboCopMcp {
     pub fn new() -> Result<Self> {
-        let registry = CopRegistry::default_registry();
-        let config = load_config(None, None, None)?;
-        Ok(Self::from_parts(config, registry))
-    }
-
-    fn from_parts(config: crate::config::ResolvedConfig, registry: CopRegistry) -> Self {
-        Self {
+        Ok(Self {
             state: Arc::new(State {
-                filters: CopFilterSet::build(&config, &registry),
-                config,
-                registry,
+                registry: CopRegistry::default_registry(),
+                fixed: None,
             }),
             tool_router: Self::tool_router(),
-        }
+        })
     }
 
     /// Built-in defaults only (ignores project / home `.rubocop.yml`). For tests.
     #[cfg(test)]
     fn with_defaults() -> Self {
-        Self::from_parts(load_default_config(None, None), CopRegistry::default_registry())
+        use crate::config::{load_default_config, CopFilterSet};
+
+        let registry = CopRegistry::default_registry();
+        let config = load_default_config(None, None);
+        let filters = CopFilterSet::build(&config, &registry);
+        Self {
+            state: Arc::new(State {
+                registry,
+                fixed: Some(FixedLint { config, filters }),
+            }),
+            tool_router: Self::tool_router(),
+        }
     }
 
     #[tool(
         name = "rubocop_inspection",
-        description = "Inspect Ruby code for offenses. Provide `source_code` to check inline code or `path` to check files.",
+        description = "Inspect Ruby code for offenses. Always pass `path` so the nearest `.rubocop.yml` is used. Optionally pass `source_code` for unsaved buffers together with `path`.",
         annotations(
             title = "RuboCop's inspection",
             read_only_hint = true,
@@ -103,7 +113,7 @@ impl RuboCopMcp {
 
     #[tool(
         name = "rubocop_autocorrection",
-        description = "Autocorrect RuboCop offenses in Ruby code. Provide `source_code` to correct inline code or `path` to correct files. Set `safety` to false to include unsafe corrections.",
+        description = "Autocorrect RuboCop offenses. Always pass `path` so the nearest `.rubocop.yml` is used. Set `safety` to false to include unsafe corrections.",
         annotations(
             title = "RuboCop's autocorrection",
             read_only_hint = false,
@@ -142,7 +152,9 @@ impl ServerHandler for RuboCopMcp {
             ))
             .with_protocol_version(ProtocolVersion::V_2025_06_18)
             .with_instructions(
-                "RuboCop-compatible lint tools: rubocop_inspection, rubocop_autocorrection."
+                "RuboCop-compatible lint tools: rubocop_inspection, rubocop_autocorrection. \
+                 Always pass `path` (absolute file or directory). Config is resolved by \
+                 walking up from that path, not from the MCP process cwd."
                     .to_string(),
             )
     }
@@ -170,8 +182,23 @@ mod tests {
         F: FnOnce(rmcp::service::RunningService<rmcp::RoleClient, ()>) -> Fut,
         Fut: std::future::Future<Output = ()>,
     {
+        serve_client(RuboCopMcp::with_defaults(), f).await;
+    }
+
+    async fn with_live_client<F, Fut>(f: F)
+    where
+        F: FnOnce(rmcp::service::RunningService<rmcp::RoleClient, ()>) -> Fut,
+        Fut: std::future::Future<Output = ()>,
+    {
+        serve_client(RuboCopMcp::new().expect("mcp"), f).await;
+    }
+
+    async fn serve_client<F, Fut>(server: RuboCopMcp, f: F)
+    where
+        F: FnOnce(rmcp::service::RunningService<rmcp::RoleClient, ()>) -> Fut,
+        Fut: std::future::Future<Output = ()>,
+    {
         let (server_side, client_side) = tokio::io::duplex(64 * 1024);
-        let server = RuboCopMcp::with_defaults();
         let server_task = tokio::spawn(async move {
             let _ = server
                 .serve(server_side)
@@ -188,6 +215,22 @@ mod tests {
         v.as_object().expect("object").clone()
     }
 
+    fn long_example_spec() -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join(".rubocop.yml"),
+            "RSpec/ExampleLength:\n  Enabled: true\n  Max: 3\n",
+        )
+        .unwrap();
+        let spec = dir.path().join("example_length_spec.rb");
+        std::fs::write(
+            &spec,
+            "RSpec.describe('x') do\n  it 'long' do\n    a = 1\n    b = 2\n    c = 3\n    d = 4\n  end\nend\n",
+        )
+        .unwrap();
+        (dir, spec)
+    }
+
     #[tokio::test]
     async fn list_tools() {
         with_client(|client| async move {
@@ -201,6 +244,26 @@ mod tests {
             assert!(names.iter().any(|n| n == "rubocop_inspection"));
             assert!(names.iter().any(|n| n == "rubocop_autocorrection"));
             assert_eq!(names.len(), 2);
+            let _ = client.cancel().await;
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn inspect_path_uses_project_config() {
+        with_live_client(|client| async move {
+            let (_dir, spec) = long_example_spec();
+            let result = client
+                .call_tool(
+                    CallToolRequestParams::new("rubocop_inspection").with_arguments(args_map(
+                        serde_json::json!({ "path": spec.to_string_lossy() }),
+                    )),
+                )
+                .await
+                .expect("call");
+            assert_eq!(result.is_error, Some(false));
+            let body = result.content[0].as_text().unwrap().text.as_str();
+            assert!(body.contains("RSpec/ExampleLength"), "got: {body}");
             let _ = client.cancel().await;
         })
         .await;
