@@ -15,6 +15,7 @@ mod duplicate_match_pattern;
 mod duplicate_methods;
 mod each_with_object_argument;
 mod else_layout;
+mod empty_block;
 mod empty_ensure;
 mod empty_file;
 mod empty_interpolation;
@@ -92,6 +93,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         duplicate_methods::DuplicateMethods,
         each_with_object_argument::EachWithObjectArgument,
         else_layout::ElseLayout,
+        empty_block::EmptyBlock,
         empty_ensure::EmptyEnsure,
         empty_file::EmptyFile,
         empty_interpolation::EmptyInterpolation,
