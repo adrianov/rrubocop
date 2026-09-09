@@ -77,7 +77,7 @@ fn load_one_inherit_from(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
     base_layer: &mut ConfigLayer,
-) {
+) -> Result<()> {
     let inherited_path = config_dir.join(rel_path);
     if !inherited_path.exists() {
         eprintln!(
@@ -85,17 +85,17 @@ fn load_one_inherit_from(
             inherited_path.display(),
             config_path.display()
         );
-        return;
+        return Ok(());
     }
-    match load_config_recursive(&inherited_path, working_dir, visited, gem_cache) {
-        Ok(layer) => merge_inherited_layer(base_layer, layer),
-        Err(e) => {
-            eprintln!(
-                "warning: failed to load inherited config {}: {e:#}",
+    let layer = load_config_recursive(&inherited_path, working_dir, visited, gem_cache)
+        .with_context(|| {
+            format!(
+                "failed to load inherited config {}",
                 inherited_path.display()
-            );
-        }
-    }
+            )
+        })?;
+    merge_inherited_layer(base_layer, layer);
+    Ok(())
 }
 
 fn process_inherit_from(
@@ -106,9 +106,9 @@ fn process_inherit_from(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
     base_layer: &mut ConfigLayer,
-) {
+) -> Result<()> {
     let Some(inherit_value) = map.get(Value::String("inherit_from".to_string())) else {
-        return;
+        return Ok(());
     };
     for rel_path in &inherit_from_paths(inherit_value) {
         load_one_inherit_from(
@@ -119,8 +119,9 @@ fn process_inherit_from(
             visited,
             gem_cache,
             base_layer,
-        );
+        )?;
     }
+    Ok(())
 }
 
 fn merge_local_layer(base_layer: &mut ConfigLayer, raw: &Value) {
@@ -149,17 +150,16 @@ fn process_inheritance_map(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
     base_layer: &mut ConfigLayer,
-) {
-    let local_ruby_version = peek_local_ruby_version(map);
+) -> Result<()> {
     process_require_plugins(
         map,
-        local_ruby_version,
+        peek_local_ruby_version(map),
         working_dir,
         visited,
         gem_cache,
         base_layer,
     );
-    process_inherit_gem(map, working_dir, visited, gem_cache, base_layer);
+    process_inherit_gem(map, working_dir, visited, gem_cache, base_layer)?;
     process_inherit_from(
         map,
         config_path,
@@ -168,7 +168,8 @@ fn process_inheritance_map(
         visited,
         gem_cache,
         base_layer,
-    );
+    )?;
+    Ok(())
 }
 
 /// Recursively load a config file and all its inherited configs.
@@ -206,7 +207,7 @@ fn build_layer_from_raw(
     gem_cache: Option<&HashMap<String, PathBuf>>,
     raw: &Value,
     export_own_inherit_mode: bool,
-) -> ConfigLayer {
+) -> Result<ConfigLayer> {
     // When this layer is an inherit_gem/from parent, only export inherit_mode
     // declared in this file (RuboCop key-order: nested modes don't apply to
     // how a child's Exclude replaces this file's Exclude). Root project keeps
@@ -223,13 +224,13 @@ fn build_layer_from_raw(
             visited,
             gem_cache,
             &mut base_layer,
-        );
+        )?;
     }
     merge_local_layer(&mut base_layer, raw);
     if export_own_inherit_mode {
         base_layer.inherit_mode = own_mode;
     }
-    base_layer
+    Ok(base_layer)
 }
 
 /// Like [`load_config_recursive`], with optional synthetic YAML contents.
@@ -263,12 +264,12 @@ fn load_config_with_mode(
     }
     let contents = read_config_contents(config_path, working_dir, override_contents)?;
     let raw = parse_config_yaml(config_path, &contents)?;
-    Ok(build_layer_from_raw(
+    build_layer_from_raw(
         config_path,
         working_dir,
         visited,
         gem_cache,
         &raw,
         export_own_inherit_mode,
-    ))
+    )
 }

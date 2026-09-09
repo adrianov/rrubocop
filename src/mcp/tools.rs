@@ -82,7 +82,7 @@ fn with_resolved<T>(
         None => load_default_config(None, None),
         Some(p) => {
             targets::refuse_home_walk(Path::new(p))?;
-            load_config(None, Some(Path::new(p)), None).map_err(|e| e.to_string())?
+            load_config(None, Some(Path::new(p)), None).map_err(|e| format!("{e:#}"))?
         }
     };
     f(&config, &CopFilterSet::build(&config, &state.registry))

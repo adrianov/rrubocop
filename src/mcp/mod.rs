@@ -241,6 +241,18 @@ mod tests {
         (dir, spec)
     }
 
+    fn unknown_inherit_gem_project() -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join(".rubocop.yml"),
+            "inherit_gem:\n  definitely_not_a_real_gem_xyz:\n    - config.yml\n",
+        )
+        .unwrap();
+        let rb = dir.path().join("a.rb");
+        std::fs::write(&rb, "puts 1\n").unwrap();
+        (dir, rb)
+    }
+
     #[tokio::test]
     async fn list_tools() {
         with_client(|client| async move {
@@ -397,6 +409,29 @@ mod tests {
                     .contains("'a'"),
                 "got: {:?}",
                 result.content[0].as_text().unwrap().text
+            );
+            let _ = client.cancel().await;
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn inspect_unknown_inherit_gem_errors() {
+        with_live_client(|client| async move {
+            let (_dir, rb) = unknown_inherit_gem_project();
+            let result = client
+                .call_tool(
+                    CallToolRequestParams::new("rubocop_inspection").with_arguments(args_map(
+                        serde_json::json!({ "path": rb.to_string_lossy() }),
+                    )),
+                )
+                .await
+                .expect("call");
+            assert_eq!(result.is_error, Some(true));
+            let body = result.content[0].as_text().unwrap().text.as_str();
+            assert!(
+                body.contains("Unable to find gem definitely_not_a_real_gem_xyz"),
+                "got: {body}"
             );
             let _ = client.cancel().await;
         })

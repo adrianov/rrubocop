@@ -19,15 +19,9 @@ fn load_inherit_gem_yaml(
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
 ) -> Result<ConfigLayer> {
-    let src = gem_path::resolve_gem_config(gem_name, rel_path, working_dir, gem_cache).with_context(
-        || {
-            format!(
-                "inherit_gem: failed to resolve config for gem '{gem_name}'. \
-                 Vendored gems need Gemfile.lock + gem_configs_manifest.json; \
-                 private gems need `bundle install` (`bundle info --path`)."
-            )
-        },
-    )?;
+    // Unknown → bundle path (hard error if missing).
+    let src = gem_path::resolve_gem_config(gem_name, rel_path, working_dir, gem_cache)
+        .with_context(|| format!("Unable to find gem {gem_name}; is the gem installed?"))?;
     match src {
         GemConfigSrc::Disk(root) => {
             let full_path = root.join(rel_path);
@@ -84,23 +78,25 @@ fn merge_inherit_layers(base_layer: &mut ConfigLayer, layers: Vec<ConfigLayer>) 
 }
 
 /// Process `inherit_gem:` map entries into `base_layer`.
+///
+/// Vendored gems use embedded YAML (no install check). Unknown gems resolve
+/// via `bundle info --path` and fail hard if missing (RuboCop `Gem::LoadError`).
 pub(crate) fn process_inherit_gem(
     map: &serde_yml::Mapping,
     working_dir: &Path,
     visited: &mut HashSet<PathBuf>,
     gem_cache: Option<&HashMap<String, PathBuf>>,
     base_layer: &mut ConfigLayer,
-) {
+) -> Result<()> {
     let Some(Value::Mapping(gem_map)) = map.get(Value::String("inherit_gem".to_string())) else {
-        return;
+        return Ok(());
     };
     for (gem_key, gem_paths) in gem_map {
         let Some(gem_name) = gem_key.as_str() else {
             continue;
         };
-        match resolve_inherit_gem(gem_name, gem_paths, working_dir, visited, gem_cache) {
-            Ok(layers) => merge_inherit_layers(base_layer, layers),
-            Err(e) => eprintln!("warning: {e:#}"),
-        }
+        let layers = resolve_inherit_gem(gem_name, gem_paths, working_dir, visited, gem_cache)?;
+        merge_inherit_layers(base_layer, layers);
     }
+    Ok(())
 }

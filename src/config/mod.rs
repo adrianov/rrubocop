@@ -275,6 +275,69 @@ mod tests {
     }
 
     #[test]
+    fn inherit_gem_unknown_gem_errors() {
+        // RuboCop raises Gem::LoadError; we must not warn-and-continue.
+        let dir = tempfile::tempdir().unwrap();
+        let err = load_config(
+            Some(&write_config(
+                dir.path(),
+                "inherit_gem:\n  definitely_not_a_real_gem_xyz:\n    - config.yml\n",
+            )),
+            Some(dir.path()),
+            None,
+        )
+        .unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("Unable to find gem definitely_not_a_real_gem_xyz"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn inherit_from_nested_unknown_inherit_gem_errors() {
+        // Nested inherit_gem must not be swallowed as inherit_from warning.
+        let dir = tempfile::tempdir().unwrap();
+        write_yaml(
+            dir.path(),
+            "base.yml",
+            "inherit_gem:\n  definitely_not_a_real_gem_xyz:\n    - config.yml\n",
+        );
+        let err = load_config(
+            Some(&write_config(dir.path(), "inherit_from: base.yml\n")),
+            Some(dir.path()),
+            None,
+        )
+        .unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("Unable to find gem definitely_not_a_real_gem_xyz"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn inherit_gem_vendored_needs_no_install() {
+        // Known gem: use embedded YAML; no Gemfile.lock / bundle install.
+        let dir = tempfile::tempdir().unwrap();
+        let excludes = load_config(
+            Some(&write_config(
+                dir.path(),
+                "inherit_gem:\n  rubocop-rails:\n    - config/default.yml\n",
+            )),
+            Some(dir.path()),
+            None,
+        )
+        .expect("vendored inherit_gem must load without gem install")
+        .global_excludes()
+        .to_vec();
+        assert!(
+            excludes.iter().any(|e| e.contains("schema.rb")),
+            "expected Rails AllCops.Exclude from vendored config, got {excludes:?}"
+        );
+    }
+
+    #[test]
     fn diamond_dependency_loads() {
         let path = fixtures_dir().join("inherit_from/diamond_root.yml");
         let config = load_config(Some(&path), None, None).unwrap();
