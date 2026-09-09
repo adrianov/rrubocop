@@ -11,7 +11,7 @@ use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 use boolean::{boolean_return, is_non_boolean_literal, unknown_call};
-use returns::{collect_returns, normalize_values};
+use returns::{collect_returns, normalize_values, Ret};
 
 pub struct PredicateMethod;
 
@@ -32,30 +32,42 @@ fn allowed_method(name: &[u8], config: &CopConfig) -> bool {
     }
 }
 
-fn all_boolean(source: &SourceFile, values: &[Node<'_>], config: &CopConfig) -> bool {
+fn all_boolean(source: &SourceFile, values: &[Ret<'_>], config: &CopConfig) -> bool {
     let filtered: Vec<_> = values
         .iter()
         .copied()
-        .filter(|v| v.kind() != "super")
+        .filter(|v| !matches!(v, Ret::Node(n) if n.kind() == "super"))
         .collect();
-    !filtered.is_empty() && filtered.iter().all(|v| boolean_return(source, *v, config))
+    !filtered.is_empty()
+        && filtered.iter().all(|v| match v {
+            Ret::Nil => false,
+            Ret::Node(n) => boolean_return(source, *n, config),
+        })
 }
 
-fn potential_non_predicate(source: &SourceFile, values: &[Node<'_>], config: &CopConfig) -> bool {
+fn potential_non_predicate(source: &SourceFile, values: &[Ret<'_>], config: &CopConfig) -> bool {
     let conservative = config.get_str("Mode", "conservative") != "aggressive";
-    if conservative && values.iter().any(|v| boolean_return(source, *v, config)) {
+    if conservative
+        && values
+            .iter()
+            .any(|v| matches!(v, Ret::Node(n) if boolean_return(source, *n, config)))
+    {
         return false;
     }
-    values.iter().any(|v| is_non_boolean_literal(*v))
+    values.iter().any(|v| match v {
+        Ret::Nil => true,
+        Ret::Node(n) => is_non_boolean_literal(*n),
+    })
 }
 
-fn acceptable(source: &SourceFile, values: &[Node<'_>], config: &CopConfig) -> bool {
+fn acceptable(source: &SourceFile, values: &[Ret<'_>], config: &CopConfig) -> bool {
     if config.get_str("Mode", "conservative") != "conservative" {
         return false;
     }
-    values
-        .iter()
-        .any(|v| v.kind() == "super" || unknown_call(source, *v, config))
+    values.iter().any(|v| match v {
+        Ret::Nil => false,
+        Ret::Node(n) => n.kind() == "super" || unknown_call(source, *n, config),
+    })
 }
 
 fn skipped_name(name: &[u8], config: &CopConfig) -> bool {
@@ -70,7 +82,7 @@ fn report(
     source: &SourceFile,
     name_node: Node<'_>,
     is_pred: bool,
-    values: &[Node<'_>],
+    values: &[Ret<'_>],
     config: &CopConfig,
     diagnostics: &mut Vec<Diagnostic>,
 ) {

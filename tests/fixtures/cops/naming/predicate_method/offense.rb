@@ -26,3 +26,18 @@ def qux?
     ^^^^ Naming/PredicateMethod: Non-predicate method names should not end with `?`.
   5
 end
+
+def message(message)
+    ^^^^^^^ Naming/PredicateMethod: Predicate method names should end with `?`.
+  # trailing comments must not hide the boolean return
+  message == payload # true
+  # store_message(message['text'])
+end
+
+def cc_only_merchant = false
+    ^^^^^^^^^^^^^^^^ Naming/PredicateMethod: Predicate method names should end with `?`.
+
+def subscribe(params = {})
+    ^^^^^^^^^ Naming/PredicateMethod: Predicate method names should end with `?`.
+  response['error'].present? ? false : !!response.dig('result', 'person_id')
+end

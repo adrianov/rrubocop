@@ -34,7 +34,17 @@ fn unary_is_bang(source: &SourceFile, node: Node<'_>) -> bool {
         .any(|c| !c.is_named() && node_bytes(source, c) == b"!")
 }
 
+/// RuboCop Parser `:block` (call + `do`/`{}`) is not `call_type?` — opaque.
+fn has_block_body(node: Node<'_>) -> bool {
+    let mut cur = node.walk();
+    node.named_children(&mut cur)
+        .any(|c| c.kind() == "block" || c.kind() == "do_block")
+}
+
 fn call_returning_boolean(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
+    if has_block_body(node) {
+        return false;
+    }
     let Some(name) = call_method_name(source, node) else {
         return false;
     };
@@ -75,6 +85,8 @@ pub(super) fn boolean_return(source: &SourceFile, node: Node<'_>, config: &CopCo
 }
 
 pub(super) fn unknown_call(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
+    // Call+block is Opaque in RuboCop (not call_type?), so not "unknown" either.
     matches!(node.kind(), "call" | "command" | "command_call")
+        && !has_block_body(node)
         && !method_returning_boolean(source, node, config)
 }
