@@ -1,7 +1,7 @@
 //! Vendored RuboCop gem configs compiled into the binary.
 //!
 //! Layout keys: `{gem}/{version}/{relative_path}` (e.g.
-//! `rubocop-rails/2.34.3/config/default.yml`). Populated from GitHub via
+//! `rubocop-rails/2.37.0/config/default.yml`). Populated from GitHub via
 //! `scripts/fetch_gem_configs.py` and embedded by `build.rs`.
 //!
 //! Manifest `same_as` maps lockfile versions to a vendored twin when
@@ -50,8 +50,8 @@ mod tests {
 
     #[test]
     fn embeds_baseline_rubocop_default() {
-        assert!(file("rubocop", "1.84.2", "config/default.yml").is_some());
-        assert!(file("rubocop-rails", "2.34.3", "config/default.yml").is_some());
+        assert!(file("rubocop", "1.91.0", "config/default.yml").is_some());
+        assert!(file("rubocop-rails", "2.37.0", "config/default.yml").is_some());
         assert!(file("rubocop-graphql", "1.5.6", "config/default.yml").is_some());
         assert!(file("rubocop-graphql", "1.8.0", "config/default.yml").is_some());
         assert!(file("test-prof", "1.4.4", "config/rubocop-rspec.yml").is_some());
@@ -63,11 +63,19 @@ mod tests {
         assert!(v.contains(&"1.77.0".to_string()));
         assert!(v.contains(&"1.79.0".to_string()));
         assert!(v.contains(&"1.84.2".to_string()));
+        assert!(v.contains(&"1.91.0".to_string()));
         assert_eq!(v, {
             let mut s = v.clone();
             s.sort();
             s
         });
+    }
+
+    #[test]
+    fn performance_lock_alias() {
+        assert_eq!(same_as("rubocop-performance", "1.27.0"), Some("1.26.1"));
+        assert!(file("rubocop-performance", "1.26.1", "config/default.yml").is_some());
+        assert!(same_as("rubocop-performance", "1.26.1").is_none());
     }
 
     #[test]

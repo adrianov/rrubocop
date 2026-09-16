@@ -6,7 +6,7 @@ One binary — runs the same way regardless of rbenv, rvm, system Ruby, or Docke
 
 Drop-in parity: reads your existing `.rubocop.yml`, emits RuboCop-like text/JSON, supports `-a`/`-A` autocorrect, and grows cop coverage over time.
 
-**Baseline** (shown in `--help` / `--version`): rubocop `1.84.2` with rubocop-rails `2.34.3`, rubocop-performance `1.26.1`, rubocop-rspec `3.9.0`, rubocop-rspec_rails `2.32.0`, rubocop-factory_bot `2.28.0` — pinned in `src/resources/baseline.json`.
+**Baseline** (shown in `--help` / `--version`): rubocop `1.91.0` with rubocop-rails `2.37.0`, rubocop-performance `1.27.0`, rubocop-rspec `3.9.0`, rubocop-rspec_rails `2.32.0`, rubocop-factory_bot `2.28.0` — pinned in `src/resources/baseline.json`.
 
 Parity runs have been verified over **600+** installed Ruby gem projects (RuboCop vs rrubocop on the same trees).
 
@@ -24,19 +24,19 @@ macOS (`.tar.gz` from [GitHub Releases](https://github.com/adrianov/rrubocop/rel
 
 ```sh
 # Apple Silicon — use the *-x86_64-apple-darwin.tar.gz asset on Intel Macs
-curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.7/rrubocop-0.8.7-aarch64-apple-darwin.tar.gz
-tar -xzf rrubocop-0.8.7-aarch64-apple-darwin.tar.gz
-sudo cp rrubocop-0.8.7-aarch64-apple-darwin/rrubocop /usr/local/bin/
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.8/rrubocop-0.8.8-aarch64-apple-darwin.tar.gz
+tar -xzf rrubocop-0.8.8-aarch64-apple-darwin.tar.gz
+sudo cp rrubocop-0.8.8-aarch64-apple-darwin/rrubocop /usr/local/bin/
 sudo mkdir -p /usr/local/share/man/man1
-sudo cp rrubocop-0.8.7-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
+sudo cp rrubocop-0.8.8-aarch64-apple-darwin/rrubocop.1 /usr/local/share/man/man1/
 ```
 
 Ubuntu / Debian (`.deb` from [GitHub Releases](https://github.com/adrianov/rrubocop/releases); amd64, Ubuntu 22.04+ / Debian bookworm+):
 
 ```sh
-# example for v0.8.7 — use the asset name from the release page
-curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.7/rrubocop_0.8.7-1_amd64.deb
-sudo dpkg -i rrubocop_0.8.7-1_amd64.deb
+# example for v0.8.8 — use the asset name from the release page
+curl -LO https://github.com/adrianov/rrubocop/releases/download/v0.8.8/rrubocop_0.8.8-1_amd64.deb
+sudo dpkg -i rrubocop_0.8.8-1_amd64.deb
 man rrubocop
 ```
 
