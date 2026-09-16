@@ -111,13 +111,37 @@ pub(crate) fn find_config(start_dir: &Path) -> Option<PathBuf> {
         .or_else(find_user_xdg_config)
 }
 
+thread_local! {
+    // Per-thread (not process-global) so tests exercising the no-user-config
+    // fallback path can suppress it without racing every other concurrently
+    // running test that also reads `$HOME`/`$XDG_CONFIG_HOME` (cargo test
+    // runs each test on its own OS thread, so this is naturally isolated).
+    static SUPPRESS_USER_CONFIG: std::cell::Cell<bool> = std::cell::Cell::new(false);
+}
+
+/// Suppress the user `~/.rubocop.yml` / XDG config fallback in `find_config`
+/// for the duration of `f`, scoped to the calling thread only.
+#[cfg(test)]
+pub(crate) fn with_user_config_suppressed<T>(f: impl FnOnce() -> T) -> T {
+    let prev = SUPPRESS_USER_CONFIG.with(|c| c.replace(true));
+    let result = f();
+    SUPPRESS_USER_CONFIG.with(|c| c.set(prev));
+    result
+}
+
 fn find_user_dotfile() -> Option<PathBuf> {
+    if SUPPRESS_USER_CONFIG.with(std::cell::Cell::get) {
+        return None;
+    }
     let home = std::env::var_os("HOME")?;
     let file = PathBuf::from(home).join(".rubocop.yml");
     file.is_file().then_some(file)
 }
 
 fn find_user_xdg_config() -> Option<PathBuf> {
+    if SUPPRESS_USER_CONFIG.with(std::cell::Cell::get) {
+        return None;
+    }
     let base = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
         .or_else(|| {

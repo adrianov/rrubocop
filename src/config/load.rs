@@ -13,19 +13,21 @@ use super::load_resolve::{
     resolve_start_dir, resolve_target_ruby_version, ConfigLoadPath, ResolvedParts,
 };
 use super::merge::merge_layer_into;
+use super::rails_app::{is_rails_app, OMAKASE_DEFAULT_YAML};
 use super::resolved::ResolvedConfig;
 
 fn merge_project_onto_defaults(
     config_path: &Path,
     config_dir: &Path,
     gem_cache: Option<&HashMap<String, PathBuf>>,
+    override_yaml: Option<&str>,
     base: &mut super::types::ConfigLayer,
 ) -> Result<(
     std::collections::HashSet<String>,
     std::collections::HashSet<String>,
     std::collections::HashSet<String>,
 )> {
-    let project_layer = load_project_layer(config_path, config_dir, gem_cache)?;
+    let project_layer = load_project_layer(config_path, config_dir, gem_cache, override_yaml)?;
     let cops = project_layer.user_mentioned_cops.clone();
     let depts = project_layer.user_mentioned_depts.clone();
     let enabled = project_enabled_depts(&project_layer);
@@ -57,12 +59,13 @@ fn assemble_resolved(
     config_path: PathBuf,
     scan_root: PathBuf,
     gem_cache: Option<&HashMap<String, PathBuf>>,
+    override_yaml: Option<&str>,
 ) -> Result<ResolvedConfig> {
     let config_dir = config_parent(&config_path);
     let base_dir = resolve_path_base_dir(&config_path, &config_dir);
     let (mut base, rubocop_known_cops) = try_load_rubocop_defaults(&config_dir, gem_cache);
     let (project_mentioned_cops, project_mentioned_depts, project_enabled_depts) =
-        merge_project_onto_defaults(&config_path, &config_dir, gem_cache, &mut base)?;
+        merge_project_onto_defaults(&config_path, &config_dir, gem_cache, override_yaml, &mut base)?;
     Ok(build_resolved(ResolvedParts {
         target_ruby_version: resolve_target_ruby_version(&base, &config_dir),
         lock: resolve_lockfile_meta(&base, &base_dir),
@@ -85,12 +88,33 @@ pub fn load_config(
 ) -> Result<ResolvedConfig> {
     match resolve_config_load(path, resolve_start_dir(target_dir)) {
         ConfigLoadPath::Empty => Ok(ResolvedConfig::empty()),
-        ConfigLoadPath::NoConfig(dir) => Ok(empty_resolved_no_config(dir)),
+        ConfigLoadPath::NoConfig(dir) => no_config_resolved(dir, gem_cache),
         ConfigLoadPath::Resolved {
             config_path,
             scan_root,
-        } => assemble_resolved(path.is_some(), config_path, scan_root, gem_cache),
+        } => assemble_resolved(path.is_some(), config_path, scan_root, gem_cache, None),
     }
+}
+
+/// No `.rubocop.yml`/`.standard.yml` found: Rails apps (`rails new`, 7.2+)
+/// default to `rubocop-rails-omakase` via `inherit_gem` with no config file
+/// on disk, so synthesize that inheritance; otherwise fall back to RuboCop's
+/// own built-in defaults.
+fn no_config_resolved(
+    dir: PathBuf,
+    gem_cache: Option<&HashMap<String, PathBuf>>,
+) -> Result<ResolvedConfig> {
+    if is_rails_app(&dir) {
+        let virtual_config = dir.join(".rubocop.yml");
+        return assemble_resolved(
+            false,
+            virtual_config,
+            dir,
+            gem_cache,
+            Some(OMAKASE_DEFAULT_YAML),
+        );
+    }
+    Ok(empty_resolved_no_config(dir))
 }
 
 fn empty_resolved_no_config(config_dir: PathBuf) -> ResolvedConfig {

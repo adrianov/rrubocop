@@ -28,6 +28,7 @@ mod load_gems;
 mod load_recursive;
 mod load_lockfile;
 mod load_resolve;
+mod rails_app;
 mod load;
 mod ruby_ver;
 mod resolved;
@@ -335,6 +336,72 @@ mod tests {
             excludes.iter().any(|e| e.contains("schema.rb")),
             "expected Rails AllCops.Exclude from vendored config, got {excludes:?}"
         );
+    }
+
+    #[test]
+    fn inherit_gem_omakase_vendored_needs_no_install() {
+        // rails/rubocop-rails-omakase: file is `rubocop.yml` (not config/default.yml)
+        // and pulls in nested plugins:/require: (rubocop-performance, rubocop-rails).
+        let dir = tempfile::tempdir().unwrap();
+        assert_omakase_applied(
+            &load_config(
+                Some(&write_config(
+                    dir.path(),
+                    "inherit_gem:\n  rubocop-rails-omakase:\n    - rubocop.yml\n",
+                )),
+                Some(dir.path()),
+                None,
+            )
+            .expect("vendored omakase inherit_gem must load without gem install"),
+        );
+    }
+
+    // Omakase disables whole departments and re-enables select cops.
+    fn assert_omakase_applied(config: &ResolvedConfig) {
+        assert!(config.is_cop_enabled(
+            "Layout/SpaceInsideParens",
+            Path::new("a.rb"),
+            &[],
+            &[]
+        ));
+        assert!(!config.is_cop_enabled(
+            "Style/Documentation",
+            Path::new("a.rb"),
+            &[],
+            &[]
+        ));
+    }
+
+    #[test]
+    fn rails_app_without_config_defaults_to_omakase() {
+        // `rails new` (7.2+) ships no `.rubocop.yml`; the omakase style
+        // should still apply out of the box, matching what a fresh app gets
+        // after `bundle binstubs rubocop`.
+        discover::with_user_config_suppressed(|| {
+            let dir = tempfile::tempdir().unwrap();
+            fs::create_dir_all(dir.path().join("config")).unwrap();
+            fs::write(dir.path().join("config/application.rb"), "").unwrap();
+            assert_omakase_applied(
+                &load_config(None, Some(dir.path()), None)
+                    .expect("rails app with no .rubocop.yml must default to omakase"),
+            );
+        });
+    }
+
+    #[test]
+    fn non_rails_project_without_config_uses_rubocop_defaults() {
+        // No `config/application.rb` / `bin/rails` → plain RuboCop defaults,
+        // not omakase.
+        discover::with_user_config_suppressed(|| {
+            let config =
+                load_config(None, Some(tempfile::tempdir().unwrap().path()), None).unwrap();
+            assert!(config.is_cop_enabled(
+                "Style/Documentation",
+                Path::new("a.rb"),
+                &[],
+                &[]
+            ));
+        });
     }
 
     #[test]

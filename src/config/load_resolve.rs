@@ -82,8 +82,12 @@ pub(crate) fn load_project_layer(
     config_path: &Path,
     config_dir: &Path,
     gem_cache: Option<&HashMap<String, PathBuf>>,
+    override_yaml: Option<&str>,
 ) -> Result<ConfigLayer> {
     let mut visited = HashSet::new();
+    if let Some(yaml) = override_yaml {
+        return load_config_recursive_inner(config_path, config_dir, &mut visited, gem_cache, Some(yaml));
+    }
     let is_standard = config_path
         .file_name()
         .is_some_and(|f| f == ".standard.yml");
