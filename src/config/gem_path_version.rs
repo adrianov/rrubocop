@@ -21,7 +21,7 @@ pub(crate) fn select_version(gem_name: &str, working_dir: &Path) -> Result<Strin
     if let Some(locked) = lockfile_gem_version_str(working_dir, gem_name) {
         return Ok(pick_locked_version(gem_name, &locked, &available));
     }
-    Ok(pick_unlocked_version(gem_name, working_dir, &available))
+    Ok(pick_unlocked_version(gem_name, &available))
 }
 
 fn pick_locked_version(gem_name: &str, locked: &str, available: &[String]) -> String {
@@ -38,14 +38,10 @@ fn pick_locked_version(gem_name: &str, locked: &str, available: &[String]) -> St
     nearest
 }
 
-fn pick_unlocked_version(gem_name: &str, working_dir: &Path, available: &[String]) -> String {
-    let chosen = baseline_version(gem_name)
+fn pick_unlocked_version(gem_name: &str, available: &[String]) -> String {
+    baseline_version(gem_name)
         .filter(|base| available.iter().any(|v| v == base))
-        .unwrap_or_else(|| available.last().cloned().unwrap());
-    if working_dir.join("Gemfile.lock").exists() || working_dir.join("gems.locked").exists() {
-        eprintln!("warning: {gem_name} not in Gemfile.lock, using vendored config {chosen}");
-    }
-    chosen
+        .unwrap_or_else(|| available.last().cloned().unwrap())
 }
 
 fn baseline_version(gem_name: &str) -> Option<String> {
