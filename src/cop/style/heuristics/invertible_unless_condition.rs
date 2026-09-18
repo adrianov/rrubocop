@@ -49,18 +49,21 @@ fn is_invertible(node: Node<'_>, source: &SourceFile, inverses: &HashSet<&str>) 
             .is_some_and(|first| is_invertible(first, source, inverses)),
         "call" => invertible_call(node, source, inverses),
         "unary" => matches!(operator(node, source), "!" | "not"),
-        "binary" => {
-            let op = operator(node, source);
-            if matches!(op, "&&" | "and" | "||" | "or") {
-                let left = node.child_by_field_name("left");
-                let right = node.child_by_field_name("right");
-                left.is_some_and(|l| is_invertible(l, source, inverses))
-                    && right.is_some_and(|r| is_invertible(r, source, inverses))
-            } else {
-                !inheritance_check(node, source) && inverses.contains(op)
-            }
-        }
+        "binary" => invertible_binary(node, source, inverses),
         _ => false,
+    }
+}
+
+fn invertible_binary(node: Node<'_>, source: &SourceFile, inverses: &HashSet<&str>) -> bool {
+    match operator(node, source) {
+        "&&" | "and" | "||" | "or" => {
+            node.child_by_field_name("left")
+                .is_some_and(|l| is_invertible(l, source, inverses))
+                && node
+                    .child_by_field_name("right")
+                    .is_some_and(|r| is_invertible(r, source, inverses))
+        }
+        op => !inheritance_check(node, source) && inverses.contains(op),
     }
 }
 
