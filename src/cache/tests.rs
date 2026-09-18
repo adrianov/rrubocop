@@ -96,6 +96,7 @@ fn file_key_separates_adjacent_variable_fields() {
         except: "c",
         ignore_disable: false,
         force_default_config: false,
+        rubocop_version: "",
         config_fingerprint: &fp,
     };
     let b = CacheSettings {
@@ -103,6 +104,7 @@ fn file_key_separates_adjacent_variable_fields() {
         except: "bc",
         ignore_disable: false,
         force_default_config: false,
+        rubocop_version: "",
         config_fingerprint: &fp,
     };
     assert_ne!(

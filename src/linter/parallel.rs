@@ -32,6 +32,7 @@ fn cache_settings(prep: &RunPrep) -> CacheSettings<'_> {
         except: &prep.except_key,
         ignore_disable: prep.ignore_disable,
         force_default_config: prep.force_default_config,
+        rubocop_version: &prep.rubocop_version,
         config_fingerprint: &prep.config_fp,
     }
 }
@@ -355,6 +356,7 @@ mod tests {
             except: "",
             ignore_disable: false,
             force_default_config: false,
+            rubocop_version: "",
             config_fingerprint: &[0; 32],
         };
         let key = cache.file_key(path, source.as_bytes(), settings);

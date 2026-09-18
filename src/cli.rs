@@ -116,6 +116,12 @@ pub struct Args {
     #[arg(long)]
     pub force_default_config: bool,
 
+    /// Emulate this RuboCop version's default config (e.g. 1.79.2); overrides
+    /// the Gemfile.lock / baseline selection. Cops not present in that
+    /// version's default.yml are treated as non-existent.
+    #[arg(long, value_name = "VERSION")]
+    pub rubocop_version: Option<String>,
+
     /// Autocorrect offenses (safe cops only)
     #[arg(short = 'a', long = "autocorrect")]
     pub autocorrect: bool,

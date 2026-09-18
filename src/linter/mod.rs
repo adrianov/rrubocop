@@ -37,6 +37,7 @@ pub(crate) struct RunPrep {
     pub(crate) except_key: String,
     pub(crate) ignore_disable: bool,
     pub(crate) force_default_config: bool,
+    pub(crate) rubocop_version: String,
     pub(crate) force_exclusion: bool,
     /// `0` = unlimited; otherwise stop once counted offenses reach this.
     pub(crate) fail_fast_limit: u32,
@@ -91,6 +92,7 @@ fn prepare_run(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> 
         filters,
         ignore_disable: args.ignore_disable_comments,
         force_default_config: args.force_default_config,
+        rubocop_version: args.rubocop_version.clone().unwrap_or_default(),
         force_exclusion: args.force_exclusion,
         fail_fast_limit: args.fail_fast,
         fail_fast_uncorrected_only: mode != AutocorrectMode::Off,

@@ -34,6 +34,7 @@ pub(crate) struct CacheSettings<'a> {
     pub except: &'a str,
     pub ignore_disable: bool,
     pub force_default_config: bool,
+    pub rubocop_version: &'a str,
     pub config_fingerprint: &'a [u8],
 }
 
@@ -76,6 +77,7 @@ impl Cache {
             settings.except.as_bytes(),
             &ign,
             &fdc,
+            settings.rubocop_version.as_bytes(),
             settings.config_fingerprint,
             path.as_bytes(),
             contents,

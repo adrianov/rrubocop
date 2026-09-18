@@ -40,6 +40,12 @@ Run only these cops (comma-separated).
 \fB\-\-except\fR \fICOPS\fR
 Exclude these cops.
 .TP
+\fB\-\-rubocop\-version\fR \fIVERSION\fR
+Emulate this RuboCop version's default config (e.g.
+.IR 1.79.2 ),
+overriding the Gemfile.lock / baseline selection. Cops absent from that
+version's default.yml are treated as non-existent.
+.TP
 \fB\-L\fR, \fB\-\-list\-target\-files\fR
 List files that would be linted.
 .TP

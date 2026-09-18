@@ -15,8 +15,6 @@ pub fn matches_if_inside_else(_source: &SourceFile, _node: Node<'_>, _config: &C
 
 pub fn matches_if_with_boolean_literal_branches(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
 
-pub fn matches_invertible_unless_condition(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
-
 pub fn matches_line_end_concatenation(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
 
 pub fn matches_method_call_with_args_parentheses(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
