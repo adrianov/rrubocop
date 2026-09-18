@@ -6,6 +6,7 @@ use std::path::Path;
 use anyhow::Result;
 
 use super::gem_configs;
+use super::gem_path_version_override::{is_well_formed_version, rubocop_version_override};
 use crate::baseline;
 
 /// Pick embedded config version for `gem_name` from lockfile / baseline.
@@ -18,13 +19,31 @@ pub(crate) fn select_version(gem_name: &str, working_dir: &Path) -> Result<Strin
              scripts/fetch_gem_configs.py."
         );
     }
+    if gem_name == "rubocop" {
+        if let Some(requested) = rubocop_version_override() {
+            if !is_well_formed_version(&requested) {
+                anyhow::bail!("invalid --rubocop-version '{requested}': expected x.y.z");
+            }
+            return Ok(pick_locked_version(
+                gem_name,
+                &requested,
+                &available,
+                &format!("--rubocop-version {requested}"),
+            ));
+        }
+    }
     if let Some(locked) = lockfile_gem_version_str(working_dir, gem_name) {
-        return Ok(pick_locked_version(gem_name, &locked, &available));
+        return Ok(pick_locked_version(gem_name, &locked, &available, "Gemfile.lock"));
     }
     Ok(pick_unlocked_version(gem_name, &available))
 }
 
-fn pick_locked_version(gem_name: &str, locked: &str, available: &[String]) -> String {
+fn pick_locked_version(
+    gem_name: &str,
+    locked: &str,
+    available: &[String],
+    source: &str,
+) -> String {
     if available.iter().any(|v| v == locked) {
         return locked.to_string();
     }
@@ -34,7 +53,7 @@ fn pick_locked_version(gem_name: &str, locked: &str, available: &[String]) -> St
         }
     }
     let nearest = nearest_version(locked, available).expect("available non-empty");
-    eprintln!("warning: Gemfile.lock has {gem_name} {locked}, using vendored config {nearest}");
+    eprintln!("warning: {source} has {gem_name} {locked}, using vendored config {nearest}");
     nearest
 }
 
@@ -144,6 +163,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn locked_version_selection_prefers_exact_same_as_then_nearest() {
+        let available = vec![
+            "1.77.0".to_string(),
+            "1.79.0".to_string(),
+            "1.91.0".to_string(),
+        ];
+        assert_eq!(
+            pick_locked_version("rubocop", "1.79.0", &available, "Gemfile.lock"),
+            "1.79.0"
+        );
+        assert_eq!(
+            pick_locked_version("rubocop", "1.79.2", &available, "Gemfile.lock"),
+            "1.79.0"
+        );
+        assert_eq!(
+            pick_locked_version("rubocop", "1.93.0", &available, "Gemfile.lock"),
+            "1.91.0"
+        );
+    }
+
+    #[test]
     fn parse_lock_version() {
         let lock = "GEM\n  specs:\n    rubocop (1.77.0)\n    rubocop-rails (2.32.0)\n";
         assert_eq!(
@@ -182,15 +222,15 @@ mod tests {
             "1.84.2".into(),
         ];
         assert_eq!(
-            pick_locked_version("rubocop", "1.79.2", &avail),
+            pick_locked_version("rubocop", "1.79.2", &avail, "Gemfile.lock"),
             "1.79.0"
         );
         assert_eq!(
-            pick_locked_version("rubocop", "1.80.2", &avail),
+            pick_locked_version("rubocop", "1.80.2", &avail, "Gemfile.lock"),
             "1.79.0"
         );
         assert_eq!(
-            pick_locked_version("rubocop", "1.79.0", &avail),
+            pick_locked_version("rubocop", "1.79.0", &avail, "Gemfile.lock"),
             "1.79.0"
         );
     }

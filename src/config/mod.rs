@@ -7,6 +7,7 @@ pub mod gem_path;
 mod gem_configs;
 mod gem_path_local;
 mod gem_path_version;
+mod gem_path_version_override;
 
 mod types;
 mod yaml_read;
@@ -41,6 +42,8 @@ mod resolved_effective;
 mod resolved_fingerprint;
 
 pub use filter::{CopFilter, CopFilterSet};
+pub use gem_path_version_override::validate_rubocop_version;
+pub(crate) use gem_path_version_override::set_rubocop_version_override;
 pub use load::{load_config, load_default_config};
 pub use resolved::ResolvedConfig;
 pub use types::NewCopsPolicy;

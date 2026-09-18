@@ -84,6 +84,7 @@ rrubocop -f json .               # JSON offenses
 rrubocop -a .                    # safe autocorrect
 rrubocop -A .                    # all autocorrect
 rrubocop --only Metrics/AbcSize lib
+rrubocop --rubocop-version 1.79.2 . # emulate a project's pinned RuboCop (matches CI's bundled gem)
 rrubocop --list-cops
 rrubocop -L                      # list target files
 rrubocop -F 10                   # stop after 10 offenses (off by default; `-F` = 1)
@@ -135,7 +136,7 @@ Intended for MCP clients, not interactive use.
 
 ## Caching
 
-Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop`). Keys cover contents, version, rule revision, `--only`/`--except`, config fingerprint, and path. Auto-pruned to 20 000 entries; `--cache false` skips reads but still writes. Autocorrect runs bypass the cache. Nothing is written inside the project.
+Content-addressed cache under `$RRUBOCOP_CACHE_DIR` (or `$XDG_CACHE_HOME/rrubocop` / `~/.cache/rrubocop`). Keys cover contents, version, rule revision, `--only`/`--except`, `--rubocop-version`, config fingerprint, and path. Auto-pruned to 20 000 entries; `--cache false` skips reads but still writes. Autocorrect runs bypass the cache. Nothing is written inside the project.
 
 ## Benchmarks
 

@@ -15,6 +15,9 @@ pub use control::matches_one_line_conditional;
 pub use control::matches_stabby_lambda_parentheses;
 pub use control::matches_ternary_parentheses;
 
+mod invertible_unless_condition;
+pub use invertible_unless_condition::matches_invertible_unless_condition;
+
 mod percent;
 pub use percent::matches_bare_percent_literals;
 pub use percent::matches_command_literal;
@@ -43,7 +46,6 @@ pub use stubs::matches_conditional_assignment;
 pub use stubs::matches_explicit_block_argument;
 pub use stubs::matches_if_inside_else;
 pub use stubs::matches_if_with_boolean_literal_branches;
-pub use stubs::matches_invertible_unless_condition;
 pub use stubs::matches_line_end_concatenation;
 pub use stubs::matches_method_call_with_args_parentheses;
 pub use stubs::matches_multiline_memoization;

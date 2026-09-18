@@ -19,7 +19,10 @@ use std::process::ExitCode;
 
 use anyhow::Result;
 use cli::Args;
-use config::{CopFilterSet, ResolvedConfig, load_config, load_default_config};
+use config::{
+    CopFilterSet, ResolvedConfig, load_config, load_default_config, set_rubocop_version_override,
+    validate_rubocop_version,
+};
 use cop::registry::CopRegistry;
 use diagnostic::Diagnostic;
 use formatter::color::Color;
@@ -35,6 +38,10 @@ pub fn run() -> Result<ExitCode> {
     let args = Args::parse_cli();
     if args.mcp {
         return mcp::run();
+    }
+    set_rubocop_version_override(args.rubocop_version.clone());
+    if let Some(version) = &args.rubocop_version {
+        validate_rubocop_version(version)?;
     }
     let registry = CopRegistry::default_registry();
     if let Some(code) = list_and_exit(&args, &registry) {
