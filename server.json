@@ -8,13 +8,13 @@
     "url": "https://github.com/adrianov/rrubocop",
     "source": "github"
   },
-  "version": "0.8.8",
+  "version": "0.8.9",
   "packages": [
     {
       "registryType": "cargo",
       "registryBaseUrl": "https://crates.io",
       "identifier": "rrubocop",
-      "version": "0.8.8",
+      "version": "0.8.9",
       "transport": {
         "type": "stdio"
       },
