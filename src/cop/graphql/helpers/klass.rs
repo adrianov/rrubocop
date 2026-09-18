@@ -107,6 +107,5 @@ fn walk_calls<'a>(node: Node<'a>, source: &SourceFile, name: &[u8], out: &mut Ve
 pub fn superclass_name(source: &SourceFile, class_node: Node<'_>) -> Option<String> {
     let sc = class_node.child_by_field_name("superclass")?;
     let mut cur = sc.walk();
-    let inner = sc.named_children(&mut cur).next().unwrap_or(sc);
-    Some(node_text(source, inner))
+    Some(node_text(source, sc.named_children(&mut cur).next().unwrap_or(sc)))
 }

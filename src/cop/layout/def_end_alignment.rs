@@ -19,9 +19,9 @@ impl Cop for DefEndAlignment {
         &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyleAlignWith", "keyword");
         end_align::check_end(
-            self, source, node, "def", style,
+            self, source, node, "def",
+            config.get_str("EnforcedStyleAlignWith", "keyword"),
             diagnostics, &mut corrections,
         );
     }

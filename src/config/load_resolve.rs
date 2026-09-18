@@ -19,17 +19,18 @@ use super::types::{ConfigLayer, NewCopsPolicy};
 pub(crate) use super::load_lockfile::resolve_lockfile_meta;
 
 pub(crate) fn resolve_start_dir(target_dir: Option<&Path>) -> Option<PathBuf> {
-    let raw = target_dir.map(|p| {
-        if p.is_file() {
-            match p.parent() {
-                Some(parent) if !parent.as_os_str().is_empty() => parent.to_path_buf(),
-                _ => PathBuf::from("."),
+    let dir = target_dir
+        .map(|p| {
+            if p.is_file() {
+                match p.parent() {
+                    Some(parent) if !parent.as_os_str().is_empty() => parent.to_path_buf(),
+                    _ => PathBuf::from("."),
+                }
+            } else {
+                p.to_path_buf()
             }
-        } else {
-            p.to_path_buf()
-        }
-    });
-    let dir = raw.or_else(|| std::env::current_dir().ok())?;
+        })
+        .or_else(|| std::env::current_dir().ok())?;
     Some(std::fs::canonicalize(&dir).unwrap_or(dir))
 }
 
@@ -65,11 +66,11 @@ pub(crate) fn resolve_config_load(path: Option<&Path>, start_dir: Option<PathBuf
 }
 
 pub(crate) fn resolve_path_base_dir(config_path: &Path, config_dir: &Path) -> PathBuf {
-    let is_rubocop_dotfile = config_path
+    if config_path
         .file_name()
         .and_then(|f| f.to_str())
-        .is_some_and(|name| name.starts_with(".rubocop"));
-    if is_rubocop_dotfile {
+        .is_some_and(|name| name.starts_with(".rubocop"))
+    {
         config_dir
             .canonicalize()
             .unwrap_or_else(|_| config_dir.to_path_buf())
@@ -88,10 +89,7 @@ pub(crate) fn load_project_layer(
     if let Some(yaml) = override_yaml {
         return load_config_recursive_inner(config_path, config_dir, &mut visited, gem_cache, Some(yaml));
     }
-    let is_standard = config_path
-        .file_name()
-        .is_some_and(|f| f == ".standard.yml");
-    if is_standard {
+    if config_path.file_name().is_some_and(|f| f == ".standard.yml") {
         let synthetic_yaml = convert_standard_yml(config_path)?;
         load_config_recursive_inner(
             config_path,
@@ -138,8 +136,7 @@ pub(crate) fn apply_disabled_by_default(
 }
 
 fn parse_ruby_version_file(content: &str) -> Option<f64> {
-    let trimmed = content.trim();
-    let parts: Vec<&str> = trimmed.split('.').collect();
+    let parts: Vec<&str> = content.trim().split('.').collect();
     if parts.len() < 2 {
         return None;
     }
@@ -152,8 +149,7 @@ pub(crate) fn resolve_target_ruby_version(base: &ConfigLayer, config_dir: &Path)
     base.target_ruby_version
         .or_else(|| resolve_ruby_version_from_gemspec(config_dir))
         .or_else(|| {
-            let path = config_dir.join(".ruby-version");
-            std::fs::read_to_string(path)
+            std::fs::read_to_string(config_dir.join(".ruby-version"))
                 .ok()
                 .and_then(|c| parse_ruby_version_file(&c))
         })

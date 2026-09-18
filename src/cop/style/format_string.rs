@@ -26,8 +26,8 @@ impl Cop for FormatString {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyle", "format");
-        let Some((msg, at)) = format_offense(source, node, style) else {
+        let Some((msg, at)) = format_offense(source, node, config.get_str("EnforcedStyle", "format"))
+        else {
             return;
         };
         let (line, col) = source.offset_to_line_col(at);
@@ -64,9 +64,8 @@ fn percent_send(_source: &SourceFile, node: Node<'_>, style: &str) -> Option<(St
         return None;
     }
     let recv = call_receiver(node)?;
-    let args = crate::cop::shared::argument_nodes(node);
     let ok = is_string_like(recv)
-        || args
+        || crate::cop::shared::argument_nodes(node)
             .first()
             .is_some_and(|a| matches!(a.kind(), "array" | "hash"));
     ok.then(|| {

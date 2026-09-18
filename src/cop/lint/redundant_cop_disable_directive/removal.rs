@@ -13,12 +13,11 @@ use super::RedundantCopDisableDirective;
 fn line_bytes(source: &SourceFile, line_no: usize) -> Option<&[u8]> {
     let start = source.line_start(line_no)?;
     let bytes = source.as_bytes();
-    let end = bytes[start..]
-        .iter()
-        .position(|&b| b == b'\n')
-        .map(|p| start + p)
-        .unwrap_or(bytes.len());
-    Some(trim_eol(&bytes[start..end]))
+    let line = match bytes[start..].iter().position(|&b| b == b'\n') {
+        Some(p) => &bytes[start..start + p],
+        None => &bytes[start..],
+    };
+    Some(trim_eol(line))
 }
 
 fn trim_eol(slice: &[u8]) -> &[u8] {
@@ -30,8 +29,9 @@ fn trim_eol(slice: &[u8]) -> &[u8] {
 }
 
 fn comment_only_span(source: &SourceFile, line_start: usize, line: &[u8]) -> (usize, usize) {
-    let total = source.as_bytes().len();
-    let end = line_start + line.len() + usize::from(line_start + line.len() < total);
+    let end = line_start
+        + line.len()
+        + usize::from(line_start + line.len() < source.as_bytes().len());
     (line_start, end)
 }
 
@@ -144,11 +144,10 @@ pub(super) fn report_duplicate_cops(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let line = source.line_text(line_no).unwrap_or("");
     let mut diag = cop.diagnostic(
         source,
         line_no,
-        cop_token_column(line, name, occurrence),
+        cop_token_column(source.line_text(line_no).unwrap_or(""), name, occurrence),
         format!("Unnecessary disabling of `{name}`."),
     );
     push_removal(

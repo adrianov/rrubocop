@@ -50,8 +50,7 @@ fn write_inspecting(file_count: usize, out: &mut dyn Write) {
 fn worst_severity(diagnostics: &[Diagnostic]) -> HashMap<String, Severity> {
     let mut map = HashMap::new();
     for d in diagnostics {
-        let key = smart_path(&d.path);
-        map.entry(key)
+        map.entry(smart_path(&d.path))
             .and_modify(|s| {
                 if d.severity > *s {
                     *s = d.severity;

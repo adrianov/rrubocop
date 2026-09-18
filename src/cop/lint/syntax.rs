@@ -184,8 +184,7 @@ fn bare_not_offense(source: &SourceFile, node: Node<'_>) -> Option<(usize, usize
     if kids.len() < 2 {
         return None;
     }
-    let op = kids[0];
-    if node_bytes(source, op) != b"not" {
+    if node_bytes(source, kids[0]) != b"not" {
         return None;
     }
     let operand = kids[1];

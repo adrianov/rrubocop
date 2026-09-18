@@ -89,8 +89,8 @@ fn check_normal(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let parent_col = util::parent_column(source, n);
-    let base_from_mod = util::base_column_for_normal(source, &kids, parent_col);
+    let base_from_mod =
+        util::base_column_for_normal(source, &kids, util::parent_column(source, n));
     let filtered: Vec<_> = kids
         .into_iter()
         .filter(|k| !util::is_bare_access_modifier(source, *k))
@@ -98,8 +98,14 @@ fn check_normal(
     if filtered.is_empty() || (filtered.len() < 2 && base_from_mod.is_none()) {
         return;
     }
-    let base = base_from_mod.unwrap_or_else(|| util::display_col(source, filtered[0].start_byte()));
-    check_flat(cop, source, &filtered, base, diagnostics, corrections);
+    check_flat(
+        cop,
+        source,
+        &filtered,
+        base_from_mod.unwrap_or_else(|| util::display_col(source, filtered[0].start_byte())),
+        diagnostics,
+        corrections,
+    );
 }
 
 fn check_sections(
@@ -121,8 +127,14 @@ fn check_sections(
         if section.len() < 2 {
             continue;
         }
-        let base = util::display_col(source, section[0].start_byte());
-        check_flat(cop, source, section, base, diagnostics, corrections);
+        check_flat(
+            cop,
+            source,
+            section,
+            util::display_col(source, section[0].start_byte()),
+            diagnostics,
+            corrections,
+        );
     }
 }
 

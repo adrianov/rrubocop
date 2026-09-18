@@ -67,20 +67,27 @@ impl EntryStore {
         }
         let mut newest_first = by_age;
         newest_first.sort_by_key(|(t, _)| std::cmp::Reverse(*t));
-        let stale: Vec<String> = newest_first
-            .iter()
-            .skip(MAX_ENTRIES)
-            .map(|(_, k)| k.clone())
-            .collect();
-        self.remove_keys(&stale);
+        self.remove_keys(
+            &newest_first
+                .iter()
+                .skip(MAX_ENTRIES)
+                .map(|(_, k)| k.clone())
+                .collect::<Vec<_>>(),
+        );
     }
 
     fn entries_by_age(&self) -> Option<Vec<(u64, String)>> {
-        let rtx = self.db.begin_read().ok()?;
-        let table = rtx.open_table(ENTRIES).ok()?;
-        let iter = table.iter().ok()?;
+        // Chained in the tail expression so the read-txn/table temporaries
+        // outlive the iterator borrow.
         Some(
-            iter.flatten()
+            self.db
+                .begin_read()
+                .ok()?
+                .open_table(ENTRIES)
+                .ok()?
+                .iter()
+                .ok()?
+                .flatten()
                 .filter_map(|(k, v)| parse_age(k.value(), v.value()))
                 .collect(),
         )
@@ -109,16 +116,27 @@ impl EntryStore {
 
     #[cfg(test)]
     pub(super) fn raw_get(&self, key: &str) -> Option<usize> {
-        let rtx = self.db.begin_read().unwrap();
-        let table = rtx.open_table(ENTRIES).unwrap();
-        table.get(key).unwrap().map(|_| 1_usize)
+        // Chained in the tail expression so the read-txn/table temporaries
+        // outlive the guard borrow.
+        self.db
+            .begin_read()
+            .unwrap()
+            .open_table(ENTRIES)
+            .unwrap()
+            .get(key)
+            .unwrap()
+            .map(|_| 1_usize)
     }
 
     #[cfg(test)]
     pub(super) fn raw_len(&self) -> usize {
-        let rtx = self.db.begin_read().unwrap();
-        let table = rtx.open_table(ENTRIES).unwrap();
-        table.len().unwrap() as usize
+        self.db
+            .begin_read()
+            .unwrap()
+            .open_table(ENTRIES)
+            .unwrap()
+            .len()
+            .unwrap() as usize
     }
 
     #[cfg(test)]

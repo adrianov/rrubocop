@@ -59,8 +59,8 @@ mod tests {
 
     #[test]
     fn native_expands_fixture_without_ruby() {
-        let raw = std::fs::read_to_string(fixture_erb()).unwrap();
-        let text = erb_native::expand_erb_native(&raw).expect("simple ERB should expand natively");
+        let text = erb_native::expand_erb_native(&std::fs::read_to_string(fixture_erb()).unwrap())
+            .expect("simple ERB should expand natively");
         assert!(!text.contains("<%"));
         assert_eq!(abc_enabled(&text), Some(false));
     }

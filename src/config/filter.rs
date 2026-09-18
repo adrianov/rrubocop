@@ -167,8 +167,10 @@ impl CopFilterSet {
         let Some(ref version) = self.migrated_schema_version else {
             return false;
         };
-        let basename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        first_timestamp_leq(basename, version)
+        first_timestamp_leq(
+            path.file_name().and_then(|n| n.to_str()).unwrap_or(""),
+            version,
+        )
     }
 }
 

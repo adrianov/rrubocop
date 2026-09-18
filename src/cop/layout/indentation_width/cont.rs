@@ -122,8 +122,7 @@ pub(super) fn aligned_continuation(
 ) -> bool {
     let start =
         indent > prev && (ends_with_open_delim(prev_line) || ends_with_continuation(prev_line));
-    let ongoing = cont_base.is_some_and(|b| indent >= b.saturating_sub(1));
-    if start || ongoing {
+    if start || cont_base.is_some_and(|b| indent >= b.saturating_sub(1)) {
         if cont_base.is_none() {
             *cont_base = Some(prev);
         }

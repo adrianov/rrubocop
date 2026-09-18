@@ -69,9 +69,7 @@ fn record_helper(source: &SourceFile, node: Node<'_>, method: &[u8], out: &mut H
 fn walk_names(source: &SourceFile, node: Node<'_>, allow_subject: bool, out: &mut HashSet<Vec<u8>>) {
     if matches!(node.kind(), "call" | "command") {
         let method = call_method_name(source, node);
-        let has_block = call_block(node).is_some();
-        let bare = is_rspec_bare(source, node);
-        if bare && has_block {
+        if is_rspec_bare(source, node) && call_block(node).is_some() {
             if let Some(m) = method {
                 if scope_boundary(m) {
                     return;
@@ -119,8 +117,7 @@ fn report_too_many(
     max: usize,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let meth = method_node(node).unwrap_or(node);
-    let (line, col) = source.offset_to_line_col(meth.start_byte());
+    let (line, col) = source.offset_to_line_col(method_node(node).unwrap_or(node).start_byte());
     diagnostics.push(cop.diagnostic(
         source,
         line,

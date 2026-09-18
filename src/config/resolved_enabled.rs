@@ -23,9 +23,12 @@ impl ResolvedConfig {
     ) -> bool {
         let config = self.cop_configs.get(name);
         let dept = name.split('/').next().unwrap_or("");
-        let inputs = self.enable_inputs(name, dept, config, true);
-        let state = resolve_enabled_state(&inputs);
-        if !state_to_enabled(state, self.new_cops, self.disabled_by_default, true) {
+        if !state_to_enabled(
+            resolve_enabled_state(&self.enable_inputs(name, dept, config, true)),
+            self.new_cops,
+            self.disabled_by_default,
+            true,
+        ) {
             return false;
         }
         if version_gate_disables(self, name, dept, config, true) {
@@ -48,8 +51,9 @@ impl ResolvedConfig {
         default_exclude: &[&str],
     ) -> bool {
         let config = self.cop_configs.get(name);
-        let dept = name.split('/').next().unwrap_or("");
-        let dept_config = self.department_configs.get(dept);
+        let dept_config = self
+            .department_configs
+            .get(name.split('/').next().unwrap_or(""));
         let include = effective_include(config, dept_config, default_include);
         let exclude = effective_exclude(config, dept_config, default_exclude);
         if !include.is_empty() && !path_matches_any(&include, path) {

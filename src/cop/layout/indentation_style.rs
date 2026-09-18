@@ -19,14 +19,14 @@ fn indent_bad(style: &str, indent: &[u8]) -> bool {
 
 fn tabs_replacement(indent: &[u8], width: usize) -> String {
     let spaces = indent.iter().filter(|&&b| b == b' ').count() / width.max(1);
-    let tabs = indent.iter().filter(|&&b| b == b'\t').count();
-    "\t".repeat(spaces + tabs)
+    "\t".repeat(spaces + indent.iter().filter(|&&b| b == b'\t').count())
 }
 
 fn spaces_replacement(indent: &[u8], width: usize) -> String {
-    let tabs = indent.iter().filter(|&&b| b == b'\t').count();
-    let spaces = indent.iter().filter(|&&b| b == b' ').count();
-    " ".repeat(tabs * width + spaces)
+    " ".repeat(
+        indent.iter().filter(|&&b| b == b'\t').count() * width
+            + indent.iter().filter(|&&b| b == b' ').count(),
+    )
 }
 
 fn replacement_for(style: &str, indent: &[u8], width: usize) -> String {

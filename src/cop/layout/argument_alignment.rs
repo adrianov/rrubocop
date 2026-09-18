@@ -29,9 +29,8 @@ impl Cop for ArgumentAlignment {
             return;
         }
         let style = config.get_str("EnforcedStyle", "with_first_argument");
-        let width = config.get_usize("IndentationWidth", 2);
         align_items::check_align(
-            self, source, node, style, width,
+            self, source, node, style, config.get_usize("IndentationWidth", 2),
             "Align the arguments of a method call if they span more than one line.",
             diagnostics, &mut corrections,
         );

@@ -136,11 +136,9 @@ fn apply_corr(
         cop_index: 0,
     });
     if has_boolean_last {
-        let first = args[0];
-        let delete_end = closing_paren_start(node).unwrap_or(node.end_byte());
         corr.push(Correction {
-            start: first.end_byte(),
-            end: delete_end,
+            start: args[0].end_byte(),
+            end: closing_paren_start(node).unwrap_or(node.end_byte()),
             replacement: String::new(),
             cop_name: cop.name(),
             cop_index: 0,

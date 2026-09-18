@@ -73,16 +73,15 @@ fn has_task_block(node: Node<'_>) -> bool {
 }
 
 fn task_name_is_default(source: &SourceFile, task: Node<'_>) -> bool {
-    let args = argument_nodes(task);
-    let Some(first) = args.first() else {
+    let Some(first) = argument_nodes(task).into_iter().next() else {
         return false;
     };
     match first.kind() {
         "simple_symbol" | "symbol" | "string" | "string_content" => {
-            symbol_or_string_is_default(source, *first)
+            symbol_or_string_is_default(source, first)
         }
-        "hash" => hash_key_is_default(source, *first),
-        "pair" => pair_key_is_default(source, *first),
+        "hash" => hash_key_is_default(source, first),
+        "pair" => pair_key_is_default(source, first),
         _ => false,
     }
 }
@@ -110,8 +109,8 @@ fn pair_key_is_default(source: &SourceFile, pair: Node<'_>) -> bool {
     };
     let b = node_bytes(source, key);
     let name = b.strip_prefix(b":").unwrap_or(b);
-    let bare = name.strip_suffix(b":").unwrap_or(name);
-    bare == b"default" || symbol_or_string_is_default(source, key)
+    name.strip_suffix(b":").unwrap_or(name) == b"default"
+        || symbol_or_string_is_default(source, key)
 }
 
 fn hash_key_is_default(source: &SourceFile, hash: Node<'_>) -> bool {

@@ -12,15 +12,15 @@ fn gem_name_from_node(source: &SourceFile, mut node: Node<'_>) -> Option<String>
     loop {
         match node.kind() {
             "string" => {
-                let bytes = node_bytes(source, node);
-                return Some(String::from_utf8_lossy(strip_quotes(bytes)).into_owned());
+                return Some(
+                    String::from_utf8_lossy(strip_quotes(node_bytes(source, node))).into_owned(),
+                );
             }
             "call" | "method_call" | "command_call" => {
                 node = node.child_by_field_name("receiver")?;
             }
             _ => {
-                let text = node_text(source, node);
-                return extract_gem_name_text(&text);
+                return extract_gem_name_text(&node_text(source, node));
             }
         }
     }

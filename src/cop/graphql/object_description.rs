@@ -49,8 +49,9 @@ impl Cop for ObjectDescription {
         if description_method_in(source, &stmts) {
             return;
         }
-        let name_node = node.child_by_field_name("name").unwrap_or(node);
-        let (line, col) = source.offset_to_line_col(name_node.start_byte());
+        let (line, col) = source.offset_to_line_col(
+            node.child_by_field_name("name").unwrap_or(node).start_byte(),
+        );
         diagnostics.push(self.diagnostic(
             source,
             line,

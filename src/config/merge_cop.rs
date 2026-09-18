@@ -37,10 +37,13 @@ fn merge_cop_lists(
     let should_merge_include = inherit_mode
         .map(|im| im.merge.contains("Include"))
         .unwrap_or(false);
-    let should_override_exclude = inherit_mode
-        .map(|im| im.override_keys.contains("Exclude"))
-        .unwrap_or(false);
-    merge_exclude_list(&mut base.exclude, &overlay.exclude, should_override_exclude);
+    merge_exclude_list(
+        &mut base.exclude,
+        &overlay.exclude,
+        inherit_mode
+            .map(|im| im.override_keys.contains("Exclude"))
+            .unwrap_or(false),
+    );
     merge_include_list(&mut base.include, &overlay.include, should_merge_include);
 }
 

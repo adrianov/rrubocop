@@ -115,10 +115,10 @@ impl Cop for SpaceInsideBlockBraces {
         if d.inner_e <= d.inner_s {
             return;
         }
-        let empty = bytes[d.inner_s..d.inner_e]
+        if bytes[d.inner_s..d.inner_e]
             .iter()
-            .all(|&b| b == b' ' || b == b'\t');
-        if empty {
+            .all(|&b| b == b' ' || b == b'\t')
+        {
             check_empty(self, source, config, lbrace, &d, diagnostics, &mut corrections);
             return;
         }

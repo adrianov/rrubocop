@@ -53,8 +53,9 @@ impl Cop for BeNil {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyle", "be_nil");
-        let Some((msg, repl)) = be_nil_rewrite(style, source, node) else {
+        let Some((msg, repl)) =
+            be_nil_rewrite(config.get_str("EnforcedStyle", "be_nil"), source, node)
+        else {
             return;
         };
         let at = if repl == "be_nil" {

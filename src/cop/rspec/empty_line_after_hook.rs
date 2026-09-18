@@ -23,10 +23,11 @@ fn has_blank_or_end(source: &SourceFile, end_node: Node<'_>) -> bool {
         return true;
     };
     let bytes = source.as_bytes();
-    let next_end = source.line_start(end_line + 2).unwrap_or(bytes.len());
-    let next = std::str::from_utf8(&bytes[next_start..next_end])
-        .unwrap_or("")
-        .trim();
+    let next = std::str::from_utf8(
+        &bytes[next_start..source.line_start(end_line + 2).unwrap_or(bytes.len())],
+    )
+    .unwrap_or("")
+    .trim();
     next.is_empty() || next == "end"
 }
 

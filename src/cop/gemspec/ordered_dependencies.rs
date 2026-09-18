@@ -41,25 +41,26 @@ impl Cop for OrderedDependencies {
         let consider_punct = config.get_bool("ConsiderPunctuation", false);
         let bytes = source.as_bytes();
         let offsets = line_offsets(source);
-        let mut current_method: Option<String> = None;
-        let mut group: Vec<DepEntry> = Vec::new();
-
-        for (line_idx, line) in source.lines().enumerate() {
-            handle_line(
-                self,
-                source,
-                bytes,
-                line,
-                line_idx,
-                offsets[line_idx],
-                treat_comments,
-                consider_punct,
-                &mut current_method,
-                &mut group,
-                diagnostics,
-                &mut corrections,
-            );
-        }
+        let (_, mut group) = source.lines().enumerate().fold(
+            (None, Vec::new()),
+            |(mut current_method, mut group), (line_idx, line)| {
+                handle_line(
+                    self,
+                    source,
+                    bytes,
+                    line,
+                    line_idx,
+                    offsets[line_idx],
+                    treat_comments,
+                    consider_punct,
+                    &mut current_method,
+                    &mut group,
+                    diagnostics,
+                    &mut corrections,
+                );
+                (current_method, group)
+            },
+        );
         flush_group(
             &mut group,
             diagnostics,

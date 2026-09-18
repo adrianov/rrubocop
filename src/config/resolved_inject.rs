@@ -103,13 +103,13 @@ fn inject_line_length_max(ll: Option<&CopConfig>, config: &mut CopConfig) {
     if config.options.contains_key("MaxLineLength") {
         return;
     }
-    let max = ll
-        .and_then(|cc| cc.options.get("Max"))
-        .and_then(|v| v.as_u64())
-        .unwrap_or(120);
     config.options.insert(
         "MaxLineLength".to_string(),
-        Value::Number(serde_yml::Number::from(max)),
+        Value::Number(serde_yml::Number::from(
+            ll.and_then(|cc| cc.options.get("Max"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(120),
+        )),
     );
 }
 
@@ -117,12 +117,13 @@ fn inject_line_length_enabled(ll: Option<&CopConfig>, config: &mut CopConfig) {
     if config.options.contains_key("LineLengthEnabled") {
         return;
     }
-    let enabled = ll
-        .map(|cc| !matches!(cc.enabled, EnabledState::False))
-        .unwrap_or(true);
-    config
-        .options
-        .insert("LineLengthEnabled".to_string(), Value::Bool(enabled));
+    config.options.insert(
+        "LineLengthEnabled".to_string(),
+        Value::Bool(
+            ll.map(|cc| !matches!(cc.enabled, EnabledState::False))
+                .unwrap_or(true),
+        ),
+    );
 }
 
 pub(crate) fn inject_redundant_line_break(
@@ -136,10 +137,12 @@ pub(crate) fn inject_redundant_line_break(
     if config.options.contains_key("SingleLineBlockChainEnabled") {
         return;
     }
-    let enabled = sibling_enabled(&cfg.cop_configs, "Layout/SingleLineBlockChain");
     config.options.insert(
         "SingleLineBlockChainEnabled".to_string(),
-        Value::Bool(enabled),
+        Value::Bool(sibling_enabled(
+            &cfg.cop_configs,
+            "Layout/SingleLineBlockChain",
+        )),
     );
 }
 
@@ -180,16 +183,20 @@ pub(crate) fn inject_first_hash_indent(cfg: &ResolvedConfig, name: &str, config:
     if name != "Layout/FirstHashElementIndentation" {
         return;
     }
-    let ha = cfg.cop_configs.get("Layout/HashAlignment");
     for (key, default) in [
         ("EnforcedColonStyle", "key"),
         ("EnforcedHashRocketStyle", "key"),
     ] {
-        let style = ha
-            .and_then(|cc| cc.options.get(key))
-            .cloned()
-            .unwrap_or_else(|| Value::String(default.to_string()));
-        config.options.entry(key.to_string()).or_insert(style);
+        config
+            .options
+            .entry(key.to_string())
+            .or_insert(
+                cfg.cop_configs
+                    .get("Layout/HashAlignment")
+                    .and_then(|cc| cc.options.get(key))
+                    .cloned()
+                    .unwrap_or_else(|| Value::String(default.to_string())),
+            );
     }
 }
 
@@ -325,14 +332,14 @@ pub(crate) fn inject_config_disabled_cops(
     if name != "Lint/RedundantCopEnableDirective" {
         return;
     }
-    let disabled: Vec<Value> = cfg
-        .cop_configs
-        .iter()
-        .filter(|(_, c)| matches!(c.enabled, EnabledState::False))
-        .map(|(n, _)| Value::String(n.clone()))
-        .collect();
     config
         .options
         .entry("ConfigDisabledCops".into())
-        .or_insert(Value::Sequence(disabled));
+        .or_insert(Value::Sequence(
+            cfg.cop_configs
+                .iter()
+                .filter(|(_, c)| matches!(c.enabled, EnabledState::False))
+                .map(|(n, _)| Value::String(n.clone()))
+                .collect(),
+        ));
 }

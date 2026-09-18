@@ -34,12 +34,11 @@ struct Offense {
 
 impl Formatter for JsonFormatter {
     fn format_to(&self, diagnostics: &[Diagnostic], files: &[PathBuf], out: &mut dyn Write) {
-        let corrected_count = diagnostics.iter().filter(|d| d.corrected).count();
         let output = JsonOutput {
             metadata: Metadata {
                 files_inspected: files.len(),
                 offense_count: diagnostics.len(),
-                corrected_count,
+                corrected_count: diagnostics.iter().filter(|d| d.corrected).count(),
             },
             offenses: diagnostics
                 .iter()

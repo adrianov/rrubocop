@@ -82,8 +82,10 @@ mod tests {
 
     fn config_with_inverse_methods(yaml: &str) -> CopConfig {
         let mut config = CopConfig::default();
-        let value: serde_yml::Value = serde_yml::from_str(yaml).expect("parse InverseMethods");
-        config.options.insert("InverseMethods".to_string(), value);
+        config.options.insert(
+            "InverseMethods".to_string(),
+            serde_yml::from_str(yaml).expect("parse InverseMethods"),
+        );
         config
     }
 

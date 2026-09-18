@@ -52,9 +52,7 @@ fn all_first_lines_equal(source: &SourceFile, elems: &[Node<'_>]) -> bool {
 /// RuboCop `MultilineElementLineBreaks#all_on_same_line?` (without `ignore_last`):
 /// braces may wrap lines while every element still sits on one line.
 fn all_elems_same_line(source: &SourceFile, elems: &[Node<'_>]) -> bool {
-    let first = shared::node_line(source, elems[0]);
-    let last_end = elem_end_line(source, *elems.last().unwrap());
-    first == last_end
+    shared::node_line(source, elems[0]) == elem_end_line(source, *elems.last().unwrap())
 }
 
 fn scan_breaks(
@@ -68,8 +66,7 @@ fn scan_breaks(
     let mut last_seen = 0usize;
     let mut seen = false;
     for e in elems {
-        let first = shared::node_line(source, *e);
-        if seen && last_seen >= first {
+        if seen && last_seen >= shared::node_line(source, *e) {
             report_same_line(cop, source, *e, message, diagnostics, corrections);
         } else {
             last_seen = elem_end_line(source, *e);
@@ -140,11 +137,10 @@ fn skip_breaks(
     let start_line = shared::node_line(source, node);
     // For method args only: RuboCop send first_line includes receiver — skip when
     // args begin after the call expression's first line (chained `.with(a,`).
-    if is_arg_list(node) {
-        let call_start = call_or_node_line(source, node, start_line);
-        if call_start != shared::node_line(source, elems[0]) {
-            return true;
-        }
+    if is_arg_list(node)
+        && call_or_node_line(source, node, start_line) != shared::node_line(source, elems[0])
+    {
+        return true;
     }
     let end_line = breaks_end_line(source, node, elems, allow_multiline_final);
     let align_start = if is_arg_list(node) {

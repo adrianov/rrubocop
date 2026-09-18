@@ -65,10 +65,18 @@ fn path_passes_exclude(
 }
 
 fn is_path_matched_impl(set: &CopFilterSet, cop_config: &CopConfig, path: &Path) -> bool {
-    let include_pats: Vec<&str> = cop_config.include.iter().map(|s| s.as_str()).collect();
-    let exclude_pats: Vec<&str> = cop_config.exclude.iter().map(|s| s.as_str()).collect();
-    let (include_set, exclude_set, include_re, exclude_re) =
-        build_path_sets(&include_pats, &exclude_pats);
+    let (include_set, exclude_set, include_re, exclude_re) = build_path_sets(
+        &cop_config
+            .include
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<&str>>(),
+        &cop_config
+            .exclude
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<&str>>(),
+    );
     let (rel_path, rel_to_base) = path_forms(set, path);
     path_passes_include(&include_set, &include_re, path, rel_path, rel_to_base)
         && path_passes_exclude(&exclude_set, &exclude_re, path, rel_path, rel_to_base)

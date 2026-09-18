@@ -34,8 +34,7 @@ impl Cop for ClassAndModuleCamelCase {
         } else {
             name_node
         };
-        let name = node_bytes(source, name_node);
-        if is_camel_case(name) {
+        if is_camel_case(node_bytes(source, name_node)) {
             return;
         }
         let (line, column) = source.offset_to_line_col(name_node.start_byte());

@@ -57,8 +57,7 @@ impl Cop for AccessorMethodName {
         let Some(name_node) = node.child_by_field_name("name") else {
             return;
         };
-        let name = node_bytes(source, name_node);
-        let Some(msg) = accessor_offense_msg(name, node) else {
+        let Some(msg) = accessor_offense_msg(node_bytes(source, name_node), node) else {
             return;
         };
         let (line, column) = source.offset_to_line_col(name_node.start_byte());

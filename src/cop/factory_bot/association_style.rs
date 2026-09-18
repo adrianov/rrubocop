@@ -50,8 +50,7 @@ fn has_keyword_arg(node: Node<'_>) -> bool {
 }
 
 fn report(cop: &AssociationStyle, source: &SourceFile, node: Node<'_>, msg: &str, diagnostics: &mut Vec<Diagnostic>) {
-    let meth = method_node(node).unwrap_or(node);
-    let (line, col) = source.offset_to_line_col(meth.start_byte());
+    let (line, col) = source.offset_to_line_col(method_node(node).unwrap_or(node).start_byte());
     diagnostics.push(cop.diagnostic(source, line, col, msg.into()));
 }
 
@@ -187,8 +186,14 @@ impl Cop for AssociationStyle {
         let Some(body) = call_block(node).and_then(|b| b.child_by_field_name("body")) else {
             return;
         };
-        let style = config.get_str("EnforcedStyle", "implicit");
-        check_body(self, source, body, style, method == b"factory", diagnostics);
+        check_body(
+            self,
+            source,
+            body,
+            config.get_str("EnforcedStyle", "implicit"),
+            method == b"factory",
+            diagnostics,
+        );
     }
 }
 

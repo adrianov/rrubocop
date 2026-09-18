@@ -62,9 +62,15 @@ pub fn assert_cop_offenses_full_with_config(
     config: CopConfig,
 ) {
     let parsed = parse_fixture(fixture_bytes);
-    let filename = parsed.filename.as_deref().unwrap_or("test.rb");
-    let diagnostics = run_cop_full_internal(cop, &parsed.source, config, filename);
-    assert_offense_lists(diagnostics, parsed.expected);
+    assert_offense_lists(
+        run_cop_full_internal(
+            cop,
+            &parsed.source,
+            config,
+            parsed.filename.as_deref().unwrap_or("test.rb"),
+        ),
+        parsed.expected,
+    );
 }
 
 fn assert_offense_lists(mut diagnostics: Vec<Diagnostic>, mut expected: Vec<ExpectedOffense>) {
@@ -94,8 +100,12 @@ pub fn assert_cop_no_offenses_full_with_config(
     config: CopConfig,
 ) {
     let parsed = parse_fixture(source_bytes);
-    let filename = parsed.filename.as_deref().unwrap_or("test.rb");
-    let diagnostics = run_cop_full_internal(cop, &parsed.source, config, filename);
+    let diagnostics = run_cop_full_internal(
+        cop,
+        &parsed.source,
+        config,
+        parsed.filename.as_deref().unwrap_or("test.rb"),
+    );
     assert!(
         diagnostics.is_empty(),
         "Expected no offenses but got {}:\n{}",

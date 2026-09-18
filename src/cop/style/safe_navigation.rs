@@ -151,11 +151,10 @@ fn inside_block(node: Node<'_>) -> bool {
 
 fn lhs_reassigned_in_method(source: &SourceFile, node: Node<'_>) -> bool {
     let mut cur = node.walk();
-    let kids: Vec<_> = node.children(&mut cur).collect();
-    let Some(lhs) = kids.first() else {
+    let Some(lhs) = node.children(&mut cur).collect::<Vec<_>>().first().copied() else {
         return false;
     };
-    let Some(name) = local_name(source, *lhs) else {
+    let Some(name) = local_name(source, lhs) else {
         return false;
     };
     let Some(method) = enclosing_method(node) else {

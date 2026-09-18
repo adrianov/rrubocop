@@ -12,10 +12,10 @@ fn is_exception_const(source: &SourceFile, node: Node<'_>) -> bool {
     match node.kind() {
         "constant" => node_bytes(source, node) == b"Exception",
         "scope_resolution" => {
-            let name = node.child_by_field_name("name");
-            let scope = node.child_by_field_name("scope");
-            name.map(|n| node_bytes(source, n) == b"Exception").unwrap_or(false)
-                && scope.is_none()
+            node.child_by_field_name("name")
+                .map(|n| node_bytes(source, n) == b"Exception")
+                .unwrap_or(false)
+                && node.child_by_field_name("scope").is_none()
         }
         _ => false,
     }
@@ -46,10 +46,10 @@ impl Cop for RescueException {
             return;
         };
         let mut cur = exceptions.walk();
-        let hit = exceptions
+        if !exceptions
             .named_children(&mut cur)
-            .any(|e| is_exception_const(source, e));
-        if !hit {
+            .any(|e| is_exception_const(source, e))
+        {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());

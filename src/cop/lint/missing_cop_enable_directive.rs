@@ -9,14 +9,13 @@ use crate::parse::source::SourceFile;
 pub struct MissingCopEnableDirective;
 
 fn directive_names(rest: &str) -> Vec<String> {
-    let cops = rest
+    let names: Vec<String> = rest
         .trim()
         .trim_start_matches(':')
         .trim()
         .split("--")
         .next()
-        .unwrap_or("");
-    let names: Vec<String> = cops
+        .unwrap_or("")
         .split(',')
         .map(|c| c.trim().to_string())
         .filter(|c| !c.is_empty())
@@ -90,11 +89,7 @@ impl Cop for MissingCopEnableDirective {
         let mut last_line = 0usize;
         for (i, line) in source.lines().enumerate() {
             last_line = i + 1;
-            let s = String::from_utf8_lossy(line);
-            let trimmed = s.trim_start();
-            if trimmed.starts_with('#') {
-                apply_line(&mut open, trimmed, i + 1);
-            }
+            apply_line(&mut open, String::from_utf8_lossy(line).trim_start(), i + 1);
         }
         report_open(self, source, open, last_line, maximum, diagnostics);
     }

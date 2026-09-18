@@ -40,8 +40,9 @@ impl Cop for FieldHashKey {
         let Some(class) = enclosing_class(node) else {
             return;
         };
-        let method_name = resolver_method_name(source, node);
-        let Some(method) = find_method_def(class, source, &method_name) else {
+        let Some(method) =
+            find_method_def(class, source, &resolver_method_name(source, node))
+        else {
             return;
         };
         let Some(key) = hash_key_from_method(source, method) else {

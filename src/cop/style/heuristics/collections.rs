@@ -6,8 +6,9 @@ use crate::parse::source::SourceFile;
 pub fn matches_empty_heredoc(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
     if node.kind() != "heredoc_body" { return false; }
     let mut cur = node.walk();
-    let content = node.children(&mut cur).find(|ch| ch.kind() == "heredoc_content");
-    content.is_some_and(|c| {
+    node.children(&mut cur)
+        .find(|ch| ch.kind() == "heredoc_content")
+        .is_some_and(|c| {
         let b = &source.as_bytes()[c.start_byte()..c.end_byte()];
         b.is_empty() || b == b"\n"
     })
@@ -19,13 +20,12 @@ pub fn matches_hash_syntax(source: &SourceFile, node: Node<'_>, config: &CopConf
     }
     let style = config.get_str("EnforcedStyle", "ruby19");
     let has_rocket = has_anon_child(node, "=>");
-    let has_colon = has_anon_child(node, ":");
     match style {
         // RuboCop ruby19: only rewrite when *every* key is a word symbol.
         "ruby19" | "ruby19_no_mixed_keys" => {
             has_rocket && pair_key_is_symbol(source, node) && hash_all_word_symbol_keys(source, node)
         }
-        "hash_rockets" => has_colon,
+        "hash_rockets" => has_anon_child(node, ":"),
         _ => false,
     }
 }

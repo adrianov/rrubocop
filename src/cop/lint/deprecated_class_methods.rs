@@ -69,14 +69,13 @@ fn attr_prefer(args: &[Node<'_>]) -> Option<&'static str> {
 
 fn drop_bool_arg(node: Node<'_>, args: &[Node<'_>], cop_name: &'static str) -> Correction {
     let mut cur = node.walk();
-    let delete_end = node
-        .children(&mut cur)
-        .find(|c| !c.is_named() && c.kind() == ")")
-        .map(|c| c.start_byte())
-        .unwrap_or(node.end_byte());
     Correction {
         start: args[0].end_byte(),
-        end: delete_end,
+        end: node
+            .children(&mut cur)
+            .find(|c| !c.is_named() && c.kind() == ")")
+            .map(|c| c.start_byte())
+            .unwrap_or(node.end_byte()),
         replacement: String::new(),
         cop_name,
         cop_index: 0,

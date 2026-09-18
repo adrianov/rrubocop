@@ -28,12 +28,11 @@ impl Cop for GemFilename {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyle", "Gemfile");
-        let file_name = Path::new(source.path_str())
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("");
-        if let Some(msg) = mismatch_msg(style, file_name, source.path_str()) {
+        if let Some(msg) = mismatch_msg(
+            config.get_str("EnforcedStyle", "Gemfile"),
+            Path::new(source.path_str()).file_name().and_then(|s| s.to_str()).unwrap_or(""),
+            source.path_str(),
+        ) {
             diagnostics.push(self.diagnostic(source, 1, 0, msg));
         }
     }

@@ -60,11 +60,11 @@ impl Cop for RedundantRegexpQuantifiers {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let text = node_text(source, node);
-        let inner = text
-            .trim_start_matches('/')
-            .trim_end_matches(|c| matches!(c, '/' | 'i' | 'm' | 'x' | 'o'));
-        let Some((inner_q, outer_q, combined)) = find_redundant(inner) else {
+        let Some((inner_q, outer_q, combined)) = find_redundant(
+            node_text(source, node)
+                .trim_start_matches('/')
+                .trim_end_matches(|c| matches!(c, '/' | 'i' | 'm' | 'x' | 'o')),
+        ) else {
             return;
         };
         let (line, col) = source.offset_to_line_col(node.start_byte());

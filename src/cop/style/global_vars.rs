@@ -41,8 +41,7 @@ impl Cop for GlobalVars {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let name = node_bytes(source, node);
-        if is_allowed(name, config) {
+        if is_allowed(node_bytes(source, node), config) {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());

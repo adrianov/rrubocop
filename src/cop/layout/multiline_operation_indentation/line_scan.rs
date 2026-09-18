@@ -33,8 +33,7 @@ fn is_assignment_operator(bytes: &[u8], idx: usize) -> bool {
 }
 
 pub(super) fn has_assignment_before_col(line: &[u8], col: usize) -> bool {
-    let end = col.min(line.len());
-    (0..end)
+    (0..col.min(line.len()))
         .rev()
         .find(|&idx| line[idx] == b'=')
         .is_some_and(|idx| is_assignment_operator(line, idx))
@@ -97,9 +96,7 @@ fn starts_kw(before: &[u8], word: &[u8]) -> bool {
 }
 
 pub(super) fn keyword_on_line(line: &[u8], expr_col: usize) -> Option<KeywordContext> {
-    let start = line_indent_bytes(line);
-    let end = expr_col.min(line.len());
-    let before = &line[start..end];
+    let before = &line[line_indent_bytes(line)..expr_col.min(line.len())];
     if let Some(ctx) = leading_keyword(before) {
         return Some(ctx);
     }

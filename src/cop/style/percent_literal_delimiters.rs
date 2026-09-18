@@ -13,8 +13,7 @@ fn percent_type(text: &[u8]) -> Option<&[u8]> {
     if !text.starts_with(b"%") || text.len() < 2 {
         return None;
     }
-    let b = text[1];
-    if b.is_ascii_alphanumeric() {
+    if text[1].is_ascii_alphanumeric() {
         Some(&text[..2])
     } else {
         Some(&text[..1])
@@ -58,16 +57,15 @@ fn mapping_pref<'a>(map: &'a serde_yml::Mapping, key: &str) -> Option<&'a str> {
 fn preferred_pair(config: &CopConfig, ty: &[u8]) -> (u8, u8) {
     let default = rubocop_default_delimiters(ty);
     let key = std::str::from_utf8(ty).unwrap_or("default");
-    let pref = config
+    let mut chars = config
         .options
         .get("PreferredDelimiters")
         .and_then(|v| v.as_mapping())
         .and_then(|m| mapping_pref(m, key))
-        .unwrap_or(default);
-    let mut chars = pref.bytes();
+        .unwrap_or(default)
+        .bytes();
     let open = chars.next().unwrap_or(b'(');
-    let close = chars.next().unwrap_or(close_for(open));
-    (open, close)
+    (open, chars.next().unwrap_or(close_for(open)))
 }
 
 fn skip_delim_report(text: &[u8], ty: &[u8], used_open: u8, pref_open: u8, pref_close: u8) -> bool {
@@ -77,8 +75,7 @@ fn skip_delim_report(text: &[u8], ty: &[u8], used_open: u8, pref_open: u8, pref_
 }
 
 fn contains_delims(text: &[u8], open: u8, close: u8) -> bool {
-    let inner = percent_inner(text);
-    inner
+    percent_inner(text)
         .map(|s| s.contains(&open) || s.contains(&close))
         .unwrap_or(false)
 }

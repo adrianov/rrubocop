@@ -99,14 +99,15 @@ fn push_sorted_correction(group: &[DepEntry], corr: &mut Vec<Correction>, bytes:
     }
     let mut indices: Vec<usize> = (0..group.len()).collect();
     indices.sort_by_key(|&i| group[i].sort_key.as_str());
-    let replacement: String = indices
-        .into_iter()
-        .map(|i| String::from_utf8_lossy(&bytes[group[i].line_start..group[i].line_end]).into_owned())
-        .collect();
     corr.push(Correction {
         start: group[0].line_start,
         end: group[group.len() - 1].line_end,
-        replacement,
+        replacement: indices
+            .into_iter()
+            .map(|i| {
+                String::from_utf8_lossy(&bytes[group[i].line_start..group[i].line_end]).into_owned()
+            })
+            .collect(),
         cop_name: "Gemspec/OrderedDependencies",
         cop_index: 0,
     });

@@ -18,9 +18,10 @@ fn assignment_eq_line(
     right: Node<'_>,
 ) -> usize {
     let search_from = left.end_byte();
-    let search_to = right.start_byte();
-    let bytes = source.as_bytes();
-    if let Some(rel) = bytes[search_from..search_to].iter().position(|&b| b == b'=') {
+    if let Some(rel) = source.as_bytes()[search_from..right.start_byte()]
+        .iter()
+        .position(|&b| b == b'=')
+    {
         return source.offset_to_line_col(search_from + rel).0;
     }
     shared::node_line(source, node)
@@ -39,8 +40,7 @@ impl Cop for AssignmentIndentation {
         let Some(left) = node.child_by_field_name("left") else { return; };
         let Some(right) = node.child_by_field_name("right") else { return; };
         // RuboCop keys off the `=` line — mass-assign `a,\n b = x` keeps `=` with last LHS.
-        let eq_line = assignment_eq_line(source, node, left, right);
-        if shared::node_line(source, right) <= eq_line {
+        if shared::node_line(source, right) <= assignment_eq_line(source, node, left, right) {
             return;
         }
         let expected = shared::line_indent(source, left.start_byte()) + width;

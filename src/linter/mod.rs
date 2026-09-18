@@ -65,8 +65,14 @@ pub fn run_linter_with(
     on_discovered: impl FnOnce(usize),
     on_file: impl Fn(&[Diagnostic]) + Sync,
 ) -> Result<LintResult> {
-    let prep = prepare_run(args, config, registry);
-    let batch = parallel::lint_pipeline(&prep, roots, config, registry, on_discovered, on_file)?;
+    let batch = parallel::lint_pipeline(
+        &prepare_run(args, config, registry),
+        roots,
+        config,
+        registry,
+        on_discovered,
+        on_file,
+    )?;
     Ok(LintResult {
         diagnostics: batch.diagnostics,
         files: batch.inspected,
@@ -79,13 +85,12 @@ fn prepare_run(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> 
     let only = optional_cop_list(&args.only, registry);
     let except = expand_cop_list(&args.except, registry);
     let mode = args.autocorrect_mode();
-    let only_key = only.as_ref().map(|v| v.join(",")).unwrap_or_default();
     RunPrep {
         cache: open_result_cache(mode),
         cache_read: args.cache_read_enabled(),
         config_fp: config.cache_fingerprint(),
         except_key: except.join(","),
-        only_key,
+        only_key: only.as_ref().map(|v| v.join(",")).unwrap_or_default(),
         only,
         except,
         mode,

@@ -19,11 +19,10 @@ impl Cop for MultilineMethodArgumentLineBreaks {
         &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let allow_final = config.get_bool("AllowMultilineFinalElement", false);
         line_breaks::check_breaks_cfg(
             self, source, node,
             "Each argument in a multi-line method call must start on a separate line.",
-            diagnostics, &mut corrections, allow_final,
+            diagnostics, &mut corrections, config.get_bool("AllowMultilineFinalElement", false),
         );
     }
 }

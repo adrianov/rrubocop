@@ -20,7 +20,7 @@ jobs:
       - name: Install abcop
         run: |
           set -euo pipefail
-          ver=0.16.4
+          ver=0.19.1
           curl -fsSLO "https://github.com/adrianov/abcop/releases/download/v${ver}/abcop_${ver}-1_amd64.deb"
           sudo dpkg -i "abcop_${ver}-1_amd64.deb"
           abcop --version

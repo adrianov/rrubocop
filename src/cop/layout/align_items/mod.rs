@@ -47,8 +47,13 @@ fn report_misaligned(
     let mut diag = cop.diagnostic(source, l, c, message.into());
     if let Some(corr) = corrections {
         if let Some(line_start) = source.line_start(l) {
-            let cur_indent = shared::line_indent(source, item.start_byte());
-            push_indent_fix(corr, cop.name(), line_start, cur_indent, expected);
+            push_indent_fix(
+                corr,
+                cop.name(),
+                line_start,
+                shared::line_indent(source, item.start_byte()),
+                expected,
+            );
             diag.corrected = true;
         }
     }
@@ -67,8 +72,7 @@ fn check_one(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let line = shared::node_line(source, item);
-    if line == first_line {
+    if shared::node_line(source, item) == first_line {
         return;
     }
     if shared::node_col(source, item) != shared::line_indent(source, item.start_byte()) {
@@ -92,11 +96,13 @@ fn align_cols(
     let fixed_col = if style == "with_fixed_indentation" {
         selector_line_indent(source, node) + width
     } else {
-        let anchor = node
-            .parent()
-            .filter(|p| matches!(p.kind(), "call" | "command" | "command_call"))
-            .unwrap_or(node);
-        shared::line_indent(source, anchor.start_byte()) + width
+        shared::line_indent(
+            source,
+            node.parent()
+                .filter(|p| matches!(p.kind(), "call" | "command" | "command_call"))
+                .unwrap_or(node)
+                .start_byte(),
+        ) + width
     };
     (first_line, base_col, fixed_col)
 }
@@ -107,8 +113,10 @@ fn call_selector_indent(source: &SourceFile, call: Node<'_>, arg_list: Node<'_>)
     }
     let bytes = source.as_bytes();
     let from = call.start_byte();
-    let to = arg_list.start_byte().min(bytes.len());
-    if let Some(rel) = bytes[from..to].iter().rposition(|&b| b == b'.' || b == b'(') {
+    if let Some(rel) = bytes[from..arg_list.start_byte().min(bytes.len())]
+        .iter()
+        .rposition(|&b| b == b'.' || b == b'(')
+    {
         return shared::line_indent(source, from + rel);
     }
     shared::line_indent(source, arg_list.start_byte())

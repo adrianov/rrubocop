@@ -92,8 +92,7 @@ impl Cop for CaseLikeIf {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let min = config.get_usize("MinBranchesCount", 3);
-        if !convertible(source, node, min) {
+        if !convertible(source, node, config.get_usize("MinBranchesCount", 3)) {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());

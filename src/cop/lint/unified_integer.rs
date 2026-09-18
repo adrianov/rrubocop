@@ -29,8 +29,7 @@ impl Cop for UnifiedInteger {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let name = node_bytes(source, node);
-        let klass = match name {
+        let klass = match node_bytes(source, node) {
             b"Fixnum" => "Fixnum",
             b"Bignum" => "Bignum",
             _ => return,

@@ -98,16 +98,20 @@ fn condition_has_assignment(node: Node<'_>) -> bool {
 }
 
 fn modifier_line_len(source: &SourceFile, node: Node<'_>, body: Node<'_>, kw: &str) -> usize {
-    let cond = node_text(source, node.child_by_field_name("condition").unwrap());
-    let body_s = node_text(source, body);
-    let line = node_line(source, node);
-    let prefix = source.line_text(line).map(str::len).unwrap_or(0);
-    prefix + body_s.len() + 1 + kw.len() + 1 + cond.len()
+    source
+        .line_text(node_line(source, node))
+        .map(str::len)
+        .unwrap_or(0)
+        + node_text(source, body).len()
+        + 1
+        + kw.len()
+        + 1
+        + node_text(source, node.child_by_field_name("condition").unwrap()).len()
 }
 
 fn modifier_fits(source: &SourceFile, node: Node<'_>, body: Node<'_>, config: &CopConfig) -> bool {
-    let max = config.get_usize("Layout/LineLength/Max", 120);
-    modifier_line_len(source, node, body, node.kind()) <= max
+    modifier_line_len(source, node, body, node.kind())
+        <= config.get_usize("Layout/LineLength/Max", 120)
 }
 
 #[cfg(test)]

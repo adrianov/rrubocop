@@ -42,8 +42,7 @@ impl Cop for RescueStandardError {
         if node.parent().is_some_and(|p| p.kind() == "rescue_modifier") {
             return;
         }
-        let style = config.get_str("EnforcedStyle", "explicit");
-        let msg = match style {
+        let msg = match config.get_str("EnforcedStyle", "explicit") {
             "implicit" if only_standard_error(source, node) => {
                 Some("Omit the error class when rescuing `StandardError` by itself.")
             }

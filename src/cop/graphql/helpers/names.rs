@@ -10,8 +10,7 @@ pub fn is_snake_case(name: &str) -> bool {
 }
 
 fn needs_underscore(chars: &[char], i: usize) -> bool {
-    let c = chars[i];
-    if i == 0 || !c.is_uppercase() {
+    if i == 0 || !chars[i].is_uppercase() {
         return false;
     }
     let prev = chars[i - 1];

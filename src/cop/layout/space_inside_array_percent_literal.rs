@@ -58,7 +58,6 @@ fn report_double(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let end = collapse_spaces(bytes, abs, limit);
     report::report_fix(
         cop,
         source,
@@ -67,7 +66,7 @@ fn report_double(
         diagnostics,
         corrections,
         abs,
-        end,
+        collapse_spaces(bytes, abs, limit),
         " ".into(),
     );
 }

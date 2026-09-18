@@ -39,8 +39,7 @@ fn major_minor_f64(ver_str: &str) -> Option<f64> {
 }
 
 fn min_version_from_constraint(constraint: &str) -> Option<f64> {
-    let version_part = constraint.trim_start_matches(|c: char| !c.is_ascii_digit());
-    major_minor_f64(version_part)
+    major_minor_f64(constraint.trim_start_matches(|c: char| !c.is_ascii_digit()))
 }
 
 fn parse_required_ruby_line(trimmed: &str) -> Option<f64> {

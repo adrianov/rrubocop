@@ -98,10 +98,12 @@ mod tests {
 
     fn run_fixture(raw: &[u8], mode: u32) -> Vec<Diagnostic> {
         let parsed = parse_fixture(raw);
-        let name = parsed.filename.as_deref().unwrap_or("script.rb");
-        let dir = tempfile::tempdir().unwrap();
-        let path = write_script(dir.path(), name, &parsed.source, mode);
-        run_on_path(&path)
+        run_on_path(&write_script(
+            tempfile::tempdir().unwrap().path(),
+            parsed.filename.as_deref().unwrap_or("script.rb"),
+            &parsed.source,
+            mode,
+        ))
     }
 
     #[test]
@@ -135,14 +137,12 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn offense_when_not_executable() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = write_script(
-            dir.path(),
+        let diags = run_on_path(&write_script(
+            tempfile::tempdir().unwrap().path(),
             "lifecycle_events.rb",
             b"#!/usr/bin/env ruby\nputs 'hello'\n",
             0o644,
-        );
-        let diags = run_on_path(&path);
+        ));
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0].cop_name, "Lint/ScriptPermission");
         assert_eq!(diags[0].location.line, 1);
@@ -155,21 +155,24 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn no_offense_when_executable() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = write_script(
-            dir.path(),
+        assert!(run_on_path(&write_script(
+            tempfile::tempdir().unwrap().path(),
             "lifecycle_events.rb",
             b"#!/usr/bin/env ruby\nputs 'hello'\n",
             0o755,
-        );
-        assert!(run_on_path(&path).is_empty());
+        ))
+        .is_empty());
     }
 
     #[test]
     #[cfg(unix)]
     fn no_offense_without_shebang() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = write_script(dir.path(), "plain.rb", b"puts 'hello'\n", 0o644);
-        assert!(run_on_path(&path).is_empty());
+        assert!(run_on_path(&write_script(
+            tempfile::tempdir().unwrap().path(),
+            "plain.rb",
+            b"puts 'hello'\n",
+            0o644,
+        ))
+        .is_empty());
     }
 }

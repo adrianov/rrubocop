@@ -51,8 +51,12 @@ fn bad_filename(path_str: &str) -> Option<&str> {
     if ALLOWED.contains(&file_name) {
         return None;
     }
-    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or(file_name);
-    stem.split('.').any(|seg| !is_filename_snake_case(seg)).then_some(file_name)
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(file_name)
+        .split('.')
+        .any(|seg| !is_filename_snake_case(seg))
+        .then_some(file_name)
 }
 
 fn is_filename_snake_case(segment: &str) -> bool {

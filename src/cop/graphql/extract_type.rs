@@ -42,10 +42,10 @@ impl Cop for ExtractType {
             return;
         }
         let max_fields = config.get_usize("MaxFields", 2);
-        let ignore = ignored_prefixes(config);
-        let mut sorted: Vec<_> = prefix_groups(&underscored_fields(source, node), &ignore)
-            .into_iter()
-            .collect();
+        let mut sorted: Vec<_> =
+            prefix_groups(&underscored_fields(source, node), &ignored_prefixes(config))
+                .into_iter()
+                .collect();
         sorted.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
         emit_groups(self, source, sorted, max_fields, diagnostics);
     }
@@ -97,8 +97,7 @@ fn push_group(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<String> {
     let names: Vec<_> = group.iter().map(|(n, _)| n.as_str()).collect();
-    let last = group.last().unwrap().1;
-    let (line, col) = source.offset_to_line_col(last.start_byte());
+    let (line, col) = source.offset_to_line_col(group.last().unwrap().1.start_byte());
     diagnostics.push(cop.diagnostic(
         source,
         line,

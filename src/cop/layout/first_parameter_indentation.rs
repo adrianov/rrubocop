@@ -20,9 +20,8 @@ impl Cop for FirstParameterIndentation {
         diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let width = config.get_usize("IndentationWidth", 2);
-        let style = config.get_str("EnforcedStyle", "special_inside_parentheses");
         first_indent::check_first(
-            self, source, node, width, style,
+            self, source, node, width, config.get_str("EnforcedStyle", "special_inside_parentheses"),
             format!("Use {width} spaces for indentation of the first parameter."),
             diagnostics, &mut corrections,
         );

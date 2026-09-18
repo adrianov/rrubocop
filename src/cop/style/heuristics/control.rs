@@ -41,8 +41,10 @@ pub fn matches_ternary_parentheses(_source: &SourceFile, node: Node<'_>, config:
     if node.kind() != "conditional" { return false; }
     let style = config.get_str("EnforcedStyle", "no_parentheses");
     let mut cur = node.walk();
-    let first = node.named_children(&mut cur).next();
-    let paren = first.is_some_and(|n| n.kind() == "parenthesized_statements");
+    let paren = node
+        .named_children(&mut cur)
+        .next()
+        .is_some_and(|n| n.kind() == "parenthesized_statements");
     match style {
         "no_parentheses" => paren,
         "require_parentheses" => !paren,

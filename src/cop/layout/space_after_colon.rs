@@ -49,9 +49,8 @@ fn check_kw_param(
 }
 
 fn colon_in_pair(bytes: &[u8], key: Node<'_>, value: Node<'_>) -> Option<usize> {
-    let from = key.end_byte();
-    let to = value.start_byte();
-    gap_colon(bytes, from, to).or_else(|| key_trailing_colon(bytes, key.end_byte()))
+    gap_colon(bytes, key.end_byte(), value.start_byte())
+        .or_else(|| key_trailing_colon(bytes, key.end_byte()))
 }
 
 fn gap_colon(bytes: &[u8], from: usize, to: usize) -> Option<usize> {

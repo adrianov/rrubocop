@@ -18,10 +18,12 @@ fn remove_blank_line(
     let mut diag = cop.diagnostic(source, line, 0, msg);
     if let Some(corr) = corrections {
         if let Some(s) = source.line_start(line) {
-            let e = source.line_start(line + 1).unwrap_or(s);
             corr.push(Correction {
-                start: s, end: e, replacement: String::new(),
-                cop_name: cop.name(), cop_index: 0,
+                start: s,
+                end: source.line_start(line + 1).unwrap_or(s),
+                replacement: String::new(),
+                cop_name: cop.name(),
+                cop_index: 0,
             });
             diag.corrected = true;
         }

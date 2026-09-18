@@ -80,12 +80,16 @@ mod tests {
             "base.yml",
             "Layout/LineLength:\n  Max: 100\nStyle/Foo:\n  Enabled: true\n",
         );
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: base.yml\nLayout/LineLength:\n  Max: 120\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
+        let config = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: base.yml\nLayout/LineLength:\n  Max: 120\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap();
         let cc = config.cop_config("Layout/LineLength");
         assert_eq!(cc.options.get("Max").and_then(|v| v.as_u64()), Some(120));
         assert!(config.is_cop_enabled("Style/Foo", Path::new("a.rb"), &[], &[]));
@@ -95,12 +99,16 @@ mod tests {
     fn inherit_from_child_overrides_base() {
         let dir = tempfile::tempdir().unwrap();
         write_yaml(dir.path(), "base.yml", "Style/Foo:\n  Enabled: true\n");
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: base.yml\nStyle/Foo:\n  Enabled: false\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
+        let config = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: base.yml\nStyle/Foo:\n  Enabled: false\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap();
         assert!(!config.is_cop_enabled("Style/Foo", Path::new("a.rb"), &[], &[]));
     }
 
@@ -112,13 +120,17 @@ mod tests {
             "base.yml",
             "Style/Foo:\n  Exclude:\n    - 'vendor/**'\n",
         );
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: base.yml\nStyle/Foo:\n  Exclude:\n    - 'tmp/**'\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
-        let cc = config.cop_config("Style/Foo");
+        let cc = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: base.yml\nStyle/Foo:\n  Exclude:\n    - 'tmp/**'\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap()
+        .cop_config("Style/Foo");
         assert!(cc.exclude.contains(&"vendor/**".to_string()));
         assert!(cc.exclude.contains(&"tmp/**".to_string()));
     }
@@ -131,12 +143,16 @@ mod tests {
             "base.yml",
             "Style/Foo:\n  Include:\n    - '**/*.rb'\n",
         );
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: base.yml\nStyle/Foo:\n  Include:\n    - 'app/**'\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
+        let config = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: base.yml\nStyle/Foo:\n  Include:\n    - 'app/**'\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap();
         assert_eq!(
             config.cop_config("Style/Foo").include,
             vec!["app/**".to_string()]
@@ -152,13 +168,18 @@ mod tests {
             "parent.yml",
             "AllCops:\n  Exclude:\n    - 'vendor/**/*'\nLayout/TrailingWhitespace:\n  Enabled: true\n",
         );
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: parent.yml\nAllCops:\n  Exclude:\n    - 'tmp/**/*'\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
-        let excludes = config.global_excludes();
+        let excludes = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: parent.yml\nAllCops:\n  Exclude:\n    - 'tmp/**/*'\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap()
+        .global_excludes()
+        .to_vec();
         assert!(
             !excludes.iter().any(|e| e == "vendor/**/*"),
             "parent Exclude should be replaced: {excludes:?}"
@@ -177,13 +198,18 @@ mod tests {
             "parent.yml",
             "inherit_mode:\n  merge:\n    - Exclude\nAllCops:\n  Exclude:\n    - 'vendor/**/*'\n",
         );
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: parent.yml\nAllCops:\n  Exclude:\n    - 'tmp/**/*'\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
-        let excludes = config.global_excludes();
+        let excludes = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: parent.yml\nAllCops:\n  Exclude:\n    - 'tmp/**/*'\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap()
+        .global_excludes()
+        .to_vec();
         assert!(
             excludes.iter().any(|e| e == "vendor/**/*"),
             "parent Exclude should remain: {excludes:?}"
@@ -204,13 +230,18 @@ mod tests {
             "parent.yml",
             "AllCops:\n  Exclude:\n    - 'spec/fixtures/**/*'\n",
         );
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: parent.yml\ninherit_mode:\n  override:\n    - Exclude\nAllCops:\n  Exclude:\n    - 'coverage/**/*'\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
-        let excludes = config.global_excludes();
+        let excludes = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: parent.yml\ninherit_mode:\n  override:\n    - Exclude\nAllCops:\n  Exclude:\n    - 'coverage/**/*'\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap()
+        .global_excludes()
+        .to_vec();
         assert!(
             !excludes.iter().any(|e| e == "spec/fixtures/**/*"),
             "inherited custom exclude should be replaced: {excludes:?}"
@@ -229,13 +260,17 @@ mod tests {
             "base.yml",
             "Style/Foo:\n  Include:\n    - '**/*.rb'\n",
         );
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: base.yml\ninherit_mode:\n  merge:\n    - Include\nStyle/Foo:\n  Include:\n    - '**/*.rake'\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
-        let cc = config.cop_config("Style/Foo");
+        let cc = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: base.yml\ninherit_mode:\n  merge:\n    - Include\nStyle/Foo:\n  Include:\n    - '**/*.rake'\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap()
+        .cop_config("Style/Foo");
         assert!(cc.include.contains(&"**/*.rb".to_string()));
         assert!(cc.include.contains(&"**/*.rake".to_string()));
     }
@@ -248,33 +283,43 @@ mod tests {
             "base.yml",
             "Style/Foo:\n  Exclude:\n    - 'vendor/**'\n",
         );
-        let path = write_yaml(
-            dir.path(),
-            ".rubocop.yml",
-            "inherit_from: base.yml\ninherit_mode:\n  override:\n    - Exclude\nStyle/Foo:\n  Exclude:\n    - 'tmp/**'\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
-        let cc = config.cop_config("Style/Foo");
+        let cc = load_config(
+            Some(&write_yaml(
+                dir.path(),
+                ".rubocop.yml",
+                "inherit_from: base.yml\ninherit_mode:\n  override:\n    - Exclude\nStyle/Foo:\n  Exclude:\n    - 'tmp/**'\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap()
+        .cop_config("Style/Foo");
         assert!(!cc.exclude.contains(&"vendor/**".to_string()));
         assert!(cc.exclude.contains(&"tmp/**".to_string()));
     }
 
     #[test]
     fn disabled_by_default_disables_unset_cops() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = write_config(
-            dir.path(),
-            "AllCops:\n  DisabledByDefault: true\nStyle/Foo:\n  Enabled: true\n",
-        );
-        let config = load_config(Some(&path), None, None).unwrap();
+        let config = load_config(
+            Some(&write_config(
+                tempfile::tempdir().unwrap().path(),
+                "AllCops:\n  DisabledByDefault: true\nStyle/Foo:\n  Enabled: true\n",
+            )),
+            None,
+            None,
+        )
+        .unwrap();
         assert!(config.is_cop_enabled("Style/Foo", Path::new("a.rb"), &[], &[]));
         assert!(!config.is_cop_enabled("Style/Bar", Path::new("a.rb"), &[], &[]));
     }
 
     #[test]
     fn circular_inherit_from_breaks_cycle() {
-        let path = fixtures_dir().join("inherit_from/circular_a.yml");
-        let result = load_config(Some(&path), None, None);
+        let result = load_config(
+            Some(&fixtures_dir().join("inherit_from/circular_a.yml")),
+            None,
+            None,
+        );
         assert!(result.is_ok(), "cycle should be broken: {result:?}");
     }
 
@@ -409,8 +454,12 @@ mod tests {
 
     #[test]
     fn diamond_dependency_loads() {
-        let path = fixtures_dir().join("inherit_from/diamond_root.yml");
-        let config = load_config(Some(&path), None, None).unwrap();
+        let config = load_config(
+            Some(&fixtures_dir().join("inherit_from/diamond_root.yml")),
+            None,
+            None,
+        )
+        .unwrap();
         assert!(!config.is_cop_enabled("Style/Foo", Path::new("a.rb"), &[], &[]));
         assert!(config.is_cop_enabled(
             "Style/FrozenStringLiteralComment",
@@ -423,8 +472,12 @@ mod tests {
 
     #[test]
     fn fixture_inherit_from_merges() {
-        let path = fixtures_dir().join("inherit_from/child.yml");
-        let config = load_config(Some(&path), None, None).unwrap();
+        let config = load_config(
+            Some(&fixtures_dir().join("inherit_from/child.yml")),
+            None,
+            None,
+        )
+        .unwrap();
         assert_eq!(
             config
                 .cop_config("Layout/LineLength")
@@ -457,8 +510,10 @@ mod tests {
             "spec/.rubocop.yml",
             "Style/Foo:\n  Enabled: false\n",
         );
-        let config = load_config(None, Some(dir.path()), None).unwrap();
-        assert_nested_cop_state(&config, dir.path());
+        assert_nested_cop_state(
+            &load_config(None, Some(dir.path()), None).unwrap(),
+            dir.path(),
+        );
     }
 
     fn parent_config_nested_fixture() -> (tempfile::TempDir, PathBuf) {
@@ -499,29 +554,39 @@ mod tests {
     #[test]
     fn nested_overrides_scoped_to_scan_root_not_config_dir() {
         let (_home, project) = parent_config_nested_fixture();
-        let config = load_config(None, Some(&project), None).unwrap();
-        assert_nested_overrides_scoped_to_scan_root(&config);
+        assert_nested_overrides_scoped_to_scan_root(
+            &load_config(None, Some(&project), None).unwrap(),
+        );
     }
 
     #[test]
     fn cache_fingerprint_changes_with_config() {
         let dir = tempfile::tempdir().unwrap();
-        let a = write_config(dir.path(), "Style/Foo:\n  Enabled: true\n");
-        let cfg_a = load_config(Some(&a), None, None).unwrap();
-        let b = write_config(dir.path(), "Style/Foo:\n  Enabled: false\n");
-        let cfg_b = load_config(Some(&b), None, None).unwrap();
+        let cfg_a = load_config(
+            Some(&write_config(dir.path(), "Style/Foo:\n  Enabled: true\n")),
+            None,
+            None,
+        )
+        .unwrap();
+        let cfg_b = load_config(
+            Some(&write_config(dir.path(), "Style/Foo:\n  Enabled: false\n")),
+            None,
+            None,
+        )
+        .unwrap();
         assert_ne!(cfg_a.cache_fingerprint(), cfg_b.cache_fingerprint());
     }
 
     #[test]
     fn cache_fingerprint_stable_across_config_reloads() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = write_config(
-            dir.path(),
-            "Metrics/MethodLength:\n  Max: 10\n  CountAsOne: array\n",
-        );
-        let a = load_config(Some(&path), None, None).unwrap();
-        let b = load_config(Some(&path), None, None).unwrap();
+        const CFG: &str = "Metrics/MethodLength:\n  Max: 10\n  CountAsOne: array\n";
+        let (a, b) = {
+            let dir = tempfile::tempdir().unwrap();
+            (
+                load_config(Some(&write_config(dir.path(), CFG)), None, None).unwrap(),
+                load_config(Some(&write_config(dir.path(), CFG)), None, None).unwrap(),
+            )
+        };
         assert_eq!(a.cache_fingerprint(), b.cache_fingerprint());
     }
 

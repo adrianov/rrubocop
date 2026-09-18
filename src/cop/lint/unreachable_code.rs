@@ -70,16 +70,20 @@ impl Cop for UnreachableCode {
         let mut cur = node.walk();
         // Skip rescue/else/ensure siblings (same as Lint/Void) — they are not
         // unreachable code after return/raise in the statement list.
-        let stmts: Vec<_> = node
-            .named_children(&mut cur)
-            .filter(|n| {
-                !matches!(
-                    n.kind(),
-                    "rescue" | "else" | "ensure" | "comment" | "heredoc_body"
-                )
-            })
-            .collect();
-        check_stmts(source, &stmts, self, diagnostics);
+        check_stmts(
+            source,
+            &node
+                .named_children(&mut cur)
+                .filter(|n| {
+                    !matches!(
+                        n.kind(),
+                        "rescue" | "else" | "ensure" | "comment" | "heredoc_body"
+                    )
+                })
+                .collect::<Vec<_>>(),
+            self,
+            diagnostics,
+        );
     }
 }
 

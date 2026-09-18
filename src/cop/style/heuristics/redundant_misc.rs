@@ -125,8 +125,8 @@ fn acceptable_capital_q(node: Node<'_>, src: &[u8]) -> bool {
     }
     // Static %Q — allowed when double quotes are required (e.g. `\n` escapes).
     let mut cur = node.walk();
-    let has_interp = node
+    !node
         .named_children(&mut cur)
-        .any(|ch| ch.kind() == "interpolation");
-    !has_interp && double_quotes_required(src)
+        .any(|ch| ch.kind() == "interpolation")
+        && double_quotes_required(src)
 }

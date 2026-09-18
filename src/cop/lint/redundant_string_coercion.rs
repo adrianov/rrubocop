@@ -26,8 +26,7 @@ fn to_s_call<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
 fn strip_to_s(source: &SourceFile, call: Node<'_>, recv: Node<'_>) -> Correction {
     let meth = call.child_by_field_name("method").unwrap_or(call);
     let mut start = meth.start_byte();
-    let bytes = source.as_bytes();
-    if start > recv.end_byte() && bytes[start - 1] == b'.' {
+    if start > recv.end_byte() && source.as_bytes()[start - 1] == b'.' {
         start -= 1;
     }
     Correction {
@@ -100,8 +99,8 @@ impl Cop for RedundantStringCoercion {
         } else {
             "Redundant use of `Object#to_s` in interpolation."
         };
-        let meth = call.child_by_field_name("method").unwrap_or(call);
-        let (line, col) = source.offset_to_line_col(meth.start_byte());
+        let (line, col) = source
+            .offset_to_line_col(call.child_by_field_name("method").unwrap_or(call).start_byte());
         let mut diag = self.diagnostic(source, line, col, msg.to_string());
         if maybe_correct(source, call, recv, corrections) {
             diag.corrected = true;

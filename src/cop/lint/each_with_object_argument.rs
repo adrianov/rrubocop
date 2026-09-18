@@ -43,11 +43,10 @@ impl Cop for EachWithObjectArgument {
         if call_method_name(source, node) != Some(b"each_with_object") {
             return;
         }
-        let args = argument_nodes(node);
-        let Some(first) = args.first() else {
+        let Some(first) = argument_nodes(node).first().copied() else {
             return;
         };
-        if !is_immutable(*first) {
+        if !is_immutable(first) {
             return;
         }
         let (line, col) = source.offset_to_line_col(first.start_byte());

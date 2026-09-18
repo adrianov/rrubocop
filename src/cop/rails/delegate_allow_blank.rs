@@ -94,7 +94,6 @@ fn pair_allow_blank_key<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<
         return None;
     }
     let key = node.child_by_field_name("key")?;
-    let t = node_text(source, key);
-    let name = t.trim().trim_start_matches(':').trim_end_matches(':');
-    (name == "allow_blank").then_some(key)
+    (node_text(source, key).trim().trim_start_matches(':').trim_end_matches(':') == "allow_blank")
+        .then_some(key)
 }

@@ -43,8 +43,10 @@ fn even_odd_fix(source: &SourceFile, node: Node<'_>) -> Option<(&'static str, St
     let (recv_node, right) = mod2_parts(source, left, right_node)?;
     let want_even = (right == b"0" && op == b"==") || (right == b"1" && op == b"!=");
     let method = if want_even { "even?" } else { "odd?" };
-    let recv = String::from_utf8_lossy(node_bytes(source, recv_node)).into_owned();
-    Some((method, recv))
+    Some((
+        method,
+        String::from_utf8_lossy(node_bytes(source, recv_node)).into_owned(),
+    ))
 }
 
 fn cmp_parts<'a>(

@@ -29,14 +29,15 @@ impl Cop for ConstantName {
         let Some(const_node) = const_lhs(node) else {
             return;
         };
-        let name = node_bytes(source, const_node);
-        if is_screaming_snake_case(name) {
+        if is_screaming_snake_case(node_bytes(source, const_node)) {
             return;
         }
-        let value = node
-            .child_by_field_name("right")
-            .or_else(|| node.child_by_field_name("value"));
-        if allowed_assignment(source, value) {
+        if allowed_assignment(
+            source,
+            node
+                .child_by_field_name("right")
+                .or_else(|| node.child_by_field_name("value")),
+        ) {
             return;
         }
         let (line, column) = source.offset_to_line_col(const_node.start_byte());

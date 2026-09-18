@@ -47,9 +47,7 @@ fn keyword_from_prev_line(
     if last_significant_index(prev).is_some_and(|idx| prev[idx] == b'\\') {
         return keyword_on_line(prev, prev.len());
     }
-    let line_indent = line_indent_bytes(line);
-    let prev_indent = line_indent_bytes(prev);
-    if prev_indent < line_indent && line_ends_with_logical(prev) {
+    if line_indent_bytes(prev) < line_indent_bytes(line) && line_ends_with_logical(prev) {
         return keyword_on_line(prev, prev.len());
     }
     None
@@ -105,13 +103,13 @@ pub(super) fn assignment_context(
             rhs_begins_line: false,
         });
     }
-    if left_line > 1 {
-        let prev = source.lines().nth(left_line - 2).unwrap_or(b"");
-        if line_ends_with_assignment(prev) && left_col == line_indent_bytes(line) {
-            return Some(AssignmentContext {
-                rhs_begins_line: true,
-            });
-        }
+    if left_line > 1
+        && line_ends_with_assignment(source.lines().nth(left_line - 2).unwrap_or(b""))
+        && left_col == line_indent_bytes(line)
+    {
+        return Some(AssignmentContext {
+            rhs_begins_line: true,
+        });
     }
     None
 }

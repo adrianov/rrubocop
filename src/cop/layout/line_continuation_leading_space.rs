@@ -174,12 +174,13 @@ fn continuation_pair<'a>(
     if !line_ends_with_cont(line) {
         return None;
     }
-    let next_end = source.line_start(line_no + 2).unwrap_or(bytes.len());
     Some((
         line_start,
         next_start,
         line,
-        trim_line_ending(&bytes[next_start..next_end]),
+        trim_line_ending(
+            &bytes[next_start..source.line_start(line_no + 2).unwrap_or(bytes.len())],
+        ),
     ))
 }
 

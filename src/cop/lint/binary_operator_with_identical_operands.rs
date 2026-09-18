@@ -36,8 +36,7 @@ impl Cop for BinaryOperatorWithIdenticalOperands {
         let Some(op) = node.child_by_field_name("operator") else {
             return;
         };
-        let op_bytes = node_bytes(source, op);
-        if !OPS.contains(&op_bytes) {
+        if !OPS.contains(&node_bytes(source, op)) {
             return;
         }
         let Some(left) = node.child_by_field_name("left") else {

@@ -17,8 +17,7 @@ fn call_dot_line_col(source: &SourceFile, call: Node<'_>) -> Option<(usize, usiz
 }
 
 fn operator_start(bytes: &[u8], from: usize, method_start: usize) -> Option<usize> {
-    let to = method_start.min(bytes.len());
-    let rel = bytes[from..to]
+    let rel = bytes[from..method_start.min(bytes.len())]
         .iter()
         .rposition(|&b| b == b'.' || b == b'&')?;
     Some(safe_nav_start(bytes, from, from + rel))

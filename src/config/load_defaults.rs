@@ -73,6 +73,5 @@ pub(crate) fn try_load_rubocop_defaults(
     let Some(raw) = parse_default_yml(&label, &contents) else {
         return (fallback_default_excludes(), HashSet::new());
     };
-    let known_cops = collect_known_cops(&raw);
-    (parse_config_layer(&raw), known_cops)
+    (parse_config_layer(&raw), collect_known_cops(&raw))
 }

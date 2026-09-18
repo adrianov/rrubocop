@@ -75,8 +75,7 @@ fn is_gem_call(source: &SourceFile, node: Node<'_>) -> bool {
 
 fn gem_name(source: &SourceFile, node: Node<'_>) -> Option<Vec<u8>> {
     let first = argument_nodes(node).into_iter().next()?;
-    let bytes = node_bytes(source, first);
-    Some(strip_quotes(bytes).to_vec())
+    Some(strip_quotes(node_bytes(source, first)).to_vec())
 }
 
 fn strip_quotes(bytes: &[u8]) -> &[u8] {

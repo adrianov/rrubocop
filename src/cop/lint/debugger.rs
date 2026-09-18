@@ -61,10 +61,11 @@ fn push_receiver<'a>(
 fn call_chain(source: &SourceFile, mut node: Node<'_>) -> String {
     let mut parts = Vec::new();
     loop {
-        let meth = call_method_name(source, node)
-            .map(|m| String::from_utf8_lossy(m).into_owned())
-            .unwrap_or_default();
-        parts.push(meth);
+        parts.push(
+            call_method_name(source, node)
+                .map(|m| String::from_utf8_lossy(m).into_owned())
+                .unwrap_or_default(),
+        );
         match push_receiver(source, &mut parts, node) {
             Some(next) => node = next,
             None => break,
@@ -106,8 +107,9 @@ fn matching_spec(source: &SourceFile, node: Node<'_>) -> Option<String> {
     let chain = call_chain(source, node);
     let leaf = call_method_name(source, node).unwrap_or(b"");
     for spec in DEFAULT_SPECS {
-        let spec_leaf = spec.rsplit('.').next().unwrap_or(spec);
-        if leaf != spec_leaf.as_bytes() || !chain_matches(&chain, spec) {
+        if leaf != spec.rsplit('.').next().unwrap_or(spec).as_bytes()
+            || !chain_matches(&chain, spec)
+        {
             continue;
         }
         if is_receiver_use(source, node) {

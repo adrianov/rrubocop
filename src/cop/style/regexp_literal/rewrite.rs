@@ -120,8 +120,7 @@ fn pct_r_body(rest: &[u8]) -> &[u8] {
     if rest.is_empty() {
         return rest;
     }
-    let open = rest[0];
-    let close = match open {
+    let close = match rest[0] {
         b'(' => b')',
         b'[' => b']',
         b'{' => b'}',

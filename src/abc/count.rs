@@ -125,28 +125,31 @@ impl<'f> Calc<'f> {
 
     fn count_safe_nav(&mut self, n: Node) {
         self.b += 1;
-        let discounted = n
+        if !n
             .child_by_field_name("receiver")
             .and_then(|r| self.csend_recv.get(&r.start_byte()))
             .map(|name| !self.seen_csend.insert(name.clone()))
-            .unwrap_or(false);
-        if !discounted {
+            .unwrap_or(false)
+        {
             self.c += 1;
         }
     }
 
     fn count_block_argument(&mut self, n: Node) {
-        let call = n.parent().and_then(|al| al.parent());
-        if call.is_some_and(|c| c.kind() == "call" && iterating_call(self.fm, c)) {
+        if n
+            .parent()
+            .and_then(|al| al.parent())
+            .is_some_and(|c| c.kind() == "call" && iterating_call(self.fm, c))
+        {
             self.c += 1;
         }
     }
 
     fn count_block(&mut self, n: Node) {
-        let iterating = n
+        if n
             .parent()
-            .is_some_and(|p| p.kind() == "call" && iterating_call(self.fm, p));
-        if iterating {
+            .is_some_and(|p| p.kind() == "call" && iterating_call(self.fm, p))
+        {
             self.c += 1;
         }
         self.add_param_assignments(n);

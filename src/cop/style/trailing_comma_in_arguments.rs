@@ -155,8 +155,7 @@ fn check_list(
         close,
         args_have_heredoc(args),
     );
-    let locs = effective_locs(source, args);
-    let want = should_have_comma(source, &locs, style, close);
+    let want = should_have_comma(source, &effective_locs(source, args), style, close);
     let at = if want && comma_at.is_none() {
         put_comma_at(source, *last)
     } else {
@@ -201,8 +200,15 @@ impl Cop for TrailingCommaInArguments {
         let Some(last) = args.last() else {
             return;
         };
-        let style = config.get_str("EnforcedStyleForMultiline", "no_comma");
-        check_list(self, source, &args, last, close, style, diagnostics);
+        check_list(
+            self,
+            source,
+            &args,
+            last,
+            close,
+            config.get_str("EnforcedStyleForMultiline", "no_comma"),
+            diagnostics,
+        );
     }
 }
 

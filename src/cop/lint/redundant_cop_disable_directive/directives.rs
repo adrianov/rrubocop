@@ -59,8 +59,7 @@ fn apply_enable(
         return;
     }
     for name in names {
-        let key = open_block_key(open, name);
-        if let Some(mut dir) = open.remove(&key) {
+        if let Some(mut dir) = open.remove(&open_block_key(open, name)) {
             dir.range = (dir.range.0, line_no);
             out.push(dir);
         }
@@ -132,14 +131,14 @@ pub(super) fn collect_directives(source: &SourceFile) -> Vec<DisableDirective> {
 fn whole_token(line: &str, byte: usize, len: usize) -> bool {
     let before = byte == 0 || !line.as_bytes()[byte - 1].is_ascii_alphanumeric();
     let after_byte = byte + len;
-    let after = line
-        .get(after_byte..)
-        .map(|rest| {
-            rest.is_empty()
-                || !rest.as_bytes()[0].is_ascii_alphanumeric() && rest.as_bytes()[0] != b'_'
-        })
-        .unwrap_or(true);
-    before && after
+    before
+        && line
+            .get(after_byte..)
+            .map(|rest| {
+                rest.is_empty()
+                    || !rest.as_bytes()[0].is_ascii_alphanumeric() && rest.as_bytes()[0] != b'_'
+            })
+            .unwrap_or(true)
 }
 
 pub(crate) fn nth_cop_token(line: &str, cop: &str, occurrence: usize) -> Option<(usize, usize)> {
@@ -173,12 +172,11 @@ pub(super) fn redundant_col(line: &str, name: &str, fallback: usize) -> usize {
 }
 
 pub(super) fn cop_highlight(line: &str, col: usize, cop: &str) -> usize {
-    let rest = line
-        .char_indices()
+    line.char_indices()
         .nth(col)
         .map(|(i, _)| &line[i..])
-        .unwrap_or("");
-    rest.split(',')
+        .unwrap_or("")
+        .split(',')
         .next()
         .unwrap_or("")
         .trim()

@@ -81,8 +81,7 @@ fn group_key(source: &SourceFile, node: Node<'_>) -> (String, String) {
         .filter_map(|arg| arg_group_name(source, arg))
         .collect();
     names.sort();
-    let display = names.join(", ");
-    (names.join("\0"), display)
+    (names.join("\0"), names.join(", "))
 }
 
 fn arg_group_name(source: &SourceFile, arg: Node<'_>) -> Option<String> {

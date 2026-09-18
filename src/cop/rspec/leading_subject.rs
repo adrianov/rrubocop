@@ -28,8 +28,7 @@ fn group_stmts(body: Node<'_>) -> Vec<Node<'_>> {
 }
 
 fn report_subject(cop: &LeadingSubject, source: &SourceFile, call: Node<'_>, diagnostics: &mut Vec<Diagnostic>) {
-    let meth = method_node(call).unwrap_or(call);
-    let (line, col) = source.offset_to_line_col(meth.start_byte());
+    let (line, col) = source.offset_to_line_col(method_node(call).unwrap_or(call).start_byte());
     diagnostics.push(cop.diagnostic(source, line, col, MSG.into()));
 }
 

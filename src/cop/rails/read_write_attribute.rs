@@ -84,11 +84,10 @@ impl Cop for ReadWriteAttribute {
 }
 
 fn within_shadowing_method(source: &SourceFile, node: Node<'_>) -> bool {
-    let args = argument_nodes(node);
-    let Some(first) = args.first() else {
+    let Some(first) = argument_nodes(node).into_iter().next() else {
         return false;
     };
-    let Some(attr) = sym_arg(source, *first) else {
+    let Some(attr) = sym_arg(source, first) else {
         return false;
     };
     let Some(method) = enclosing_method(node) else {
@@ -109,8 +108,7 @@ fn within_shadowing_method(source: &SourceFile, node: Node<'_>) -> bool {
 }
 
 fn sym_arg(source: &SourceFile, node: Node<'_>) -> Option<String> {
-    let t = node_text(source, node);
-    Some(t.trim_start_matches(':').to_string())
+    Some(node_text(source, node).trim_start_matches(':').to_string())
 }
 
 fn enclosing_method(node: Node<'_>) -> Option<Node<'_>> {

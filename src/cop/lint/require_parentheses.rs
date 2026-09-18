@@ -22,8 +22,7 @@ fn is_bool_op(source: &SourceFile, node: Node<'_>) -> bool {
 }
 
 fn check_defined(source: &SourceFile, node: Node<'_>) -> bool {
-    let text = node_text(source, node);
-    if !text.starts_with("defined?") {
+    if !node_text(source, node).starts_with("defined?") {
         return false;
     }
     node.child_by_field_name("operand")

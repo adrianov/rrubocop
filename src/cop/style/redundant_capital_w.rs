@@ -47,10 +47,11 @@ fn needs_capital_w(source: &SourceFile, node: Node<'_>) -> bool {
         return false;
     }
     let content = &bytes[3..bytes.len().saturating_sub(1)];
-    let has_interp = content
+    content
         .windows(2)
-        .any(|w| w[0] == b'#' && (w[1] == b'{' || w[1] == b'@' || w[1] == b'$'));
-    has_interp || content.contains(&b'\\') || content.contains(&b'\'')
+        .any(|w| w[0] == b'#' && (w[1] == b'{' || w[1] == b'@' || w[1] == b'$'))
+        || content.contains(&b'\\')
+        || content.contains(&b'\'')
 }
 
 fn report(

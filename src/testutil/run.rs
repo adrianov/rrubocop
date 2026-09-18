@@ -51,8 +51,13 @@ fn run_model_or_source(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     if cop.needs_file_model() {
-        let file_model = model::build(source.as_bytes(), tree.clone());
-        cop.check_file_model(source, &file_model, config, diagnostics, None);
+        cop.check_file_model(
+            source,
+            &model::build(source.as_bytes(), tree.clone()),
+            config,
+            diagnostics,
+            None,
+        );
     } else {
         cop.check_source(source, tree, code_map, config, diagnostics, None);
     }

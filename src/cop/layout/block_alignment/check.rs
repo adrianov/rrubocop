@@ -35,8 +35,13 @@ pub(super) fn check_block(
     if opener::brace_block_in_stabby_lambda(source, opener_node) {
         return;
     }
-    let style = config.get_str("EnforcedStyleAlignWith", "either");
-    let cols = alignment_cols(source, node, opener_node, end_kw, style);
+    let cols = alignment_cols(
+        source,
+        node,
+        opener_node,
+        end_kw,
+        config.get_str("EnforcedStyleAlignWith", "either"),
+    );
     if end_aligned(&cols, shared::node_col(source, end_kw)) {
         return;
     }
@@ -64,11 +69,13 @@ fn alignment_cols<'a>(
     end_kw: Node<'_>,
     style: &'a str,
 ) -> AlignCols<'a> {
-    let anchor_off = anchors::do_line_anchor_offset(source, node, opener_node);
     AlignCols {
         style,
         expression_col: expression_col_for(source, node, end_kw, style),
-        do_line_col: shared::line_indent(source, anchor_off),
+        do_line_col: shared::line_indent(
+            source,
+            anchors::do_line_anchor_offset(source, node, opener_node),
+        ),
         do_line_begin_col: anchors::do_line_begin_col(source, opener_node),
         call_expr_col: call_scan::call_expression_col_on_opener_line(source, opener_node),
         opener_col: shared::node_col(source, opener_node),

@@ -23,10 +23,9 @@ impl ResolvedConfig {
         {
             return true;
         }
-        let dept = name.split('/').next().unwrap_or("");
         layer
             .department_configs
-            .get(dept)
+            .get(name.split('/').next().unwrap_or(""))
             .is_some_and(|c| c.enabled == EnabledState::False)
     }
 

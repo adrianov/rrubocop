@@ -22,12 +22,13 @@ fn noun(n: usize, one: &'static str, many: &'static str) -> &'static str {
 }
 
 fn count_fix_states(diagnostics: &[Diagnostic]) -> (usize, usize) {
-    let corrected = diagnostics.iter().filter(|d| d.corrected).count();
-    let correctable = diagnostics
-        .iter()
-        .filter(|d| d.correctable && !d.corrected)
-        .count();
-    (corrected, correctable)
+    (
+        diagnostics.iter().filter(|d| d.corrected).count(),
+        diagnostics
+            .iter()
+            .filter(|d| d.correctable && !d.corrected)
+            .count(),
+    )
 }
 
 fn colored_offense_count(color: Color, n: usize) -> String {

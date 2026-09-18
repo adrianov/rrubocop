@@ -32,10 +32,11 @@ fn advance_index_recv<'a>(cur: &mut Node<'a>, parent: Node<'a>) -> bool {
     if !matches!(parent.kind(), "element_reference" | "call") {
         return false;
     }
-    let recv = parent
+    if parent
         .child_by_field_name("object")
-        .or_else(|| parent.child_by_field_name("receiver"));
-    if recv.is_some_and(|r| r.id() == cur.id()) {
+        .or_else(|| parent.child_by_field_name("receiver"))
+        .is_some_and(|r| r.id() == cur.id())
+    {
         *cur = parent;
         true
     } else {

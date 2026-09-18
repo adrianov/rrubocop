@@ -87,21 +87,23 @@ fn next_line_has_value(source: &SourceFile, node: Node<'_>) -> bool {
     let Some(text) = source.line_text(line) else {
         return false;
     };
-    let line_start = source.line_start(line).unwrap_or(0);
-    let byte_col = node.start_byte().saturating_sub(line_start);
-    let rest = text.get(byte_col..).unwrap_or(text);
-    let after = rest.strip_prefix("next").unwrap_or("");
-    after_next_has_value(after)
+    after_next_has_value(
+        text.get(node.start_byte().saturating_sub(source.line_start(line).unwrap_or(0))..)
+            .unwrap_or(text)
+            .strip_prefix("next")
+            .unwrap_or(""),
+    )
 }
 
 fn after_next_has_value(after: &str) -> bool {
-    let before_mod = after
+    after
         .split_once(" if ")
         .or_else(|| after.split_once("\tif "))
         .or_else(|| after.split_once(" unless "))
         .map(|(a, _)| a)
-        .unwrap_or(after);
-    before_mod.chars().any(|c| !c.is_whitespace())
+        .unwrap_or(after)
+        .chars()
+        .any(|c| !c.is_whitespace())
 }
 
 fn next_has_value(source: &SourceFile, node: Node<'_>) -> bool {

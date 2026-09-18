@@ -84,10 +84,13 @@ fn load_gem_yaml_layer(
         gem_path::GemConfigSrc::Disk(root) => {
             load_config_recursive(&root.join(rel_path), working_dir, visited, gem_cache)
         }
-        gem_path::GemConfigSrc::Embed { version, yaml } => {
-            let path = gem_path::virtual_config_path(gem_name, &version, rel_path);
-            load_config_recursive_inner(&path, working_dir, visited, gem_cache, Some(yaml))
-        }
+        gem_path::GemConfigSrc::Embed { version, yaml } => load_config_recursive_inner(
+            &gem_path::virtual_config_path(gem_name, &version, rel_path),
+            working_dir,
+            visited,
+            gem_cache,
+            Some(yaml),
+        ),
     }
 }
 

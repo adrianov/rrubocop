@@ -63,19 +63,16 @@ pub(super) fn lint_pipeline(
 ) -> Result<LintBatch> {
     let diagnostics = Mutex::new(Vec::new());
     let inspected = Mutex::new(Vec::new());
-    let stop = AtomicBool::new(false);
-    let fail_count = AtomicU32::new(0);
-    let settings = cache_settings(prep);
     let discovered_count = run_discover_lint(
         prep,
         paths,
         config,
         registry,
-        settings,
+        cache_settings(prep),
         &diagnostics,
         &inspected,
-        &stop,
-        &fail_count,
+        &AtomicBool::new(false),
+        &AtomicU32::new(0),
         on_discovered,
         &on_file,
     )?;
@@ -149,8 +146,7 @@ fn run_workers(
     fail_count: &AtomicU32,
     on_file: &(impl Fn(&[Diagnostic]) + Sync),
 ) -> Result<()> {
-    let workers = rayon::current_num_threads().max(1);
-    (0..workers).into_par_iter().try_for_each(|_| {
+    (0..rayon::current_num_threads().max(1)).into_par_iter().try_for_each(|_| {
         worker_loop(
             rx,
             prep,

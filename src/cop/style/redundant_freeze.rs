@@ -72,10 +72,9 @@ fn report(
         "Do not freeze immutable objects, as freezing them has no effect.".to_string(),
     );
     if let Some(corr) = corrections.as_mut() {
-        let meth = node.child_by_field_name("method").unwrap_or(node);
         corr.push(Correction {
             start: recv.end_byte(),
-            end: meth.end_byte(),
+            end: node.child_by_field_name("method").unwrap_or(node).end_byte(),
             replacement: String::new(),
             cop_name: cop.name(),
             cop_index: 0,

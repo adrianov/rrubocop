@@ -97,8 +97,10 @@ fn push_caret_offense(
 
 /// Strip annotation lines; keep Ruby source. See nitrocop `parse_fixture`.
 pub fn parse_fixture(raw: &[u8]) -> ParsedFixture {
-    let text = std::str::from_utf8(raw).expect("fixture must be valid UTF-8");
-    let elements: Vec<&str> = text.split('\n').collect();
+    let elements: Vec<&str> = std::str::from_utf8(raw)
+        .expect("fixture must be valid UTF-8")
+        .split('\n')
+        .collect();
     let (filename, start_idx) = filename_header(&elements);
     let mut source_lines: Vec<&str> = Vec::new();
     let mut expected = Vec::new();

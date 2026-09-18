@@ -34,10 +34,9 @@ fn fix_gap(
     let Some(insert_at) = source.line_start(a_end + 1) else {
         return false;
     };
-    let end_at = source.line_start(b_start).unwrap_or(insert_at);
     corr.push(Correction {
         start: insert_at,
-        end: end_at,
+        end: source.line_start(b_start).unwrap_or(insert_at),
         replacement: "\n".repeat(number),
         cop_name: cop.name(),
         cop_index: 0,

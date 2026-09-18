@@ -88,9 +88,10 @@ pub(super) fn offset_provided(call: Node<'_>, method: &[u8]) -> bool {
 }
 
 fn string_has_tz(source: &SourceFile, string_node: Node<'_>) -> bool {
-    let t = String::from_utf8_lossy(node_bytes(source, string_node));
-    let inner = t.trim_matches(|c| c == '"' || c == '\'');
-    TZ_SPEC.is_match(inner)
+    TZ_SPEC.is_match(
+        String::from_utf8_lossy(node_bytes(source, string_node))
+            .trim_matches(|c| c == '"' || c == '\''),
+    )
 }
 
 pub(super) fn attach_tz_string(source: &SourceFile, call: Node<'_>) -> bool {
@@ -104,14 +105,14 @@ pub(super) fn attach_tz_string(source: &SourceFile, call: Node<'_>) -> bool {
 }
 
 fn has_safe_nav(source: &SourceFile, recv: Node<'_>, parent: Node<'_>) -> bool {
-    let bytes = source.as_bytes();
-    let start = recv.end_byte();
-    let end = parent
-        .child_by_field_name("method")
-        .map(|m| m.start_byte())
-        .unwrap_or(parent.end_byte());
-    bytes
-        .get(start..end)
+    source
+        .as_bytes()
+        .get(
+            recv.end_byte()..parent
+                .child_by_field_name("method")
+                .map(|m| m.start_byte())
+                .unwrap_or(parent.end_byte()),
+        )
         .is_some_and(|b| b.windows(2).any(|w| w == b"&."))
 }
 
