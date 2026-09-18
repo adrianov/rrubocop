@@ -17,8 +17,9 @@ fn find_lbrace<'a>(node: Node<'a>) -> Option<Node<'a>> {
 
 fn find_rbrace<'a>(node: Node<'a>) -> Option<Node<'a>> {
     let mut cur = node.walk();
-    let kids: Vec<_> = node.children(&mut cur).collect();
-    kids.iter().rev().find(|c| c.kind() == "}").copied()
+    node.children(&mut cur)
+        .filter(|c| c.kind() == "}")
+        .last()
 }
 
 fn ws_before(bytes: &[u8], start: usize) -> usize {
@@ -106,8 +107,10 @@ impl Cop for SpaceBeforeBlockBraces {
         if start == 0 {
             return;
         }
-        let empty = find_rbrace(node).is_some_and(|r| empty_braces(bytes, lbrace, r));
-        let want = enforced_style(config, empty);
+        let want = enforced_style(
+            config,
+            find_rbrace(node).is_some_and(|r| empty_braces(bytes, lbrace, r)),
+        );
         let ws_start = ws_before(bytes, start);
         report_spacing(
             self,

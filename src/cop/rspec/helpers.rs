@@ -75,8 +75,7 @@ fn line_is_code(bytes: &[u8], line_no: usize, source: &SourceFile) -> bool {
     let Some(ls) = source.line_start(line_no) else {
         return false;
     };
-    let le = source.line_start(line_no + 1).unwrap_or(bytes.len());
-    let trimmed = trim_ws(&bytes[ls..le]);
+    let trimmed = trim_ws(&bytes[ls..source.line_start(line_no + 1).unwrap_or(bytes.len())]);
     !trimmed.is_empty() && trimmed[0] != b'#'
 }
 
@@ -97,11 +96,10 @@ fn trim_ws(line: &[u8]) -> &[u8] {
         .iter()
         .position(|&b| !matches!(b, b' ' | b'\t' | b'\r'))
         .unwrap_or(line.len());
-    let e = line
+    &line[s..line
         .iter()
         .rposition(|&b| !matches!(b, b' ' | b'\t' | b'\r' | b'\n'))
-        .map_or(s, |i| i + 1);
-    &line[s..e]
+        .map_or(s, |i| i + 1)]
 }
 
 fn unquote(b: &[u8]) -> &[u8] {

@@ -13,11 +13,10 @@ use crate::parse::source::SourceFile;
 pub struct SpaceBeforeComment;
 
 fn line_prefix<'a>(bytes: &'a [u8], start: usize) -> &'a [u8] {
-    let line_start = bytes[..start]
+    let before = &bytes[bytes[..start]
         .iter()
         .rposition(|&b| b == b'\n')
-        .map_or(0, |i| i + 1);
-    let before = &bytes[line_start..start];
+        .map_or(0, |i| i + 1)..start];
     before.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(before)
 }
 

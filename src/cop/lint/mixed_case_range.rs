@@ -8,12 +8,19 @@ use crate::parse::source::SourceFile;
 /// Lint/MixedCaseRange — 'A'..'z' style ranges.
 pub struct MixedCaseRange;
 
+fn single_char(s: &str) -> Option<char> {
+    let mut chars = s.chars();
+    match (chars.next(), chars.next()) {
+        (Some(c), None) => Some(c),
+        _ => None,
+    }
+}
+
 fn char_content(source: &SourceFile, node: Node<'_>) -> Option<char> {
-    let t = node_text(source, node);
-    let inner = t.trim_matches(|c| c == '\'' || c == '"');
-    let mut chars = inner.chars();
-    let c = chars.next()?;
-    chars.next().is_none().then_some(c)
+    single_char(
+        node_text(source, node)
+            .trim_matches(|c| c == '\'' || c == '"'),
+    )
 }
 
 fn mixed_case(a: char, b: char) -> bool {

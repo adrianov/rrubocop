@@ -76,11 +76,10 @@ fn display_len(line: &[u8]) -> usize {
 
 fn strip_directive(line: &[u8]) -> &[u8] {
     let s = std::str::from_utf8(line).unwrap_or("");
-    let cut = s
+    let mut end = s
         .find("# rubocop:")
         .or_else(|| s.find("#rubocop:"))
         .unwrap_or(s.len());
-    let mut end = cut;
     while end > 0 && matches!(line[end - 1], b' ' | b'\t') {
         end -= 1;
     }
@@ -124,8 +123,9 @@ fn uri_allows(cfg: &Settings, text: &str) -> bool {
 
 /// RuboCop `extend_end_position`: absorb trailing non-space (e.g. `)`).
 fn extend_end(line: &str, end: usize) -> usize {
-    let rest = line.get(end..).unwrap_or("");
-    end + rest
+    end + line
+        .get(end..)
+        .unwrap_or("")
         .char_indices()
         .take_while(|(_, c)| !c.is_whitespace())
         .last()
@@ -141,8 +141,7 @@ fn qualified_allows(cfg: &Settings, text: &str) -> bool {
     let Some(m) = QUALIFIED_NAME_RE.find_iter(text).last() else {
         return false;
     };
-    let end = extend_end(text, m.end());
-    m.start() < cfg.max && end == text.len()
+    m.start() < cfg.max && extend_end(text, m.end()) == text.len()
 }
 
 fn check_line(

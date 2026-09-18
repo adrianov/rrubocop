@@ -10,8 +10,7 @@ pub struct UselessSetterCall;
 
 fn last_assignment(body: Node<'_>) -> Option<Node<'_>> {
     let mut cur = body.walk();
-    let stmts: Vec<_> = body.named_children(&mut cur).collect();
-    let last = *stmts.last()?;
+    let last = body.named_children(&mut cur).last()?;
     (last.kind() == "assignment").then_some(last)
 }
 
@@ -73,8 +72,7 @@ impl Cop for UselessSetterCall {
         let Some((left, recv)) = setter_call(last) else {
             return;
         };
-        let var = node_bytes(source, recv);
-        if !created_from_call(source, body, var, last.id()) {
+        if !created_from_call(source, body, node_bytes(source, recv), last.id()) {
             return;
         }
         let v = node_text(source, recv);

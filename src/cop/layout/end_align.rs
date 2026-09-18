@@ -19,10 +19,9 @@ fn apply_fix(
     let Some(ls) = source.line_start(el) else {
         return false;
     };
-    let cur = shared::line_indent(source, end_kw.start_byte());
     corr.push(Correction {
         start: ls,
-        end: ls + cur,
+        end: ls + shared::line_indent(source, end_kw.start_byte()),
         replacement: " ".repeat(base_col),
         cop_name,
         cop_index: 0,
@@ -61,8 +60,7 @@ fn report_misaligned_end(
 /// variable-alignment context: first non-whitespace on the assignment line.
 pub fn assignment_context_base_col(source: &SourceFile, kw_offset: usize) -> Option<usize> {
     let bytes = source.as_bytes();
-    let line_start = line_start_before(bytes, kw_offset);
-    let before = &bytes[line_start..kw_offset];
+    let before = &bytes[line_start_before(bytes, kw_offset)..kw_offset];
     first_non_ws_if_assign(before).or_else(|| first_non_ws_if_shovel(before))
 }
 

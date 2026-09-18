@@ -102,7 +102,6 @@ fn pair_if_required<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>>
         return None;
     }
     let key = node.child_by_field_name("key")?;
-    let t = node_text(source, key);
-    let name = t.trim().trim_start_matches(':').trim_end_matches(':');
-    (name == "required").then_some(node)
+    (node_text(source, key).trim().trim_start_matches(':').trim_end_matches(':') == "required")
+        .then_some(node)
 }

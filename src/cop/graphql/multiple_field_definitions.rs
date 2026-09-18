@@ -64,8 +64,7 @@ fn ungrouped_last_def(
     node: Node<'_>,
     name: &str,
 ) -> bool {
-    let defs = same_name_defs(source, class, name);
-    is_last_ungrouped(&defs, node)
+    is_last_ungrouped(&same_name_defs(source, class, name), node)
 }
 
 fn same_name_defs<'a>(

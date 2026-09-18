@@ -52,11 +52,13 @@ fn body_indents(body: &[u8]) -> Vec<usize> {
 
 fn opener_info(source: &SourceFile, node: Node<'_>) -> (Option<(usize, usize, bool)>, bool, usize) {
     let opener = find_opener(source, node);
-    let needs_squiggly = opener.is_some_and(|(_, _, s)| !s);
-    let indent = opener
-        .map(|(start, _, _)| shared::line_indent(source, start))
-        .unwrap_or(0);
-    (opener, needs_squiggly, indent)
+    (
+        opener,
+        opener.is_some_and(|(_, _, s)| !s),
+        opener
+            .map(|(start, _, _)| shared::line_indent(source, start))
+            .unwrap_or(0),
+    )
 }
 
 fn has_offense(indents: &[usize], width: usize, needs_squiggly: bool, opener_indent: usize) -> bool {

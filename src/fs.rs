@@ -25,10 +25,15 @@ pub fn discover_files_filtered(
 ) -> Result<DiscoveredFiles> {
     let mut files = Vec::new();
     let mut explicit = HashSet::new();
-    let stop = AtomicBool::new(false);
-    discover_emitting(paths, filters, force_exclusion, &stop, |p| {
-        files.push(p);
-    })?;
+    discover_emitting(
+        paths,
+        filters,
+        force_exclusion,
+        &AtomicBool::new(false),
+        |p| {
+            files.push(p);
+        },
+    )?;
     for path in paths {
         if path.is_file() {
             explicit.insert(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()));
@@ -81,10 +86,16 @@ fn collect_emitting(
     emit: &mut impl FnMut(PathBuf),
 ) -> Result<()> {
     if path.is_file() {
-        let canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-        explicit.insert(canon);
-        let norm = normalize_scan_path(path.to_path_buf());
-        maybe_emit(norm, true, force_exclusion, filters, seen, count, emit);
+        explicit.insert(path.canonicalize().unwrap_or_else(|_| path.to_path_buf()));
+        maybe_emit(
+            normalize_scan_path(path.to_path_buf()),
+            true,
+            force_exclusion,
+            filters,
+            seen,
+            count,
+            emit,
+        );
         return Ok(());
     }
     if path.is_dir() {
@@ -143,8 +154,15 @@ fn walk_directory_emitting(
         };
         let path = entry.path();
         if path.is_file() && is_ruby_file(path) {
-            let norm = normalize_scan_path(path.to_path_buf());
-            maybe_emit(norm, false, force_exclusion, filters, seen, count, emit);
+            maybe_emit(
+                normalize_scan_path(path.to_path_buf()),
+                false,
+                force_exclusion,
+                filters,
+                seen,
+                count,
+                emit,
+            );
         }
     }
     Ok(())
@@ -215,8 +233,7 @@ fn has_ruby_shebang(path: &Path) -> bool {
     let Ok(bytes) = std::fs::read(path) else {
         return false;
     };
-    let line = bytes.split(|&b| b == b'\n').next().unwrap_or(&[]);
-    let Ok(text) = std::str::from_utf8(line) else {
+    let Ok(text) = std::str::from_utf8(bytes.split(|&b| b == b'\n').next().unwrap_or(&[])) else {
         return false;
     };
     text.starts_with("#!") && (text.contains("ruby") || text.contains("jruby"))

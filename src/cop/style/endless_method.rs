@@ -29,8 +29,7 @@ impl Cop for EndlessMethod {
     ) {
         // endless: has `=` after args, no `end`
         let mut cur = node.walk();
-        let has_end = node.children(&mut cur).any(|c| node_bytes(source, c) == b"end");
-        if has_end {
+        if node.children(&mut cur).any(|c| node_bytes(source, c) == b"end") {
             return;
         }
         // if no end, likely endless (or error)

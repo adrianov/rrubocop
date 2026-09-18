@@ -51,8 +51,7 @@ impl Cop for ExampleLength {
         if lines <= max {
             return;
         }
-        let meth = method_node(node).unwrap_or(node);
-        let (line, col) = source.offset_to_line_col(meth.start_byte());
+        let (line, col) = source.offset_to_line_col(method_node(node).unwrap_or(node).start_byte());
         diagnostics.push(self.diagnostic(
             source,
             line,

@@ -26,8 +26,7 @@ const EXPECTS: &[&[u8]] = &[
 fn pair_af_value(source: &SourceFile, pair: Node<'_>) -> Option<bool> {
     let key = pair.child_by_field_name("key")?;
     let kb = node_bytes(source, key);
-    let name = kb.strip_prefix(b":").unwrap_or(kb);
-    if name != b"aggregate_failures" {
+    if kb.strip_prefix(b":").unwrap_or(kb) != b"aggregate_failures" {
         return None;
     }
     Some(pair.child_by_field_name("value")?.kind() != "false")
@@ -37,8 +36,7 @@ fn af_from_arg(source: &SourceFile, arg: Node<'_>) -> Option<bool> {
     match arg.kind() {
         "simple_symbol" | "symbol" => {
             let b = node_bytes(source, arg);
-            let name = b.strip_prefix(b":").unwrap_or(b);
-            (name == b"aggregate_failures").then_some(true)
+            (b.strip_prefix(b":").unwrap_or(b) == b"aggregate_failures").then_some(true)
         }
         "pair" => pair_af_value(source, arg),
         "hash" | "bare_hash" => {
@@ -126,8 +124,7 @@ fn report_too_many_expects(
     max: usize,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    let meth = method_node(node).unwrap_or(node);
-    let (line, col) = source.offset_to_line_col(meth.start_byte());
+    let (line, col) = source.offset_to_line_col(method_node(node).unwrap_or(node).start_byte());
     diagnostics.push(cop.diagnostic(
         source,
         line,

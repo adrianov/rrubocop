@@ -40,8 +40,7 @@ impl Cop for DuplicateMatchPattern {
             let Some(pat) = child.child_by_field_name("pattern") else {
                 continue;
             };
-            let key = node_bytes(source, pat).to_vec();
-            if !seen.insert(key) {
+            if !seen.insert(node_bytes(source, pat).to_vec()) {
                 let (line, col) = source.offset_to_line_col(pat.start_byte());
                 diagnostics.push(self.diagnostic(
                     source,

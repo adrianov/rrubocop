@@ -42,8 +42,8 @@ impl Cop for WhenThen {
 
 fn is_single_line(source: &SourceFile, node: Node<'_>) -> bool {
     let (start_line, _) = source.offset_to_line_col(node.start_byte());
-    let end_off = node.end_byte().saturating_sub(1).max(node.start_byte());
-    let (end_line, _) = source.offset_to_line_col(end_off);
+    let (end_line, _) =
+        source.offset_to_line_col(node.end_byte().saturating_sub(1).max(node.start_byte()));
     start_line == end_line
 }
 

@@ -141,14 +141,13 @@ fn correct_braces(
         return true;
     }
     if !want_nl_close && !close_on_same {
-        let close_ch = String::from_utf8_lossy(&bytes[close_off..close_off + 1]);
         return move_close_inline(
             cop,
             source,
             bytes,
             *elems.last().unwrap(),
             close_off,
-            &close_ch,
+            &String::from_utf8_lossy(&bytes[close_off..close_off + 1]),
             corr,
         );
     }
@@ -188,8 +187,7 @@ fn report_bad_style(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     // RuboCop highlights `node.loc.end` (the closing brace).
-    let close_off = node.end_byte().saturating_sub(1);
-    let (l, c) = source.offset_to_line_col(close_off);
+    let (l, c) = source.offset_to_line_col(node.end_byte().saturating_sub(1));
     let method_call = source.as_bytes().get(node.start_byte()) == Some(&b'(');
     let mut diag = cop.diagnostic(
         source,

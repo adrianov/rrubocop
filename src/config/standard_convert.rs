@@ -171,7 +171,7 @@ fn emit_converted_yml(map: &serde_yml::Mapping) -> String {
 
 pub(crate) fn convert_standard_yml(standard_path: &Path) -> Result<String> {
     let doc = read_standard_doc(standard_path)?;
-    let empty_mapping = serde_yml::Mapping::new();
-    let map = doc.as_mapping().unwrap_or(&empty_mapping);
-    Ok(emit_converted_yml(map))
+    Ok(emit_converted_yml(
+        doc.as_mapping().unwrap_or(&serde_yml::Mapping::new()),
+    ))
 }

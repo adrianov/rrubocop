@@ -87,9 +87,9 @@ fn adjacent_fields(prev: Node<'_>, curr: Node<'_>) -> bool {
     if consecutive_lines(prev, curr) {
         return true;
     }
-    let prev_end = prev
-        .child_by_field_name("block")
+    prev.child_by_field_name("block")
         .map(|b| b.end_position().row)
-        .unwrap_or(prev.end_position().row);
-    prev_end + 1 == curr.start_position().row
+        .unwrap_or(prev.end_position().row)
+        + 1
+        == curr.start_position().row
 }

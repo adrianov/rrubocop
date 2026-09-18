@@ -50,9 +50,7 @@ fn is_nested_dirname(source: &SourceFile, node: Node<'_>) -> bool {
     if !call_receiver(node).is_some_and(|r| is_const_named(source, r, b"File")) {
         return false;
     }
-    let args = argument_nodes(node);
-    let Some(arg) = args.first() else {
-        return false;
-    };
-    arg.kind() == "call" && call_method_name(source, *arg) == Some(b"dirname")
+    argument_nodes(node).first().is_some_and(|arg| {
+        arg.kind() == "call" && call_method_name(source, *arg) == Some(b"dirname")
+    })
 }

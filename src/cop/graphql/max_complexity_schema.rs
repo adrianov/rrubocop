@@ -33,10 +33,10 @@ impl Cop for MaxComplexitySchema {
         if nested_class(node) {
             return;
         }
-        let found = collect_calls_named(node, source, b"max_complexity")
+        if collect_calls_named(node, source, b"max_complexity")
             .into_iter()
-            .any(|n| in_this_class(n, node));
-        if found {
+            .any(|n| in_this_class(n, node))
+        {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());

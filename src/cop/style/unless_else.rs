@@ -107,8 +107,7 @@ fn body_ranges(
         .map(|k| k.end_byte())
         .unwrap_or(else_n.start_byte());
     let u = trim_end(src, then_n.start_byte(), then_n.end_byte());
-    let e = trim_end(src, else_kw_end, else_n.end_byte());
-    valid_pair(u, e)
+    valid_pair(u, trim_end(src, else_kw_end, else_n.end_byte()))
 }
 
 fn then_body(node: Node<'_>) -> Option<Node<'_>> {
@@ -132,8 +131,13 @@ fn swap_ranges(
     cop: &'static str,
 ) {
     let unless_txt = String::from_utf8_lossy(&src[u.0..u.1]).into_owned();
-    let else_txt = String::from_utf8_lossy(&src[e.0..e.1]).into_owned();
-    push_corr(corr, u.0, u.1, else_txt, cop);
+    push_corr(
+        corr,
+        u.0,
+        u.1,
+        String::from_utf8_lossy(&src[e.0..e.1]).into_owned(),
+        cop,
+    );
     push_corr(corr, e.0, e.1, unless_txt, cop);
 }
 

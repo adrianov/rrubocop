@@ -202,10 +202,11 @@ impl ResolvedConfig {
         config: Option<&CopConfig>,
         restore_ok: bool,
     ) -> EnableInputs {
-        let dept_config = self.department_configs.get(dept);
         EnableInputs {
             cop_state: config.map(|c| c.enabled).unwrap_or(EnabledState::Unset),
-            dept_state: dept_config
+            dept_state: self
+                .department_configs
+                .get(dept)
                 .map(|dc| dc.enabled)
                 .unwrap_or(EnabledState::Unset),
             disabled_by_default: self.disabled_by_default,

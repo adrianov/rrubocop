@@ -30,9 +30,8 @@ struct LintCtx<'a> {
 
 impl<'a> LintCtx<'a> {
     fn lint_bytes(&self, bytes: &[u8]) -> Result<LintOutput> {
-        let source = SourceFile::from_bytes(self.path, bytes.to_vec());
         lint_source(
-            &source,
+            &SourceFile::from_bytes(self.path, bytes.to_vec()),
             self.config,
             self.registry,
             self.filters,
@@ -100,8 +99,7 @@ pub(crate) fn lint_bytes_autocorrect(
 }
 
 fn run_autocorrect_loop(ctx: &LintCtx<'_>, bytes: &mut Vec<u8>) -> Result<Vec<Diagnostic>> {
-    let mut checksums = HashSet::new();
-    let mut corrected = collect_corrected_passes(ctx, bytes, &mut checksums)?;
+    let mut corrected = collect_corrected_passes(ctx, bytes, &mut HashSet::new())?;
     corrected.append(&mut final_pass(ctx, bytes)?);
     corrected.sort_by(|a, b| a.sort_key().cmp(&b.sort_key()));
     Ok(corrected)
@@ -207,8 +205,7 @@ mod tests {
 
     #[test]
     fn no_duplicate_remaining_offenses() {
-        let mut bytes = b"gem 'b'\ngem 'a'\n".to_vec();
-        let diags = lint_only("Gemfile", &mut bytes, "Bundler/OrderedGems");
+        let diags = lint_only("Gemfile", &mut b"gem 'b'\ngem 'a'\n".to_vec(), "Bundler/OrderedGems");
         let n = diags
             .iter()
             .filter(|d| d.cop_name == "Bundler/OrderedGems")
@@ -250,14 +247,17 @@ mod tests {
             source_line: String::new(),
             highlight_length: 1,
         }];
-        let set = CorrectionSet::from_vec(vec![Correction {
-            start: 3,
-            end: 5,
-            replacement: String::new(),
-            cop_name: "Layout/Other",
-            cop_index: 0,
-        }]);
-        reconcile_corrected(&mut diags, &source, &set);
+        reconcile_corrected(
+            &mut diags,
+            &source,
+            &CorrectionSet::from_vec(vec![Correction {
+                start: 3,
+                end: 5,
+                replacement: String::new(),
+                cop_name: "Layout/Other",
+                cop_index: 0,
+            }]),
+        );
         assert!(!diags[0].corrected);
     }
 }

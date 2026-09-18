@@ -55,8 +55,10 @@ fn is_empty_else(else_n: Node<'_>) -> bool {
         return true;
     }
     if named.len() == 1 && named[0].kind() == "then" {
-        let mut tc = named[0].walk();
-        return named[0].named_children(&mut tc).next().is_none();
+        return named[0]
+            .named_children(&mut named[0].walk())
+            .next()
+            .is_none();
     }
     false
 }

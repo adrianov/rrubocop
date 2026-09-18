@@ -66,8 +66,9 @@ impl Cop for RefuteMethods {
         let Some(method) = call_method_name(source, node) else {
             return;
         };
-        let style = config.get_str("EnforcedStyle", "assert_not");
-        let Some((bad, good)) = style_pair(style, method) else {
+        let Some((bad, good)) =
+            style_pair(config.get_str("EnforcedStyle", "assert_not"), method)
+        else {
             return;
         };
         let meth = method_node(node).unwrap_or(node);

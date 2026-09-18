@@ -66,16 +66,15 @@ fn push_unquote(
     let Some(corr) = corrections.as_mut() else {
         return;
     };
-    let unquoted: String = b
-        .iter()
-        .copied()
-        .filter(|&c| c != b'\'' && c != b'"')
-        .map(|c| c as char)
-        .collect();
     corr.push(Correction {
         start: node.start_byte(),
         end: node.end_byte(),
-        replacement: unquoted,
+        replacement: b
+            .iter()
+            .copied()
+            .filter(|&c| c != b'\'' && c != b'"')
+            .map(|c| c as char)
+            .collect(),
         cop_name: cop.name(),
         cop_index: 0,
     });

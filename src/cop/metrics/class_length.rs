@@ -50,8 +50,7 @@ fn check_class(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let max = config.get_usize("Max", 100);
-    let count_comments = config.get_bool("CountComments", false);
-    let length = body_line_count(source, node, count_comments);
+    let length = body_line_count(source, node, config.get_bool("CountComments", false));
     if length <= max {
         return;
     }

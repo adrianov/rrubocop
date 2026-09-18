@@ -88,8 +88,7 @@ pub(super) fn block_expression_start<'a>(block: Node<'a>) -> Node<'a> {
 }
 
 pub(super) fn block_line_indent(source: &SourceFile, node: Node<'_>) -> usize {
-    let start = block_expression_start(node);
-    shared::line_indent(source, start.start_byte())
+    shared::line_indent(source, block_expression_start(node).start_byte())
 }
 
 pub(super) fn expression_start_col(source: &SourceFile, block: Node<'_>) -> usize {
@@ -144,10 +143,9 @@ fn block_end_align_target(source: &SourceFile, parent: Node<'_>, current: Node<'
 fn expression_start_from_ancestors(source: &SourceFile, block: Node<'_>) -> usize {
     let mut current = block;
     let mut start_offset = block.start_byte();
-    let initial = block;
 
     while let Some(parent) = current.parent() {
-        if current.id() != initial.id()
+        if current.id() != block.id()
             && parent
                 .child_by_field_name("block")
                 .is_some_and(|b| b.id() == current.id())

@@ -27,8 +27,7 @@ impl Cop for ClassVars {
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
         if let Some(msg) = class_var_msg(source, node) {
-            let at = class_var_loc(node);
-            let (line, col) = source.offset_to_line_col(at);
+            let (line, col) = source.offset_to_line_col(class_var_loc(node));
             diagnostics.push(self.diagnostic(source, line, col, msg));
         }
     }

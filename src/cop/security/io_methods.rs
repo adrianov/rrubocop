@@ -63,8 +63,8 @@ fn report(
 ) {
     let method_str = std::str::from_utf8(method).unwrap_or("");
     let recv = call_receiver(node).unwrap_or(node);
-    let meth_node = node.child_by_field_name("method").unwrap_or(node);
-    let (line, column) = source.offset_to_line_col(meth_node.start_byte());
+    let (line, column) = source
+        .offset_to_line_col(node.child_by_field_name("method").unwrap_or(node).start_byte());
     let mut diag = cop.diagnostic(
         source,
         line,

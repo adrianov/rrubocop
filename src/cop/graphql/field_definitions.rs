@@ -117,12 +117,14 @@ fn resolver_placement_msg(
     if method_idx == i + 1 {
         return None;
     }
-    let name = field_name(source, stmt).unwrap_or_default();
-    Some(if same_name_field_count(source, body, &name) == 1 {
-        "Define resolver method after field definition."
-    } else {
-        "Define resolver method after last field definition sharing resolver method."
-    })
+    Some(
+        if same_name_field_count(source, body, &field_name(source, stmt).unwrap_or_default()) == 1
+        {
+            "Define resolver method after field definition."
+        } else {
+            "Define resolver method after last field definition sharing resolver method."
+        },
+    )
 }
 
 fn last_field_needing_resolver(
@@ -134,8 +136,7 @@ fn last_field_needing_resolver(
     if !is_field_call(source, stmt) || field_has_explicit_resolver(source, stmt) {
         return false;
     }
-    let name = field_name(source, stmt).unwrap_or_default();
-    last_same_name_idx(source, body, &name) == Some(i)
+    last_same_name_idx(source, body, &field_name(source, stmt).unwrap_or_default()) == Some(i)
 }
 
 fn last_same_name_idx(source: &SourceFile, body: &[Node<'_>], name: &str) -> Option<usize> {

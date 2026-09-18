@@ -38,14 +38,13 @@ impl Cop for BlockNesting {
     ) {
         let max = config.get_usize("Max", 3);
         let count_blocks = config.get_bool("CountBlocks", false);
-        let count_modifiers = config.get_bool("CountModifierForms", false);
         visit(
             source,
             tree.root_node(),
             0,
             max,
             count_blocks,
-            count_modifiers,
+            config.get_bool("CountModifierForms", false),
             self,
             diagnostics,
         );

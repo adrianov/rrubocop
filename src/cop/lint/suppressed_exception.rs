@@ -73,10 +73,9 @@ impl Cop for SuppressedException {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let allow_nil = config.get_bool("AllowNil", true);
         match classify_body(node) {
             RescueBody::Other => return,
-            RescueBody::OnlyNil if allow_nil => return,
+            RescueBody::OnlyNil if config.get_bool("AllowNil", true) => return,
             RescueBody::Empty | RescueBody::OnlyNil => {}
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());

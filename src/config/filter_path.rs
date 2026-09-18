@@ -18,10 +18,11 @@ pub(crate) fn path_forms<'a>(
     set: &'a CopFilterSet,
     path: &'a Path,
 ) -> (Option<&'a Path>, Option<&'a Path>) {
-    let rel_path = set
-        .nearest_config_dir(path)
-        .and_then(|cd| path.strip_prefix(cd).ok());
-    (rel_path, rel_to_base_dir(set, path))
+    (
+        set.nearest_config_dir(path)
+            .and_then(|cd| path.strip_prefix(cd).ok()),
+        rel_to_base_dir(set, path),
+    )
 }
 
 fn any_rel_match<'a>(
@@ -33,22 +34,27 @@ fn any_rel_match<'a>(
 
 pub(crate) fn path_included_any_form(set: &CopFilterSet, filter: &CopFilter, path: &Path) -> bool {
     let (rel_path, rel_to_base) = path_forms(set, path);
-    let rel_to_scan = set
-        .scan_root
-        .as_deref()
-        .and_then(|root| path.strip_prefix(root).ok());
-    let stripped = path.strip_prefix("./").ok();
     filter.is_included(path)
-        || any_rel_match([rel_path, rel_to_base, rel_to_scan, stripped], |p| {
-            filter.is_included(p)
-        })
+        || any_rel_match(
+            [
+                rel_path,
+                rel_to_base,
+                set.scan_root
+                    .as_deref()
+                    .and_then(|root| path.strip_prefix(root).ok()),
+                path.strip_prefix("./").ok(),
+            ],
+            |p| filter.is_included(p),
+        )
 }
 
 pub(crate) fn path_excluded_cop_forms(set: &CopFilterSet, filter: &CopFilter, path: &Path) -> bool {
     let (rel_path, rel_to_base) = path_forms(set, path);
-    let stripped = path.strip_prefix("./").ok();
     filter.is_excluded(path)
-        || any_rel_match([rel_path, rel_to_base, stripped], |p| filter.is_excluded(p))
+        || any_rel_match(
+            [rel_path, rel_to_base, path.strip_prefix("./").ok()],
+            |p| filter.is_excluded(p),
+        )
 }
 
 fn exclude_rel_forms<'a>(
@@ -56,15 +62,15 @@ fn exclude_rel_forms<'a>(
     path: &'a Path,
 ) -> [Option<&'a Path>; 4] {
     let nearest_dir = set.nearest_config_dir(path);
-    let rel_to_nearest = nearest_dir.and_then(|cd| path.strip_prefix(cd).ok());
-    let rel_to_root = set
-        .config_dir
-        .as_deref()
-        .filter(|root| nearest_dir.is_some_and(|n| n != *root))
-        .and_then(|cd| path.strip_prefix(cd).ok());
-    let rel_to_base = rel_to_base_dir(set, path);
-    let stripped = path.strip_prefix("./").ok();
-    [rel_to_nearest, rel_to_root, rel_to_base, stripped]
+    [
+        nearest_dir.and_then(|cd| path.strip_prefix(cd).ok()),
+        set.config_dir
+            .as_deref()
+            .filter(|root| nearest_dir.is_some_and(|n| n != *root))
+            .and_then(|cd| path.strip_prefix(cd).ok()),
+        rel_to_base_dir(set, path),
+        path.strip_prefix("./").ok(),
+    ]
 }
 
 pub(crate) fn filter_excluded_any_form(
@@ -91,8 +97,7 @@ fn re_matches_forms(
     rel_path: Option<&Path>,
     rel_to_base: Option<&Path>,
 ) -> bool {
-    let path_str = path.to_string_lossy();
-    re.is_match(path_str.as_ref())
+    re.is_match(&path.to_string_lossy())
         || any_rel_match([rel_path, rel_to_base], |rel| {
             re.is_match(&rel.to_string_lossy())
         })
@@ -105,13 +110,12 @@ pub(crate) fn include_matches_forms(
     rel_path: Option<&Path>,
     rel_to_base: Option<&Path>,
 ) -> bool {
-    let glob_ok = include_set
+    include_set
         .as_ref()
-        .is_some_and(|inc| glob_matches_forms(inc, path, rel_path, rel_to_base));
-    let re_ok = include_re
-        .as_ref()
-        .is_some_and(|re| re_matches_forms(re, path, rel_path, rel_to_base));
-    glob_ok || re_ok
+        .is_some_and(|inc| glob_matches_forms(inc, path, rel_path, rel_to_base))
+        || include_re
+            .as_ref()
+            .is_some_and(|re| re_matches_forms(re, path, rel_path, rel_to_base))
 }
 
 pub(crate) fn exclude_set_matches(

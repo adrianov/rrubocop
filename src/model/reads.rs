@@ -59,8 +59,7 @@ impl Builder<'_> {
         // read, and a shorthand read can never be inlined away (`42:` is
         // not valid Ruby), so it must never qualify as the single use.
         let bytes = [key.start_byte(), key.end_byte()];
-        let bound = self.lookup(scope, bytes[0], &name).is_some();
-        if !bound {
+        if self.lookup(scope, bytes[0], &name).is_none() {
             self.vcall_sites.push(bytes[0]);
             return;
         }
@@ -81,8 +80,7 @@ impl Builder<'_> {
 
     fn walk_unary(&mut self, n: Node, scope: ScopeId, under_defined: bool) {
         let op_node = n.child_by_field_name("operator");
-        let op = op_node.map(|o| self.text(o)).unwrap_or("");
-        let ud = under_defined || op == "defined?";
+        let ud = under_defined || op_node.is_some_and(|o| self.text(o) == "defined?");
         let mut cursor = n.walk();
         for child in n.children(&mut cursor) {
             if op_node.map(|o| o.id()) == Some(child.id()) {
@@ -112,12 +110,9 @@ impl Builder<'_> {
     /// Safe-navigation on a local receiver: recorded for the ABC
     /// repeated-csend discount.
     fn note_csend_site(&mut self, n: Node, scope: ScopeId) {
-        let op = n
+        if n
             .child_by_field_name("operator")
-            .map(|o| self.text(o))
-            .unwrap_or("")
-            .to_string();
-        if op == "&."
+            .is_some_and(|o| self.text(o) == "&.")
             && let Some(recv) = n.child_by_field_name("receiver")
             && recv.kind() == "identifier"
         {

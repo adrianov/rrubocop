@@ -59,12 +59,14 @@ impl Cop for ParenthesesAroundCondition {
 
 fn parens_required(source: &SourceFile, cond: Node<'_>) -> bool {
     let bytes = source.as_bytes();
-    let start = cond.start_byte();
-    let end = cond.end_byte();
-    let before = start.checked_sub(1).and_then(|i| bytes.get(i).copied());
-    let after = bytes.get(end).copied();
-    before.is_some_and(|b| b.is_ascii_alphabetic())
-        || after.is_some_and(|b| b.is_ascii_alphabetic())
+    cond.start_byte()
+        .checked_sub(1)
+        .and_then(|i| bytes.get(i).copied())
+        .is_some_and(|b| b.is_ascii_alphabetic())
+        || bytes
+            .get(cond.end_byte())
+            .copied()
+            .is_some_and(|b| b.is_ascii_alphabetic())
 }
 
 fn post_while_until(node: Node<'_>) -> bool {

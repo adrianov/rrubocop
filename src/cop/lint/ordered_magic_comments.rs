@@ -17,24 +17,20 @@ fn is_other_magic(line: &str) -> bool {
 }
 
 fn first_disorder(source: &SourceFile) -> Option<usize> {
-    let mut encoding_seen = false;
+    // The first "other magic" comment seen before the encoding comment is
+    // out of order; nothing after the encoding comment can matter.
     let mut other_line = None;
     for (i, line) in source.lines().enumerate() {
-        let s = String::from_utf8_lossy(line);
-        let t = s.trim();
-        if t.is_empty() {
-            continue;
-        }
-        if !t.starts_with('#') {
-            break;
-        }
-        if is_encoding(t) {
-            encoding_seen = true;
-            if let Some(line_no) = other_line {
-                return Some(line_no);
+        match String::from_utf8_lossy(line).trim() {
+            t if t.is_empty() => {}
+            t if !t.starts_with('#') => break,
+            t => {
+                if is_encoding(t) {
+                    return other_line;
+                } else if is_other_magic(t) {
+                    other_line = Some(i + 1);
+                }
             }
-        } else if is_other_magic(t) && !encoding_seen {
-            other_line = Some(i + 1);
         }
     }
     None

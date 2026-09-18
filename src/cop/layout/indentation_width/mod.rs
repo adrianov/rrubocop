@@ -82,7 +82,6 @@ fn report_width(
         return;
     }
     let diff = indent.abs_diff(prev);
-    let expected = expected_indent(indent, prev, width);
     report::report_fix(
         cop,
         source,
@@ -92,7 +91,7 @@ fn report_width(
         corrections,
         off,
         off + indent,
-        " ".repeat(expected),
+        " ".repeat(expected_indent(indent, prev, width)),
     );
 }
 

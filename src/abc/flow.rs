@@ -30,11 +30,11 @@ impl<'f> Calc<'f> {
 
     fn count_rescue(&mut self, n: Node, kind: &str) {
         // a multi-clause rescue group is ONE :rescue node; TS emits siblings
-        let first_clause = n
-            .prev_named_sibling()
-            .map(|p| p.kind() != "rescue")
-            .unwrap_or(true);
-        if kind == "rescue_modifier" || first_clause {
+        if kind == "rescue_modifier"
+            || n.prev_named_sibling()
+                .map(|p| p.kind() != "rescue")
+                .unwrap_or(true)
+        {
             self.c += 1;
         }
         if rescue_binds_named_variable(self.fm, n) {

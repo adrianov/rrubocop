@@ -78,10 +78,9 @@ pub fn reconcile_corrected(
             d.corrected = false;
             continue;
         };
-        let matched = set.accepted().iter().any(|c| {
+        if !set.accepted().iter().any(|c| {
             c.cop_name == d.cop_name && correction_covers(c, off)
-        });
-        if !matched {
+        }) {
             d.corrected = false;
         }
     }

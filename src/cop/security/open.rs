@@ -40,8 +40,8 @@ impl Cop for Open {
         let Some(msg) = open_offense_msg(source, node) else {
             return;
         };
-        let meth_node = node.child_by_field_name("method").unwrap_or(node);
-        let (line, column) = source.offset_to_line_col(meth_node.start_byte());
+        let (line, column) = source
+            .offset_to_line_col(node.child_by_field_name("method").unwrap_or(node).start_byte());
         diagnostics.push(self.diagnostic(source, line, column, msg));
     }
 }

@@ -40,8 +40,7 @@ fn find_target_binary<'a>(source: &'a SourceFile, n: Node<'a>) -> Option<Node<'a
 fn find_target_call<'a>(source: &'a SourceFile, n: Node<'a>) -> Option<Node<'a>> {
     let meth = call_method_name(source, n)?;
     let recv = call_receiver(n)?;
-    let args = crate::cop::shared::argument_nodes(n);
-    let arg = args.first().copied()?;
+    let arg = crate::cop::shared::argument_nodes(n).first().copied()?;
     match meth {
         b"=~" | b"match" | b"match?" => match_target(source, recv, arg),
         b"is_a?" if recv.kind() == "identifier" => Some(arg),

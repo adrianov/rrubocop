@@ -69,10 +69,9 @@ fn remove_blank(
     let mut diag = cop.diagnostic(source, line, 0, msg);
     if let Some(corr) = corrections {
         if let Some(s) = source.line_start(line) {
-            let e = source.line_start(line + 1).unwrap_or(s);
             corr.push(Correction {
                 start: s,
-                end: e,
+                end: source.line_start(line + 1).unwrap_or(s),
                 replacement: String::new(),
                 cop_name: cop.name(),
                 cop_index: 0,

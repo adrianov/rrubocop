@@ -29,8 +29,7 @@ impl Cop for FloatOutOfRange {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let text = node_text(source, node).replace('_', "");
-        if let Ok(v) = text.parse::<f64>() {
+        if let Ok(v) = node_text(source, node).replace('_', "").parse::<f64>() {
             if v.is_infinite() {
                 let (line, col) = source.offset_to_line_col(node.start_byte());
                 diagnostics.push(self.diagnostic(

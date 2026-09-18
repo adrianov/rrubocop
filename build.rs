@@ -10,8 +10,11 @@ fn main() {
     let manifest = manifest_dir.join("src/resources/gem_configs_manifest.json");
     println!("cargo:rerun-if-changed={}", configs.display());
     println!("cargo:rerun-if-changed={}", manifest.display());
-    let out = PathBuf::from(env::var("OUT_DIR").unwrap()).join("gem_configs_embed.rs");
-    write_embed_rs(&configs, &manifest, &out);
+    write_embed_rs(
+        &configs,
+        &manifest,
+        &PathBuf::from(env::var("OUT_DIR").unwrap()).join("gem_configs_embed.rs"),
+    );
 }
 
 fn write_files_table(code: &mut String, configs: &Path) {
@@ -55,18 +58,18 @@ fn push_same_as_gem(gem: &str, meta: &serde_json::Value, out: &mut Vec<(String, 
 }
 
 fn same_as_entries(manifest: &Path) -> Vec<(String, String, String)> {
-    let raw = fs::read_to_string(manifest).unwrap_or_else(|e| {
-        panic!("read {}: {e}", manifest.display());
-    });
-    let v: serde_json::Value = serde_json::from_str(&raw).unwrap_or_else(|e| {
-        panic!("parse {}: {e}", manifest.display());
-    });
-    let gems = v
-        .get("gems")
-        .and_then(|g| g.as_object())
-        .unwrap_or_else(|| panic!("{}: missing gems object", manifest.display()));
     let mut out = Vec::new();
-    for (gem, meta) in gems {
+    // Iterate the parsed value directly: its temporaries live for the whole
+    // `for` statement, so `gems` can borrow them without a `let` binding.
+    for (gem, meta) in serde_json::from_str::<serde_json::Value>(
+        &fs::read_to_string(manifest)
+            .unwrap_or_else(|e| panic!("read {}: {e}", manifest.display())),
+    )
+    .unwrap_or_else(|e| panic!("parse {}: {e}", manifest.display()))
+    .get("gems")
+    .and_then(|g| g.as_object())
+    .unwrap_or_else(|| panic!("{}: missing gems object", manifest.display()))
+    {
         push_same_as_gem(gem, meta, &mut out);
     }
     out.sort();
@@ -95,11 +98,12 @@ fn walk(root: &Path, dir: &Path, out: &mut Vec<(String, PathBuf)>) {
         if path.extension().and_then(|e| e.to_str()) != Some("yml") {
             continue;
         }
-        let rel = path
-            .strip_prefix(root)
-            .expect("under gem_configs")
-            .to_string_lossy()
-            .replace('\\', "/");
-        out.push((rel, path));
+        out.push((
+            path.strip_prefix(root)
+                .expect("under gem_configs")
+                .to_string_lossy()
+                .replace('\\', "/"),
+            path,
+        ));
     }
 }

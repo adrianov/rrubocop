@@ -63,8 +63,9 @@ fn pair_key_is_type(source: &SourceFile, pair: Node<'_>) -> bool {
 }
 
 fn pair_type_value<'a>(source: &'a SourceFile, pair: Node<'_>) -> Option<&'a str> {
-    let b = node_bytes(source, pair.child_by_field_name("value")?);
-    std::str::from_utf8(b).ok().map(|s| s.trim_start_matches(':'))
+    std::str::from_utf8(node_bytes(source, pair.child_by_field_name("value")?))
+        .ok()
+        .map(|s| s.trim_start_matches(':'))
 }
 
 fn find_type_pair<'a>(source: &SourceFile, node: Node<'a>) -> Option<(Node<'a>, usize)> {

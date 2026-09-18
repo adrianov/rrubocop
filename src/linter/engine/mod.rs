@@ -175,12 +175,19 @@ fn run_non_syntax(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<Vec<Correction>>,
 ) {
-    let rest: Vec<ActiveCop<'_>> = active
-        .iter()
-        .filter(|(c, _, _)| c.name() != "Lint/Syntax")
-        .map(|(c, cfg, idx)| (*c, cfg.clone(), *idx))
-        .collect();
-    run_phases(source, tree, &rest, registry, mode, diagnostics, corrections);
+    run_phases(
+        source,
+        tree,
+        &active
+            .iter()
+            .filter(|(c, _, _)| c.name() != "Lint/Syntax")
+            .map(|(c, cfg, idx)| (*c, cfg.clone(), *idx))
+            .collect::<Vec<_>>(),
+        registry,
+        mode,
+        diagnostics,
+        corrections,
+    );
 }
 
 fn run_phases(

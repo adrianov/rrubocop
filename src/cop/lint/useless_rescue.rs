@@ -86,11 +86,11 @@ fn is_last_rescue(node: Node<'_>) -> bool {
         return true;
     };
     let mut cur = parent.walk();
-    let rescues: Vec<_> = parent
+    parent
         .named_children(&mut cur)
         .filter(|n| n.kind() == "rescue")
-        .collect();
-    rescues.last().is_some_and(|n| n.id() == node.id())
+        .last()
+        .is_some_and(|n| n.id() == node.id())
 }
 
 fn exception_var_used_in_ensure(source: &SourceFile, rescue: Node<'_>) -> bool {

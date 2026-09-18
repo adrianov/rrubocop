@@ -115,8 +115,9 @@ impl Cop for SpaceBeforeFirstArg {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let allow = config.get_bool("AllowForAlignment", true);
-        let Some((start, end)) = offense(source, node, allow) else {
+        let Some((start, end)) =
+            offense(source, node, config.get_bool("AllowForAlignment", true))
+        else {
             return;
         };
         report::report_fix(

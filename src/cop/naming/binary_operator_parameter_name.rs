@@ -120,10 +120,13 @@ fn rename_target<'a>(source: &SourceFile, n: Node<'a>, old: &[u8]) -> Option<Nod
     if n.kind() != "identifier" || node_bytes(source, n) != old {
         return None;
     }
-    let in_params = n
+    if n
         .parent()
-        .is_some_and(|p| matches!(p.kind(), "method_parameters" | "parameters"));
-    (!in_params).then_some(n)
+        .is_some_and(|p| matches!(p.kind(), "method_parameters" | "parameters"))
+    {
+        return None;
+    }
+    Some(n)
 }
 
 fn assignment_left_ident<'a>(source: &SourceFile, n: Node<'a>, old: &[u8]) -> Option<Node<'a>> {

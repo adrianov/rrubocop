@@ -15,11 +15,12 @@ pub(crate) fn skip_single_elem_inline_close(
     close_ch: u8,
 ) -> bool {
     let mut cur = node.walk();
-    let n = node
+    if node
         .named_children(&mut cur)
         .filter(|c| c.kind() != "comment")
-        .count();
-    if n != 1 {
+        .count()
+        != 1
+    {
         return false;
     }
     let close = node.end_byte().saturating_sub(1);

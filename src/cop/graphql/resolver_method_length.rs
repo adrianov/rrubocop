@@ -56,12 +56,10 @@ fn over_limit(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Option
         return None;
     }
     let max = config.get_usize("Max", 10);
-    let line_count = method_line_count(node);
-    if line_count <= max {
+    if method_line_count(node) <= max {
         return None;
     }
-    let count_comments = config.get_bool("CountComments", false);
-    let length = method_body_line_count(source, node, count_comments);
+    let length = method_body_line_count(source, node, config.get_bool("CountComments", false));
     (length > max).then_some((length, max))
 }
 
@@ -99,8 +97,7 @@ fn method_body_line_count(source: &SourceFile, node: Node<'_>, count_comments: b
 }
 
 fn irrelevant_line(line: &[u8], count_comments: bool) -> bool {
-    let code = strip_line_comment(line);
-    let trimmed = trim_ascii_end(code);
+    let trimmed = trim_ascii_end(strip_line_comment(line));
     trimmed.is_empty() || (!count_comments && trimmed.starts_with(b"#"))
 }
 

@@ -89,9 +89,7 @@ fn check_pair(
     ) else {
         return;
     };
-    let prev_key = sort_key(&prev_name, consider_punct);
-    let curr_key = sort_key(&curr_name, consider_punct);
-    if curr_key >= prev_key {
+    if sort_key(&curr_name, consider_punct) >= sort_key(&prev_name, consider_punct) {
         return;
     }
     let (line, column) = source.offset_to_line_col(current.start_byte());

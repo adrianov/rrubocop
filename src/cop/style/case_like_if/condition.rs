@@ -52,9 +52,11 @@ fn collect_binary_condition(source: &SourceFile, n: Node<'_>, target: Node<'_>) 
 fn collect_call_condition(source: &SourceFile, n: Node<'_>, target: Node<'_>) -> bool {
     let meth = call_method_name(source, n).unwrap_or(b"");
     let recv = call_receiver(n);
-    let arg = crate::cop::shared::argument_nodes(n).first().copied();
     match meth {
-        b"=~" | b"match" | b"match?" => match (recv, arg) {
+        b"=~" | b"match" | b"match?" => match (
+            recv,
+            crate::cop::shared::argument_nodes(n).first().copied(),
+        ) {
             (Some(r), Some(a)) => match_side(source, r, a, target).is_some(),
             _ => false,
         },

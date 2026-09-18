@@ -51,8 +51,7 @@ fn first_comment_or_inline(lines: &[String], idx: usize, line: &str) -> bool {
     if idx == 0 {
         return true;
     }
-    let prev = lines[idx - 1].trim_start();
-    !prev.starts_with('#')
+    !lines[idx - 1].trim_start().starts_with('#')
 }
 
 fn check_line(

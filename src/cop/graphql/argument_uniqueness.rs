@@ -38,8 +38,7 @@ impl Cop for ArgumentUniqueness {
         if nested_class(node) {
             return;
         }
-        let mut by_field: HashMap<String, HashSet<String>> = HashMap::new();
-        walk(self, source, node, node, &mut by_field, diagnostics);
+        walk(self, source, node, node, &mut HashMap::new(), diagnostics);
     }
 }
 

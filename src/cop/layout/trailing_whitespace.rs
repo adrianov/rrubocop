@@ -94,8 +94,13 @@ fn in_heredoc_skip(
     stripped: &[u8], allow: bool, terms: &mut Vec<Vec<u8>>,
 ) -> bool {
     let Some(term) = terms.last() else { return false; };
-    let trimmed: Vec<u8> = stripped.iter().copied().skip_while(|&b| b == b' ' || b == b'\t').collect();
-    if &trimmed == term {
+    if stripped
+        .iter()
+        .copied()
+        .skip_while(|&b| b == b' ' || b == b'\t')
+        .collect::<Vec<u8>>()
+        == *term
+    {
         terms.pop();
         false
     } else {

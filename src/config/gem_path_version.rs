@@ -76,8 +76,7 @@ fn baseline_version(gem_name: &str) -> Option<String> {
 /// Full `x.y.z` (or longer) version from Gemfile.lock / gems.locked.
 fn lockfile_gem_version_str(working_dir: &Path, gem_name: &str) -> Option<String> {
     for lock_name in &["Gemfile.lock", "gems.locked"] {
-        let lock_path = working_dir.join(lock_name);
-        let Ok(content) = fs::read_to_string(&lock_path) else {
+        let Ok(content) = fs::read_to_string(working_dir.join(lock_name)) else {
             continue;
         };
         if let Some(ver) = parse_gem_version_str(&content, gem_name) {
@@ -89,8 +88,7 @@ fn lockfile_gem_version_str(working_dir: &Path, gem_name: &str) -> Option<String
 
 fn parse_gem_version_str(content: &str, gem_name: &str) -> Option<String> {
     content.lines().find_map(|line| {
-        let trimmed = line.trim();
-        let rest = trimmed.strip_prefix(gem_name)?;
+        let rest = line.trim().strip_prefix(gem_name)?;
         let ver = rest.strip_prefix(" (")?.strip_suffix(')')?;
         if ver.is_empty() || !ver.as_bytes()[0].is_ascii_digit() {
             return None;
@@ -110,9 +108,11 @@ fn parse_semver_part(raw: &str) -> u64 {
 fn parse_semver(v: &str) -> Option<(u64, u64, u64)> {
     let mut parts = v.split('.');
     let major = parts.next()?.parse().ok()?;
-    let minor = parse_semver_part(parts.next().unwrap_or("0"));
-    let patch = parse_semver_part(parts.next().unwrap_or("0"));
-    Some((major, minor, patch))
+    Some((
+        major,
+        parse_semver_part(parts.next().unwrap_or("0")),
+        parse_semver_part(parts.next().unwrap_or("0")),
+    ))
 }
 
 fn version_distance(a: &str, b: &str) -> u64 {

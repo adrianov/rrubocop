@@ -6,8 +6,7 @@ use crate::parse::source::SourceFile;
 
 pub(super) fn closer_follows_rescue_modifier(source: &SourceFile, closer: Node<'_>) -> bool {
     let bytes = source.as_bytes();
-    let pos = skip_hspace(bytes, closer.end_byte());
-    is_rescue_word(bytes, pos)
+    is_rescue_word(bytes, skip_hspace(bytes, closer.end_byte()))
 }
 
 fn skip_hspace(bytes: &[u8], mut pos: usize) -> usize {

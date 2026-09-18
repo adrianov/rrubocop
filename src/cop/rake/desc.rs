@@ -158,6 +158,5 @@ fn pair_key_is_default(source: &SourceFile, pair: Node<'_>) -> bool {
     };
     let name = symbol_bare_name(source, key);
     // `default:` hash key symbol may include trailing `:`
-    let bare = name.strip_suffix(b":").unwrap_or(name);
-    bare == b"default"
+    name.strip_suffix(b":").unwrap_or(name) == b"default"
 }

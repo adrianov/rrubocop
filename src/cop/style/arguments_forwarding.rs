@@ -67,8 +67,7 @@ fn lvars_in_range(body: Node<'_>, start: usize, end: usize) -> bool {
         if n.kind() != "identifier" {
             return;
         }
-        let p = n.parent();
-        if p.is_some_and(|pr| {
+        if n.parent().is_some_and(|pr| {
             matches!(
                 pr.kind(),
                 "assignment"

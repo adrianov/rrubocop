@@ -48,8 +48,8 @@ fn name_offense(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Opti
     }
     let spec = specified?;
     let leaf = class_leaf_name(source, node)?;
-    let default_name = leaf.strip_suffix("Type").unwrap_or(&leaf);
-    (spec == default_name).then_some("graphql_name should be specified only for overrides.")
+    (spec == leaf.strip_suffix("Type").unwrap_or(&leaf))
+        .then_some("graphql_name should be specified only for overrides.")
 }
 
 fn find_graphql_name(source: &SourceFile, class_node: Node<'_>) -> Option<String> {

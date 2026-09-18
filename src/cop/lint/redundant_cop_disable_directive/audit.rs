@@ -131,9 +131,7 @@ fn apply_redundant_fix(
     mut corrections: Option<&mut Vec<Correction>>,
     diag: &mut Diagnostic,
 ) {
-    let remove_line =
-        remove_entire_disable_line(source, dir, offenses, active, remove_entire);
-    if remove_line {
+    if remove_entire_disable_line(source, dir, offenses, active, remove_entire) {
         if !*entire_fix {
             push_removal(
                 source,

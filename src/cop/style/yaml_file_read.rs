@@ -52,11 +52,9 @@ fn is_yaml_file_read(source: &SourceFile, node: Node<'_>) -> bool {
     if !is_const_named(source, recv, b"YAML") {
         return false;
     }
-    let args = argument_nodes(node);
-    let Some(arg) = args.first() else {
-        return false;
-    };
-    is_file_read(source, *arg)
+    argument_nodes(node)
+        .first()
+        .is_some_and(|arg| is_file_read(source, *arg))
 }
 
 fn is_file_read(source: &SourceFile, arg: Node<'_>) -> bool {

@@ -82,9 +82,13 @@ fn operation_expected_col(
     let left_line = shared::node_line(source, left);
     let left_col = shared::node_col(source, left);
     let keyword_ctx = keyword_context(source, node, left_line, left_col);
-    let assignment_ctx = assignment_from_ancestors(source, node)
-        .or_else(|| assignment_context(source, left_line, left_col));
-    if should_align_op(style, keyword_ctx, assignment_ctx, argument_in_method_call(node)) {
+    if should_align_op(
+        style,
+        keyword_ctx,
+        assignment_from_ancestors(source, node)
+            .or_else(|| assignment_context(source, left_line, left_col)),
+        argument_in_method_call(node),
+    ) {
         (left_col, true)
     } else {
         (

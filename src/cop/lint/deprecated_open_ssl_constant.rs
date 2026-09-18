@@ -86,18 +86,16 @@ impl Cop for DeprecatedOpenSSLConstant {
         let Some(recv) = call_receiver(node) else {
             return;
         };
-        let parts = scope_parts(source, recv);
-        let Some((algo, mid)) = openssl_algo(&parts) else {
-            return;
-        };
-        let original = node_text(source, node);
-        let repl = replacement(mid, meth, algo);
-        let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            format!("Use `{repl}` instead of `{original}`."),
-        ));
+        if let Some((algo, mid)) = openssl_algo(&scope_parts(source, recv)) {
+            let original = node_text(source, node);
+            let repl = replacement(mid, meth, algo);
+            let (line, col) = source.offset_to_line_col(node.start_byte());
+            diagnostics.push(self.diagnostic(
+                source,
+                line,
+                col,
+                format!("Use `{repl}` instead of `{original}`."),
+            ));
+        }
     }
 }

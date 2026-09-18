@@ -79,15 +79,15 @@ impl ResolvedConfig {
 
     fn build_global_excludes(&self) -> (GlobSet, Vec<String>, Option<RegexSet>) {
         let pats: Vec<&str> = self.global_excludes.iter().map(|s| s.as_str()).collect();
-        let global_exclude = build_glob_set(&pats).unwrap_or_else(GlobSet::empty);
-        let global_exclude_patterns = self
-            .global_excludes
-            .iter()
-            .filter(|pattern| extract_ruby_regexp(pattern).is_none())
-            .cloned()
-            .collect();
-        let global_exclude_re = build_regex_set(&pats);
-        (global_exclude, global_exclude_patterns, global_exclude_re)
+        (
+            build_glob_set(&pats).unwrap_or_else(GlobSet::empty),
+            self.global_excludes
+                .iter()
+                .filter(|pattern| extract_ruby_regexp(pattern).is_none())
+                .cloned()
+                .collect(),
+            build_regex_set(&pats),
+        )
     }
 
     fn sub_config_dirs(&self) -> Vec<std::path::PathBuf> {
@@ -120,9 +120,12 @@ impl ResolvedConfig {
     fn cop_filter_enabled(&self, name: &str, default_enabled: bool, lcr_on: bool) -> bool {
         let config = self.cop_configs.get(name);
         let dept = name.split('/').next().unwrap_or("");
-        let inputs = self.enable_inputs(name, dept, config, default_enabled);
-        let state = resolve_enabled_state(&inputs);
-        let mut enabled = state_to_enabled(state, self.new_cops, self.disabled_by_default, default_enabled);
+        let mut enabled = state_to_enabled(
+            resolve_enabled_state(&self.enable_inputs(name, dept, config, default_enabled)),
+            self.new_cops,
+            self.disabled_by_default,
+            default_enabled,
+        );
         if enabled && version_gate_disables(self, name, dept, config, false) {
             enabled = false;
         }
@@ -139,8 +142,9 @@ impl ResolvedConfig {
         default_exclude: &[&str],
     ) -> CopFilter {
         let config = self.cop_configs.get(name);
-        let dept = name.split('/').next().unwrap_or("");
-        let dept_config = self.department_configs.get(dept);
+        let dept_config = self
+            .department_configs
+            .get(name.split('/').next().unwrap_or(""));
         let include_patterns = effective_include(config, dept_config, default_include);
         let exclude_patterns = effective_exclude(config, dept_config, default_exclude);
         CopFilter {

@@ -20,11 +20,10 @@ impl SourceFile {
 
     pub fn from_bytes(path: impl Into<PathBuf>, content: Vec<u8>) -> Self {
         let content = truncate_at_end_marker(content);
-        let line_starts = compute_line_starts(&content);
         Self {
             path: path.into(),
+            line_starts: compute_line_starts(&content),
             content,
-            line_starts,
         }
     }
 
@@ -65,12 +64,14 @@ impl SourceFile {
     /// Line content without trailing `\n` / `\r` (1-based line).
     pub fn line_text(&self, line: usize) -> Option<&str> {
         let start = self.line_start(line)?;
-        let end = self
-            .line_starts
-            .get(line)
-            .copied()
-            .unwrap_or(self.content.len());
-        std::str::from_utf8(trim_line_ending(&self.content[start..end])).ok()
+        std::str::from_utf8(trim_line_ending(
+            &self.content[start..self
+                .line_starts
+                .get(line)
+                .copied()
+                .unwrap_or(self.content.len())],
+        ))
+        .ok()
     }
 
     /// Byte offset of (1-based line, 0-based display column). Best-effort for ASCII.

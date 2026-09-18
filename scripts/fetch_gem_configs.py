@@ -17,8 +17,10 @@ from pathlib import Path
 
 
 def fetch(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "rrubocop-fetch-gem-configs"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
+    with urllib.request.urlopen(
+        urllib.request.Request(url, headers={"User-Agent": "rrubocop-fetch-gem-configs"}),
+        timeout=60,
+    ) as resp:
         return resp.read()
 
 

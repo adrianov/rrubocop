@@ -109,11 +109,10 @@ fn negated_operand<'a>(source: &SourceFile, cond: Node<'a>) -> Option<Node<'a>> 
         return None;
     }
     let mut cur = cond.walk();
-    let has_neg = cond.children(&mut cur).any(|c| {
+    if !cond.children(&mut cur).any(|c| {
         let t = node_bytes(source, c);
         t == b"!" || t == b"not"
-    });
-    if !has_neg {
+    }) {
         return None;
     }
     cond.child_by_field_name("operand")

@@ -28,9 +28,10 @@ impl Cop for MethodDefParentheses {
     ) {
         let style = config.get_str("EnforcedStyle", "require_parentheses");
         let has_parens = has_open_paren(source, node);
-        let has_params = node.child_by_field_name("parameters").is_some();
         let msg = match style {
-            "require_parentheses" if has_params && !has_parens => {
+            "require_parentheses"
+                if node.child_by_field_name("parameters").is_some() && !has_parens =>
+            {
                 "Use parentheses for method definitions with parameters."
             }
             "require_no_parentheses" if has_parens => {
@@ -44,8 +45,7 @@ impl Cop for MethodDefParentheses {
 }
 
 fn has_open_paren(source: &SourceFile, node: Node<'_>) -> bool {
-    let params = node.child_by_field_name("parameters");
-    let target = params.unwrap_or(node);
+    let target = node.child_by_field_name("parameters").unwrap_or(node);
     let mut cur = target.walk();
     target
         .children(&mut cur)

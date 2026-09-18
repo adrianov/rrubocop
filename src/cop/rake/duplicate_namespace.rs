@@ -39,8 +39,14 @@ impl Cop for DuplicateNamespace {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let mut seen: HashMap<String, usize> = HashMap::new();
-        walk(source, tree.root_node(), &mut Vec::new(), &mut seen, self, diagnostics);
+        walk(
+            source,
+            tree.root_node(),
+            &mut Vec::new(),
+            &mut HashMap::new(),
+            self,
+            diagnostics,
+        );
     }
 }
 

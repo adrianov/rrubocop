@@ -157,8 +157,9 @@ impl Cop for ElseAlignment {
         if shared::node_col(source, node) != shared::line_indent(source, node.start_byte()) {
             return;
         }
-        let end_style = config.get_str("EndAlignmentStyle", "keyword");
-        let Some(base_col) = base_col_for_else(source, node, end_style) else {
+        let Some(base_col) =
+            base_col_for_else(source, node, config.get_str("EndAlignmentStyle", "keyword"))
+        else {
             return;
         };
         if shared::node_col(source, node) == base_col {

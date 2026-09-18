@@ -9,8 +9,10 @@ use crate::parse::source::SourceFile;
 pub struct EmptyLineAfterMagicComment;
 
 fn trim_ws(line: &[u8]) -> &[u8] {
-    let s = line.iter().position(|&b| b != b' ' && b != b'\t' && b != b'\r').unwrap_or(line.len());
-    &line[s..]
+    &line[line
+        .iter()
+        .position(|&b| b != b' ' && b != b'\t' && b != b'\r')
+        .unwrap_or(line.len())..]
 }
 
 fn is_encoding_magic(lower: &str) -> bool {
@@ -87,8 +89,12 @@ impl Cop for EmptyLineAfterMagicComment {
         let Some(last_magic) = last_magic_line(&lines) else { return; };
         let next = last_magic + 1;
         if next >= lines.len() { return; }
-        let blank = lines[next].iter().all(|&b| b == b' ' || b == b'\t' || b == b'\r');
-        if blank { return; }
+        if lines[next]
+            .iter()
+            .all(|&b| b == b' ' || b == b'\t' || b == b'\r')
+        {
+            return;
+        }
         report::insert_newline(
             self, source, next + 1,
             "Add an empty line after magic comments.".into(),

@@ -101,8 +101,7 @@ pub(crate) fn iterating_call(fm: &FileModel, call: Node) -> bool {
         return false;
     };
     {
-        let name = fm.text(m);
-        ITERATING.binary_search(&name).is_ok()
+        ITERATING.binary_search(&fm.text(m)).is_ok()
     }
 }
 

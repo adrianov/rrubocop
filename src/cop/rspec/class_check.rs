@@ -84,8 +84,7 @@ impl Cop for ClassCheck {
         let Some(method) = call_method_name(source, node) else {
             return;
         };
-        let style = config.get_str("EnforcedStyle", "be_a");
-        let Some(prefer) = style_prefer(style, method) else {
+        let Some(prefer) = style_prefer(config.get_str("EnforcedStyle", "be_a"), method) else {
             return;
         };
         report_prefer(

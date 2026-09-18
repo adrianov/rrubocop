@@ -29,7 +29,14 @@ impl Cop for MultilineMethodDefinitionBraceLayout {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyle", "symmetrical");
-        brace_layout::check_braces(self, source, node, b'(', style, diagnostics, &mut corrections);
+        brace_layout::check_braces(
+            self,
+            source,
+            node,
+            b'(',
+            config.get_str("EnforcedStyle", "symmetrical"),
+            diagnostics,
+            &mut corrections,
+        );
     }
 }

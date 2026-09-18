@@ -111,8 +111,7 @@ pub fn check_first(
     if elems.is_empty() {
         return;
     }
-    let start_line = shared::node_line(source, node);
-    if skip_first_indent(source, &elems, start_line) {
+    if skip_first_indent(source, &elems, shared::node_line(source, node)) {
         return;
     }
     let first = elems[0];

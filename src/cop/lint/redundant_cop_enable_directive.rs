@@ -12,14 +12,13 @@ use super::redundant_cop_disable_directive::nth_cop_token;
 pub struct RedundantCopEnableDirective;
 
 fn directive_names(rest: &str) -> Vec<String> {
-    let cops = rest
+    let names: Vec<String> = rest
         .trim()
         .trim_start_matches(':')
         .trim()
         .split("--")
         .next()
-        .unwrap_or("");
-    let names: Vec<String> = cops
+        .unwrap_or("")
         .split(',')
         .map(|c| c.trim().to_string())
         .filter(|c| !c.is_empty())
@@ -74,12 +73,15 @@ fn partial_enable_cop_range(source: &SourceFile, line_no: usize, cop: &str) -> O
     })
 }
 
-fn entire_enable_line_range(source: &SourceFile, line_no: usize, line: &str) -> Option<(usize, usize)> {
+fn entire_enable_line_range(
+    source: &SourceFile,
+    line_no: usize,
+    line: &str,
+) -> Option<(usize, usize)> {
     let start = source.line_start(line_no)?;
-    let bytes = source.as_bytes();
     Some((
         start,
-        start + line.len() + usize::from(start + line.len() < bytes.len()),
+        start + line.len() + usize::from(start + line.len() < source.as_bytes().len()),
     ))
 }
 

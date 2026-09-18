@@ -97,8 +97,7 @@ fn range_operator(source: &SourceFile, range: Node<'_>) -> &'static str {
             }
         }
     }
-    let t = node_text(source, range);
-    if t.contains("...") {
+    if node_text(source, range).contains("...") {
         "..."
     } else {
         ".."

@@ -70,10 +70,11 @@ fn at_body_opening(source: &SourceFile, n: Node<'_>) -> bool {
         match parent.kind() {
             "body_statement" | "block_body" => cur = parent.parent(),
             "class" | "module" | "singleton_class" => {
-                let open = superclass_or_self(parent)
-                    .map(|s| shared::node_line(source, s))
-                    .unwrap_or_else(|| shared::node_line(source, parent));
-                return line == open + 1;
+                return line
+                    == superclass_or_self(parent)
+                        .map(|s| shared::node_line(source, s))
+                        .unwrap_or_else(|| shared::node_line(source, parent))
+                        + 1;
             }
             "do_block" | "block" | "lambda" => {
                 return line == shared::node_line(source, parent) + 1;

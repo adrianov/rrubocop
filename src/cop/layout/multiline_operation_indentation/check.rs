@@ -25,14 +25,17 @@ pub(super) fn check_binary(
     let Some((actual, expected, align_only)) = indent_mismatch(source, node, config) else {
         return;
     };
-    let right = node.child_by_field_name("right").unwrap();
-    let left = node.child_by_field_name("left").unwrap();
-    let msg = offense_message(source, left, actual, expected, align_only);
     report::fix_indent(
         cop,
         source,
-        right.start_byte(),
-        msg,
+        node.child_by_field_name("right").unwrap().start_byte(),
+        offense_message(
+            source,
+            node.child_by_field_name("left").unwrap(),
+            actual,
+            expected,
+            align_only,
+        ),
         diagnostics,
         corrections,
         actual,

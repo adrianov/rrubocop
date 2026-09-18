@@ -113,8 +113,12 @@ fn skip_run(
     if !allow_aligned {
         return false;
     }
-    let end_col = utf8_byte_index_to_column(&line[..end]);
-    aligned_elsewhere(lines, line_idx, end_col, after == Some(b'='))
+    aligned_elsewhere(
+        lines,
+        line_idx,
+        utf8_byte_index_to_column(&line[..end]),
+        after == Some(b'='),
+    )
 }
 
 fn check_run(

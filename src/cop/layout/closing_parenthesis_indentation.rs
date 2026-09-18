@@ -60,11 +60,9 @@ fn expected_close_col(source: &SourceFile, node: Node<'_>, indent_width: usize) 
         // empty multiline `()` → align `)` with `(`
         return open_col;
     };
-    let first_line = shared::node_line(source, first);
-    if first_line > open_line {
+    if shared::node_line(source, first) > open_line {
         // First arg on next line → `)` outdented by IndentationWidth from that indent.
-        let arg_indent = shared::line_indent(source, first.start_byte());
-        return arg_indent.saturating_sub(indent_width);
+        return shared::line_indent(source, first.start_byte()).saturating_sub(indent_width);
     }
     if all_elements_aligned(source, &elements) {
         open_col
@@ -106,8 +104,7 @@ impl Cop for ClosingParenthesisIndentation {
         if shared::line_indent(source, close_off) != close_col {
             return;
         }
-        let width = config.get_usize("IndentationWidth", 2);
-        let want = expected_close_col(source, node, width);
+        let want = expected_close_col(source, node, config.get_usize("IndentationWidth", 2));
         if close_col == want {
             return;
         }

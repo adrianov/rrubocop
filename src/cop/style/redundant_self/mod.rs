@@ -76,10 +76,9 @@ fn report(
     let (line, col) = source.offset_to_line_col(recv.start_byte());
     let mut diag = cop.diagnostic(source, line, col, "Redundant `self` detected.".to_string());
     if let Some(corr) = corrections.as_mut() {
-        let meth = node.child_by_field_name("method").unwrap_or(node);
         corr.push(Correction {
             start: recv.start_byte(),
-            end: meth.start_byte(),
+            end: node.child_by_field_name("method").unwrap_or(node).start_byte(),
             replacement: String::new(),
             cop_name: cop.name(),
             cop_index: 0,

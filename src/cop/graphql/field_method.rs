@@ -40,8 +40,9 @@ impl Cop for FieldMethod {
         let Some(class) = enclosing_class(node) else {
             return;
         };
-        let method_name = resolver_method_name(source, node);
-        let Some(method) = find_method_def(class, source, &method_name) else {
+        let Some(method) =
+            find_method_def(class, source, &resolver_method_name(source, node))
+        else {
             return;
         };
         let Some(suggested) = method_from_body(source, method) else {

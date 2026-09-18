@@ -59,9 +59,8 @@ fn report(
         "Do not use `then` with `in`-pattern matching.".to_string(),
     );
     if let Some(corr) = corrections.as_mut() {
-        let remove_start = skip_spaces_before(source.as_bytes(), then_kw.start_byte());
         corr.push(Correction {
-            start: remove_start,
+            start: skip_spaces_before(source.as_bytes(), then_kw.start_byte()),
             end: then_kw.end_byte(),
             replacement: String::new(),
             cop_name: cop.name(),

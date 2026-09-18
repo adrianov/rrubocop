@@ -86,11 +86,10 @@ fn identity_child(source: &SourceFile, child: Node<'_>) -> bool {
 }
 
 fn identity_block_text(raw: &[u8]) -> bool {
-    let text = String::from_utf8_lossy(raw);
-    let Some((param, body)) = split_block_parts(&text) else {
-        return false;
-    };
-    !param.is_empty() && param == body && !param.contains(',')
+    match split_block_parts(&String::from_utf8_lossy(raw)) {
+        Some((param, body)) => !param.is_empty() && param == body && !param.contains(','),
+        None => false,
+    }
 }
 
 fn split_block_parts(text: &str) -> Option<(&str, String)> {
@@ -101,12 +100,13 @@ fn split_block_parts(text: &str) -> Option<(&str, String)> {
     if parts.len() < 3 {
         return None;
     }
-    let param = parts[1].trim();
-    let body = parts[2]
-        .trim()
-        .trim_end_matches("end")
-        .trim()
-        .trim_matches(|c| c == '{' || c == '}')
-        .to_string();
-    Some((param, body))
+    Some((
+        parts[1].trim(),
+        parts[2]
+            .trim()
+            .trim_end_matches("end")
+            .trim()
+            .trim_matches(|c| c == '{' || c == '}')
+            .to_string(),
+    ))
 }

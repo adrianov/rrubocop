@@ -41,11 +41,11 @@ fn if_branches<'a>(node: Node<'a>) -> Vec<Option<Node<'a>>> {
     if node.kind() == "conditional" || is_ternary(node) {
         return ternary_branches(node);
     }
-    let then_b = node
-        .child_by_field_name("consequence")
-        .or_else(|| node.child_by_field_name("body"));
-    let else_b = node.child_by_field_name("alternative");
-    match (then_b, else_b) {
+    match (
+        node.child_by_field_name("consequence")
+            .or_else(|| node.child_by_field_name("body")),
+        node.child_by_field_name("alternative"),
+    ) {
         (Some(t), Some(e)) => then_else_branches(t, e),
         _ => vec![],
     }
@@ -54,8 +54,7 @@ fn if_branches<'a>(node: Node<'a>) -> Vec<Option<Node<'a>>> {
 fn then_else_branches<'a>(then_b: Node<'a>, else_b: Node<'a>) -> Vec<Option<Node<'a>>> {
     if else_b.kind() == "else" {
         let mut cur = else_b.walk();
-        let body = else_b.named_children(&mut cur).next();
-        return vec![Some(then_b), body];
+        return vec![Some(then_b), else_b.named_children(&mut cur).next()];
     }
     if matches!(else_b.kind(), "if" | "elsif") {
         let mut out = vec![Some(then_b)];
@@ -93,8 +92,7 @@ fn case_branches<'a>(node: Node<'a>) -> Vec<Option<Node<'a>>> {
         match child.kind() {
             "when" | "else" => {
                 let mut c2 = child.walk();
-                let body = child.named_children(&mut c2).last();
-                out.push(body);
+                out.push(child.named_children(&mut c2).last());
             }
             _ => {}
         }

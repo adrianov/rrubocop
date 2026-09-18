@@ -33,8 +33,12 @@ fn aligned_expected(source: &SourceFile, node: Node<'_>, width: usize) -> usize 
     }
     // RuboCop falls back to `indentation(chain) + width` when there is no
     // same-line first dot (`allow(...)\n  .to\n  .and_call_original`).
-    let root = chain::chain_root(source, node);
-    multiline_operation_indentation::aligned_method_call_col(source, node, root, width)
+    multiline_operation_indentation::aligned_method_call_col(
+        source,
+        node,
+        chain::chain_root(source, node),
+        width,
+    )
 }
 
 fn inside_paren_arg_list(node: Node<'_>) -> bool {

@@ -22,9 +22,7 @@ fn is_endless_method(source: &SourceFile, node: Node<'_>) -> bool {
         return false;
     }
     let bytes = source.as_bytes();
-    let start = node.start_byte();
-    let end = node.end_byte().min(bytes.len());
-    bytes[start..end].contains(&b'=')
+    bytes[node.start_byte()..node.end_byte().min(bytes.len())].contains(&b'=')
 }
 
 fn shared_has_end(node: Node<'_>) -> bool {
@@ -63,8 +61,7 @@ impl Cop for SingleLineMethods {
         if is_endless_method(source, node) {
             return;
         }
-        let allow_empty = config.get_bool("AllowIfMethodIsEmpty", true);
-        if allow_empty {
+        if config.get_bool("AllowIfMethodIsEmpty", true) {
             match method_body(node) {
                 None => return,
                 Some(body) if body_is_empty(body) => return,

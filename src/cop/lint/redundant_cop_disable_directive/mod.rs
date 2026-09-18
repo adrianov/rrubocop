@@ -44,18 +44,16 @@ impl Cop for RedundantCopDisableDirective {
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         for (i, line) in source.lines().enumerate() {
-            let s = String::from_utf8_lossy(line);
-            let Some((_, rest)) = disable_marker(&s) else {
-                continue;
-            };
-            scan_duplicate_cops(
-                self,
-                source,
-                i + 1,
-                &cop_names(rest),
-                diagnostics,
-                &mut corrections,
-            );
+            if let Some((_, rest)) = disable_marker(&String::from_utf8_lossy(line)) {
+                scan_duplicate_cops(
+                    self,
+                    source,
+                    i + 1,
+                    &cop_names(rest),
+                    diagnostics,
+                    &mut corrections,
+                );
+            }
         }
     }
 
@@ -133,9 +131,8 @@ mod tests {
         let tree = crate::parse::parse_ruby(&source).unwrap();
         let code_map =
             crate::parse::codemap::CodeMap::from_tree(tree.root_node(), source.as_bytes());
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
-        cop.check_source(
+        RedundantCopDisableDirective.check_source(
             &source,
             &tree,
             &code_map,
@@ -152,11 +149,16 @@ mod tests {
         let source =
             SourceFile::from_bytes("test.rb", b"puts 'x' # rubocop:disable Rails/Output\n".to_vec());
         let offenses = vec![offense("Rails/Output", 1)];
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output"]);
-        let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &offenses, &active, &mut diags, None);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &offenses,
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            None,
+        );
         assert!(diags.is_empty());
     }
 
@@ -167,11 +169,16 @@ mod tests {
             b"# rubocop:disable Rails/Output\nRails.logger.debug 'x'\n# rubocop:enable Rails/Output\n"
                 .to_vec(),
         );
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output"]);
-        let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &[], &active, &mut diags, None);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            None,
+        );
         assert_eq!(diags.len(), 1);
     }
 
@@ -182,11 +189,16 @@ mod tests {
             b"# rubocop:disable Rails/Output, Layout/LineLength\nx = 1\n# rubocop:enable Rails/Output, Layout/LineLength\n"
                 .to_vec(),
         );
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
-        let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &[], &active, &mut diags, None);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            None,
+        );
         assert_eq!(diags.len(), 2);
     }
 
@@ -197,11 +209,16 @@ mod tests {
             b"# rubocop:disable Rails/Output, Layout/LineLength\nx = 1\n# rubocop:enable Rails/Output\n# rubocop:enable Layout/LineLength\n"
                 .to_vec(),
         );
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
-        let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &[], &active, &mut diags, None);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            None,
+        );
         assert_eq!(diags.len(), 2);
         assert!(diags.iter().any(|d| d.message.contains("Rails/Output")));
         assert!(diags.iter().any(|d| d.message.contains("Layout/LineLength")));
@@ -214,11 +231,16 @@ mod tests {
             b"# rubocop:disable Rails/Output, Layout/LineLength\nx = 1\n# rubocop:enable all\n"
                 .to_vec(),
         );
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
-        let active = active_refs(&cops, &cfgs);
-        audit_redundant_disables(&cop, &source, &[], &active, &mut diags, None);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            None,
+        );
         assert_eq!(diags.len(), 2);
         assert!(diags.iter().all(|d| d.location.line == 1));
     }
@@ -227,10 +249,16 @@ mod tests {
     fn redundant_disable_column_on_multibyte_line() {
         let line = "Rails.logger.debug { \"Начинаю обновление\" } # rubocop:disable Rails/Output";
         let source = SourceFile::from_bytes("test.rb", format!("{line}\n").into_bytes());
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output"]);
-        audit_redundant_disables(&cop, &source, &[], &active_refs(&cops, &cfgs), &mut diags, None);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[],
+            &active_refs(&cops, &cfgs),
+            &mut diags,
+            None,
+        );
         assert_eq!(diags.len(), 1);
         let col = byte_index_to_column(line, line.find("Rails/Output").unwrap());
         assert_eq!(diags[0].location.column, col);
@@ -243,12 +271,11 @@ mod tests {
             "test.rb",
             b"Rails.logger.debug 'x' # rubocop:disable Rails/Output\n".to_vec(),
         );
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let mut corrs = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output"]);
         audit_redundant_disables(
-            &cop,
+            &RedundantCopDisableDirective,
             &source,
             &[],
             &active_refs(&cops, &cfgs),
@@ -269,11 +296,10 @@ mod tests {
             b"x = 1 # rubocop:disable Rails/Output, Layout/LineLength\n".to_vec(),
         );
         let offenses = vec![offense("Layout/LineLength", 1)];
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output", "Layout/LineLength"]);
         audit_redundant_disables(
-            &cop,
+            &RedundantCopDisableDirective,
             &source,
             &offenses,
             &active_refs(&cops, &cfgs),
@@ -310,12 +336,11 @@ mod tests {
             "test.rb",
             b"# rubocop:disable Rails/Output\nx = 1\n".to_vec(),
         );
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
         let mut corrs = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output"]);
         audit_redundant_disables(
-            &cop,
+            &RedundantCopDisableDirective,
             &source,
             &[],
             &active_refs(&cops, &cfgs),
@@ -383,9 +408,8 @@ mod tests {
             b"User.update_all(active: false) # rubocop:disable Rails/SkipsModelValidations\n"
                 .to_vec(),
         );
-        let cop = RedundantCopDisableDirective;
         let mut diags = Vec::new();
-        audit_redundant_disables(&cop, &source, &[], &[], &mut diags, None);
+        audit_redundant_disables(&RedundantCopDisableDirective, &source, &[], &[], &mut diags, None);
         assert!(diags.is_empty());
     }
 

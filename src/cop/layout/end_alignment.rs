@@ -52,13 +52,12 @@ impl Cop for EndAlignment {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyleAlignWith", "keyword");
         end_align::check_end(
             self,
             source,
             node,
             base_name(node.kind()),
-            style,
+            config.get_str("EnforcedStyleAlignWith", "keyword"),
             diagnostics,
             &mut corrections,
         );

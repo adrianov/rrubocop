@@ -36,12 +36,11 @@ fn count_format_args(args: &[Node<'_>]) -> usize {
     if args.is_empty() {
         return 0;
     }
-    let all_pairs = args.iter().all(|a| a.kind() == "pair" || a.kind() == "hash");
-    if all_pairs {
+    if args.iter().all(|a| a.kind() == "pair" || a.kind() == "hash") {
         return 1;
     }
-    let has_kw = args.iter().any(|a| a.kind() == "pair");
-    args.iter().filter(|a| a.kind() != "pair").count() + usize::from(has_kw)
+    args.iter().filter(|a| a.kind() != "pair").count()
+        + usize::from(args.iter().any(|a| a.kind() == "pair"))
 }
 
 fn has_splat_arg(args: &[Node<'_>]) -> bool {
@@ -137,8 +136,15 @@ fn check_format(
         return;
     };
     let (actual, expected) = format_actual_expected(named, field_n, &args[1..]);
-    let method = String::from_utf8_lossy(meth);
-    report_mismatch(cop, source, node, &method, actual, expected, diagnostics);
+    report_mismatch(
+        cop,
+        source,
+        node,
+        &String::from_utf8_lossy(meth),
+        actual,
+        expected,
+        diagnostics,
+    );
 }
 
 impl Cop for FormatParameterMismatch {

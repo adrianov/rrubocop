@@ -35,15 +35,14 @@ impl Cop for AmbiguousRegexpLiteral {
         if node_bytes(source, args_node).starts_with(b"(") {
             return;
         }
-        let args = argument_nodes(node);
-        let Some(first) = args.first() else {
+        let Some(first) = argument_nodes(node).first().copied() else {
             return;
         };
         if first.kind() != "regex" {
             return;
         }
         // RuboCop only flags slash regexps (`/…/`), not `%r{…}`.
-        if node_bytes(source, *first).starts_with(b"%") {
+        if node_bytes(source, first).starts_with(b"%") {
             return;
         }
         let (line, col) = source.offset_to_line_col(first.start_byte());

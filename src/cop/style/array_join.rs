@@ -75,8 +75,9 @@ fn star_op(node: Node<'_>) -> Option<Node<'_>> {
 
 fn right_string(node: Node<'_>) -> Option<Node<'_>> {
     let mut cur = node.walk();
-    let kids: Vec<_> = node.children(&mut cur).collect();
-    kids.iter()
+    node.children(&mut cur)
+        .collect::<Vec<_>>()
+        .iter()
         .rev()
         .find(|ch| ch.is_named())
         .copied()

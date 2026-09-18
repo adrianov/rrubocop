@@ -67,8 +67,14 @@ fn replacement(source: &SourceFile, node: Node<'_>, arg: Node<'_>) -> Option<(us
     let end = node.end_byte();
     let parenthesized = parenthesized_call(source.as_bytes(), start);
     let range_start = if parenthesized { start } else { (start + 1).min(end) };
-    let arg_src = String::from_utf8_lossy(&source.as_bytes()[arg.start_byte()..arg.end_byte()]);
-    Some((range_start, end, block_text(&arg_src, parenthesized)))
+    Some((
+        range_start,
+        end,
+        block_text(
+            &String::from_utf8_lossy(&source.as_bytes()[arg.start_byte()..arg.end_byte()]),
+            parenthesized,
+        ),
+    ))
 }
 
 impl Cop for EagerEvaluationLogMessage {
@@ -144,13 +150,16 @@ mod tests {
 
     fn fixed(src: &[u8]) -> String {
         let source = SourceFile::from_bytes("test.rb", src.to_vec());
-        let tree = crate::parse::parse_ruby(&source).expect("parse");
-        let node = tree.root_node().named_child(0).expect("call");
-        let cop = EagerEvaluationLogMessage;
         let mut corrections = Vec::new();
-        cop.check_node(
+        // The parsed tree temporary lives until the end of this statement,
+        // so the borrowed node is valid for the duration of the call.
+        EagerEvaluationLogMessage.check_node(
             &source,
-            node,
+            crate::parse::parse_ruby(&source)
+                .expect("parse")
+                .root_node()
+                .named_child(0)
+                .expect("call"),
             &CopConfig::default(),
             &mut Vec::new(),
             Some(&mut corrections),

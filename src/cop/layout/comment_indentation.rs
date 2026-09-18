@@ -19,12 +19,11 @@ fn standalone_comment(bytes: &[u8], ls: usize, start: usize) -> bool {
 }
 
 fn line_body(bytes: &[u8], nls: usize) -> &[u8] {
-    let end = bytes[nls..]
+    &bytes[nls..bytes[nls..]
         .iter()
         .position(|&b| b == b'\n')
         .map(|i| nls + i)
-        .unwrap_or(bytes.len());
-    &bytes[nls..end]
+        .unwrap_or(bytes.len())]
 }
 
 fn content_indent(line: &[u8]) -> Option<usize> {
@@ -33,8 +32,7 @@ fn content_indent(line: &[u8]) -> Option<usize> {
 }
 
 fn stripped(line: &[u8]) -> &[u8] {
-    let i = line.iter().take_while(|&&b| matches!(b, b' ' | b'\t')).count();
-    &line[i..]
+    &line[line.iter().take_while(|&&b| matches!(b, b' ' | b'\t')).count()..]
 }
 
 fn less_indented(line: &[u8]) -> bool {

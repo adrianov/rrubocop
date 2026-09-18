@@ -26,8 +26,9 @@ impl Cop for QuotedSymbols {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let style = config.get_str("EnforcedStyle", "same_as_string_literals");
-        if style != "same_as_string_literals" {
+        if config.get_str("EnforcedStyle", "same_as_string_literals")
+            != "same_as_string_literals"
+        {
             return;
         }
         if !is_plain_quoted(source, node) {

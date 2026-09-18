@@ -91,8 +91,7 @@ fn binary_spaces_ok(bytes: &[u8], left: Node<'_>, right: Node<'_>, op: Node<'_>)
 
 fn after_ok_with_comment(after: &[u8]) -> bool {
     // `&& # rubocop:disable …\n` — newline after comment is fine.
-    let t = after.trim_ascii_start();
-    t.starts_with(b"#") || space_ok(after)
+    after.trim_ascii_start().starts_with(b"#") || space_ok(after)
 }
 
 impl Cop for SpaceAroundOperators {
