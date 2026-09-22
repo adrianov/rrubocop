@@ -140,7 +140,7 @@ mod tests {
         fmt.format_to(&[], &[PathBuf::from("a.rb")], &mut buf);
         let s = String::from_utf8(buf).unwrap();
         assert!(s.contains("\x1b[32m.\x1b[0m"), "{s}");
-        assert!(s.contains("\x1b[32m0 offenses\x1b[0m"), "{s}");
+        assert!(s.contains("\x1b[32mno offenses detected\x1b[0m"), "{s}");
     }
 
     #[test]
