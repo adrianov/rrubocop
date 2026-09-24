@@ -105,7 +105,7 @@ Exit codes: `0` clean, `1` offenses at/above `--fail-level`, `2` error.
 | `rubocop_inspection` | Lint via `path` / `paths` (string or array; required for filesystem inspect) and/or inline `source_code`; returns LSP-shaped offense JSON |
 | `rubocop_autocorrection` | Same targets as inspection; `safety: true` = safe only; writes files when a filesystem `path` is set |
 
-Always pass `path` or `paths` (absolute file or directory preferred; `path` may be a string **or** an array). The server walks up from the first target to find `.rubocop.yml`. Omitting targets for filesystem ops errors out (avoids scanning `$HOME` when MCP `cwd` is mis-set). A long-lived global MCP started from `$HOME` otherwise inherits `~/.rubocop.yml` (`AllCops: Enabled: false` is common) and misses project cops such as `RSpec/ExampleLength`.
+Always pass `path` or `paths` (absolute file or directory preferred; `path` may be a string **or** an array). The server walks up from the first target to find `.rubocop.yml`. Omitting targets for filesystem ops errors out (avoids scanning `$HOME` when MCP `cwd` is mis-set). Files without a recognized Ruby extension, filename, or shebang (e.g. YAML/JSON configs) are silently skipped — same as upstream MCP, whose `TargetFinder` runs in `:only_recognized_file_types` mode — so passing mixed paths yields no `Lint/Syntax` noise; `summary.target_file_count` reflects inspected files only. A long-lived global MCP started from `$HOME` otherwise inherits `~/.rubocop.yml` (`AllCops: Enabled: false` is common) and misses project cops such as `RSpec/ExampleLength`.
 
 - MCP Registry name: `mcp-name: io.github.adrianov/rrubocop`
 

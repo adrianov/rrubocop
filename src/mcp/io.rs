@@ -45,13 +45,18 @@ pub(super) fn lint_mut(
 
 pub(super) fn target_files(filters: &CopFilterSet, targets: &[String]) -> Result<Vec<PathBuf>, String> {
     targets::validate_roots(targets)?;
-    fs::discover_files_filtered(
+    let mut files = fs::discover_files_filtered(
         &targets.iter().map(PathBuf::from).collect::<Vec<_>>(),
         filters,
         false,
     )
     .map(|d| d.files)
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    // Upstream MCP inspects explicit paths via TargetFinder in
+    // `:only_recognized_file_types` mode: non-Ruby files are silently skipped
+    // instead of parsed as Ruby (which would only yield Lint/Syntax noise).
+    files.retain(|path| fs::is_ruby_file(path));
+    Ok(files)
 }
 
 pub(super) fn read_file(path: &Path) -> Result<Vec<u8>, String> {

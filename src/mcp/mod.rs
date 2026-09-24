@@ -100,7 +100,7 @@ impl RuboCopMcp {
 
     #[tool(
         name = "rubocop_inspection",
-        description = "Inspect Ruby code for offenses. Pass `path` (string or array) and/or `paths`, preferably absolute, so the nearest `.rubocop.yml` is used. Optionally pass `source_code` for unsaved buffers together with `path`.",
+        description = "Inspect Ruby code for offenses. Pass `path` (string or array) and/or `paths`, preferably absolute, so the nearest `.rubocop.yml` is used. Optionally pass `source_code` for unsaved buffers together with `path`. Files without a recognized Ruby extension, filename, or shebang (e.g. YAML) are skipped.",
         annotations(
             title = "RuboCop's inspection",
             read_only_hint = true,
@@ -122,7 +122,7 @@ impl RuboCopMcp {
 
     #[tool(
         name = "rubocop_autocorrection",
-        description = "Autocorrect RuboCop offenses. Pass `path` (string or array) and/or `paths`, preferably absolute. Set `safety` to false to include unsafe corrections.",
+        description = "Autocorrect RuboCop offenses. Pass `path` (string or array) and/or `paths`, preferably absolute. Set `safety` to false to include unsafe corrections. Files without a recognized Ruby extension, filename, or shebang (e.g. YAML) are skipped.",
         annotations(
             title = "RuboCop's autocorrection",
             read_only_hint = false,
@@ -223,6 +223,20 @@ mod tests {
 
     fn args_map(v: serde_json::Value) -> Map<String, serde_json::Value> {
         v.as_object().expect("object").clone()
+    }
+
+    /// Call a tool expecting success; return the JSON payload of its text content.
+    async fn call_tool_body(
+        client: &rmcp::service::RunningService<rmcp::RoleClient, ()>,
+        name: &'static str,
+        args: serde_json::Value,
+    ) -> serde_json::Value {
+        let result = client
+            .call_tool(CallToolRequestParams::new(name).with_arguments(args_map(args)))
+            .await
+            .expect("call");
+        assert_eq!(result.is_error, Some(false));
+        serde_json::from_str(result.content[0].as_text().unwrap().text.as_str()).unwrap()
     }
 
     fn long_example_spec() -> (tempfile::TempDir, std::path::PathBuf) {
@@ -410,6 +424,68 @@ mod tests {
                 "got: {:?}",
                 result.content[0].as_text().unwrap().text
             );
+            let _ = client.cancel().await;
+        })
+        .await;
+    }
+
+    fn mixed_files_project() -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join(".rubocop.yml"),
+            "AllCops:\n  DisabledByDefault: true\nStyle/CharacterLiteral:\n  Enabled: true\n",
+        )
+        .unwrap();
+        let rb = dir.path().join("a.rb");
+        std::fs::write(&rb, "?a\n").unwrap();
+        let yml = dir.path().join("b.yml");
+        std::fs::write(&yml, "foo: bar\n").unwrap();
+        (dir, rb, yml)
+    }
+
+    #[tokio::test]
+    async fn inspect_skips_non_ruby_files() {
+        with_live_client(|client| async move {
+            let (_dir, rb, yml) = mixed_files_project();
+            let body = call_tool_body(
+                &client,
+                "rubocop_inspection",
+                serde_json::json!({
+                    "path": [rb.to_string_lossy(), yml.to_string_lossy()]
+                }),
+            )
+            .await;
+            let files = body["files"].as_array().unwrap();
+            assert_eq!(files.len(), 1, "{body}");
+            assert!(files[0]["path"].as_str().unwrap().ends_with("a.rb"), "{body}");
+            assert_eq!(body["summary"]["target_file_count"], 1, "{body}");
+            assert_eq!(body["summary"]["offense_count"], 1, "{body}");
+            let _ = client.cancel().await;
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn autocorrect_skips_non_ruby_files() {
+        with_live_client(|client| async move {
+            let (_dir, rb, yml) = mixed_files_project();
+            let yml_before = std::fs::read_to_string(&yml).unwrap();
+            let body = call_tool_body(
+                &client,
+                "rubocop_autocorrection",
+                serde_json::json!({
+                    "path": [rb.to_string_lossy(), yml.to_string_lossy()],
+                    "safety": true
+                }),
+            )
+            .await;
+            let files = body["files"].as_array().unwrap();
+            assert_eq!(files.len(), 1, "{body}");
+            assert!(files[0]["path"].as_str().unwrap().ends_with("a.rb"), "{body}");
+            assert_eq!(files[0]["corrected"], true, "{body}");
+            assert_eq!(body["summary"]["target_file_count"], 1, "{body}");
+            assert_eq!(body["summary"]["corrected_file_count"], 1, "{body}");
+            assert_eq!(std::fs::read_to_string(&yml).unwrap(), yml_before);
             let _ = client.cancel().await;
         })
         .await;
