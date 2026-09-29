@@ -41,3 +41,24 @@ def subscribe(params = {})
     ^^^^^^^^^ Naming/PredicateMethod: Predicate method names should end with `?`.
   response['error'].present? ? false : !!response.dig('result', 'person_id')
 end
+
+def flag
+    ^^^^ Naming/PredicateMethod: Predicate method names should end with `?`.
+  if cond
+    true
+  end
+end
+
+def compare_values(value1, operator, value2)
+    ^^^^^^^^^^^^^^ Naming/PredicateMethod: Predicate method names should end with `?`.
+  case operator
+  when '<' then value1 < value2
+  when '>' then value1 > value2
+  end
+end
+
+def foo?
+    ^^^^ Naming/PredicateMethod: Non-predicate method names should not end with `?`.
+  if x
+  end
+end

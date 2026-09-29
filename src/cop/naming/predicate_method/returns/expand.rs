@@ -21,15 +21,15 @@ pub(super) fn expand_and_or<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
 }
 
 fn expand_modifier<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
+    // RuboCop `IfNode#branches` is only the written body — no nil for `expr if cond`.
     if let Some(body) = node.child_by_field_name("body") {
         push_value(out, body);
-    } else {
-        let mut cur = node.walk();
-        if let Some(cons) = node.named_children(&mut cur).next() {
-            push_value(out, cons);
-        }
+        return;
     }
-    out.push(Ret::Nil);
+    let mut cur = node.walk();
+    if let Some(cons) = node.named_children(&mut cur).next() {
+        push_value(out, cons);
+    }
 }
 
 fn expand_conditional_fields<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
@@ -46,24 +46,18 @@ fn push_else_branch<'a>(out: &mut Vec<Ret<'a>>, alt: Node<'a>) {
     push_ret(out, unwrap_branch_body(alt));
 }
 
-fn take_if_alternative<'a>(out: &mut Vec<Ret<'a>>, alt: Node<'a>) -> bool {
-    if alt.kind() == "else" {
-        push_else_branch(out, alt);
-        return true;
+fn push_if_branch<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
+    match node.child_by_field_name("consequence") {
+        Some(cons) => push_value(out, cons),
+        None => out.push(Ret::Nil),
     }
-    push_value(out, alt);
-    false
 }
 
 fn expand_if_chain<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
-    // RuboCop: nil for missing else only on plain `if/end` (no subsequent).
-    let top_has_subsequent = node.child_by_field_name("alternative").is_some();
+    // `IfNode#branches` omits a missing else. An empty branch (`if x; else`) is nil.
     let mut cur = Some(node);
-    let mut saw_else = false;
     while let Some(n) = cur.take() {
-        if let Some(cons) = n.child_by_field_name("consequence") {
-            push_value(out, cons);
-        }
+        push_if_branch(out, n);
         let Some(alt) = n.child_by_field_name("alternative") else {
             break;
         };
@@ -71,11 +65,8 @@ fn expand_if_chain<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
             cur = Some(alt);
             continue;
         }
-        saw_else = take_if_alternative(out, alt);
+        push_else_branch(out, alt);
         break;
-    }
-    if !saw_else && !top_has_subsequent {
-        out.push(Ret::Nil);
     }
 }
 
@@ -89,20 +80,14 @@ fn when_body<'a>(child: Node<'a>) -> Ret<'a> {
 }
 
 fn expand_case<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
-    let mut has_else = false;
+    // `CaseNode#branches` omits a missing else (no implicit nil).
     let mut cur = node.walk();
     for child in node.named_children(&mut cur) {
         match child.kind() {
-            "when" | "in" => push_ret(out, when_body(child)),
-            "else" => {
-                has_else = true;
-                push_else_branch(out, child);
-            }
+            "when" | "in" | "in_clause" => push_ret(out, when_body(child)),
+            "else" => push_else_branch(out, child),
             _ => {}
         }
-    }
-    if !has_else {
-        out.push(Ret::Nil);
     }
 }
 

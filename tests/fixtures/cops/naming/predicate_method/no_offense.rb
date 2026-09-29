@@ -78,3 +78,28 @@ def update_deposit_details(deposit)
   return
   accept_deposit(deposit)
 end
+
+# Missing else is not an implicit nil (RuboCop IfNode#branches).
+def delivery_coords_are_equal_center_of_region?
+  if addr.present? && receive?
+    regions.any? { |coords| center?(coords) }
+  end
+end
+
+def include_emission?(emission)
+  if details.success?
+    purchasable = quantity.positive?
+    previously_bought = ids.include?(emission)
+    purchasable || previously_bought
+  end
+end
+
+def foo?
+  bar if x
+end
+
+def flagged?
+  if cond
+    true
+  end
+end
