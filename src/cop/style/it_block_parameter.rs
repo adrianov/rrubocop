@@ -51,14 +51,39 @@ fn push_at(
     diagnostics.push(diag);
 }
 
-fn param_remove_end(source: &SourceFile, params: Node<'_>) -> usize {
+fn hspace(byte: u8) -> bool {
+    byte == b' ' || byte == b'\t'
+}
+
+fn skip_hspace(bytes: &[u8], mut i: usize) -> usize {
+    while bytes.get(i).is_some_and(|b| hspace(*b)) {
+        i += 1;
+    }
+    i
+}
+
+fn trim_hspace(bytes: &[u8], mut start: usize) -> usize {
+    while start > 0 && hspace(bytes[start - 1]) {
+        start -= 1;
+    }
+    start
+}
+
+/// Range covering `|arg|`. On `{ |arg| x` the following space goes too.
+/// On `do |arg|` / `{ |arg|` before a newline, the space before `|` and any
+/// trailing horizontal whitespace go too, so the line does not end with a space.
+fn param_span(source: &SourceFile, params: Node<'_>) -> (usize, usize) {
     let start = params.start_byte();
     let end = params.end_byte();
     let bytes = source.as_bytes();
-    if start > 0 && end < bytes.len() && bytes[start - 1] == b' ' && bytes[end] == b' ' {
-        return end + 1;
+    let ws_end = skip_hspace(bytes, end);
+    if ws_end == bytes.len() || bytes.get(ws_end) == Some(&b'\n') {
+        return (trim_hspace(bytes, start), ws_end);
     }
-    end
+    if start > 0 && bytes[start - 1] == b' ' && bytes.get(end) == Some(&b' ') {
+        return (start, end + 1);
+    }
+    (start, end)
 }
 
 fn report_it(
@@ -137,13 +162,8 @@ fn report_named(
         return;
     }
     if let Some(params) = block.child_by_field_name("parameters") {
-        push_replace(
-            corrections,
-            params.start_byte(),
-            param_remove_end(source, params),
-            "",
-            cop.name(),
-        );
+        let (start, end) = param_span(source, params);
+        push_replace(corrections, start, end, "", cop.name());
     }
     for id in uses {
         push_at(
@@ -228,6 +248,61 @@ mod tests {
             &ItBlockParameter,
             b"block { do_something(_1) }\n",
             ruby_config("3.3", "always"),
+        );
+    }
+
+    fn corrected(src: &str) -> String {
+        let config = ruby_config("3.4", "always");
+        let source = crate::parse::source::SourceFile::from_bytes("t.rb", src.as_bytes().to_vec());
+        let tree = crate::parse::parse_ruby(&source).expect("parse");
+        let mut corrections = Vec::new();
+        walk(
+            &ItBlockParameter,
+            &source,
+            tree.root_node(),
+            &config,
+            &mut Vec::new(),
+            &mut corrections,
+        );
+        String::from_utf8(
+            crate::correction::CorrectionSet::from_vec(corrections).apply(source.as_bytes()),
+        )
+        .expect("utf8")
+    }
+
+    fn walk(
+        cop: &ItBlockParameter,
+        source: &crate::parse::source::SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<crate::diagnostic::Diagnostic>,
+        corrections: &mut Vec<crate::correction::Correction>,
+    ) {
+        if matches!(node.kind(), "block" | "do_block") {
+            cop.check_node(source, node, config, diagnostics, Some(corrections));
+        }
+        for child in node.children(&mut node.walk()) {
+            walk(cop, source, child, config, diagnostics, corrections);
+        }
+    }
+
+    #[test]
+    fn always_drops_space_before_newline() {
+        assert_eq!(
+            corrected("list.each do |item|\n  item\nend\n"),
+            "list.each do\n  it\nend\n"
+        );
+        assert_eq!(
+            corrected("list.each { |item|\n  item\n}\n"),
+            "list.each {\n  it\n}\n"
+        );
+        assert_eq!(
+            corrected("list.each { |item| item }\n"),
+            "list.each { it }\n"
+        );
+        assert_eq!(
+            corrected("list.each do |item| \t\n  item\nend\n"),
+            "list.each do\n  it\nend\n"
         );
     }
 }
