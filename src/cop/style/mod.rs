@@ -54,6 +54,7 @@ mod if_with_semicolon;
 mod in_pattern_then;
 mod infinite_loop;
 mod invertible_unless_condition;
+mod it_block_parameter;
 mod lambda;
 mod lambda_call;
 mod line_end_concatenation;
@@ -210,6 +211,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         in_pattern_then::InPatternThen,
         infinite_loop::InfiniteLoop,
         invertible_unless_condition::InvertibleUnlessCondition,
+        it_block_parameter::ItBlockParameter,
         lambda::Lambda,
         lambda_call::LambdaCall,
         line_end_concatenation::LineEndConcatenation,
