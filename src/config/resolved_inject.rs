@@ -179,6 +179,25 @@ pub(crate) fn inject_hash_alignment(cfg: &ResolvedConfig, name: &str, config: &m
     );
 }
 
+pub(crate) fn inject_first_argument(cfg: &ResolvedConfig, name: &str, config: &mut CopConfig) {
+    if name != "Layout/FirstArgumentIndentation" {
+        return;
+    }
+    inject_sibling_str(
+        &mut config.options,
+        &cfg.cop_configs,
+        "Layout/ArgumentAlignment",
+        "EnforcedStyle",
+        "ArgumentAlignmentStyle",
+        "with_first_argument",
+    );
+    inject_bool(
+        &mut config.options,
+        "FirstMethodArgumentLineBreakEnabled",
+        sibling_enabled(&cfg.cop_configs, "Layout/FirstMethodArgumentLineBreak"),
+    );
+}
+
 pub(crate) fn inject_first_hash_indent(cfg: &ResolvedConfig, name: &str, config: &mut CopConfig) {
     if name != "Layout/FirstHashElementIndentation" {
         return;
@@ -191,12 +210,12 @@ pub(crate) fn inject_first_hash_indent(cfg: &ResolvedConfig, name: &str, config:
             .options
             .entry(key.to_string())
             .or_insert(
-                cfg.cop_configs
-                    .get("Layout/HashAlignment")
-                    .and_then(|cc| cc.options.get(key))
-                    .cloned()
-                    .unwrap_or_else(|| Value::String(default.to_string())),
-            );
+            cfg.cop_configs
+                .get("Layout/HashAlignment")
+                .and_then(|cc| cc.options.get(key))
+                .cloned()
+                .unwrap_or_else(|| Value::String(default.to_string())),
+        );
     }
 }
 
