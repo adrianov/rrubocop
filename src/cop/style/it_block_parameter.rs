@@ -77,7 +77,7 @@ fn param_span(source: &SourceFile, params: Node<'_>) -> (usize, usize) {
     let end = params.end_byte();
     let bytes = source.as_bytes();
     let ws_end = skip_hspace(bytes, end);
-    if ws_end == bytes.len() || bytes.get(ws_end) == Some(&b'\n') {
+    if ws_end == bytes.len() || matches!(bytes.get(ws_end), Some(&b'\n' | &b'\r')) {
         return (trim_hspace(bytes, start), ws_end);
     }
     if start > 0 && bytes[start - 1] == b' ' && bytes.get(end) == Some(&b' ') {
@@ -303,6 +303,10 @@ mod tests {
         assert_eq!(
             corrected("list.each do |item| \t\n  item\nend\n"),
             "list.each do\n  it\nend\n"
+        );
+        assert_eq!(
+            corrected("list.each do |item|\r\n  item\r\nend\r\n"),
+            "list.each do\r\n  it\r\nend\r\n"
         );
     }
 }
