@@ -198,6 +198,15 @@ pub(crate) fn inject_first_argument(cfg: &ResolvedConfig, name: &str, config: &m
     );
 }
 
+fn argument_alignment_fixed(configs: &HashMap<String, CopConfig>) -> bool {
+    sibling_enabled(configs, "Layout/ArgumentAlignment")
+        && configs
+            .get("Layout/ArgumentAlignment")
+            .and_then(|cc| cc.options.get("EnforcedStyle"))
+            .and_then(|v| v.as_str())
+            == Some("with_fixed_indentation")
+}
+
 pub(crate) fn inject_first_hash_indent(cfg: &ResolvedConfig, name: &str, config: &mut CopConfig) {
     if name != "Layout/FirstHashElementIndentation" {
         return;
@@ -217,6 +226,11 @@ pub(crate) fn inject_first_hash_indent(cfg: &ResolvedConfig, name: &str, config:
                 .unwrap_or_else(|| Value::String(default.to_string())),
         );
     }
+    inject_bool(
+        &mut config.options,
+        "FixedArgumentIndentation",
+        argument_alignment_fixed(&cfg.cop_configs),
+    );
 }
 
 pub(crate) fn inject_end_alignment(cfg: &ResolvedConfig, name: &str, config: &mut CopConfig) {

@@ -196,6 +196,13 @@ mod tests {
     }
 
     #[test]
+    fn first_hash_shifts_value_lines() {
+        let mut bytes = b"a = {\n    a: [\n      1\n    ]\n}\n".to_vec();
+        lint_only("t.rb", &mut bytes, "Layout/FirstHashElementIndentation");
+        assert_eq!(bytes, b"a = {\n  a: [\n    1\n  ]\n}\n");
+    }
+
+    #[test]
     fn loop_applies_multiple_passes() {
         let mut bytes = b"x = 1  \n  y = 2  \n".to_vec();
         let diags = lint_only("sample.rb", &mut bytes, "Layout/TrailingWhitespace");
