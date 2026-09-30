@@ -79,8 +79,8 @@ pub(crate) fn write_summary(
     let (corrected, correctable) = count_fix_states(diagnostics);
     if corrected == 0 && correctable == 0 {
         if n == 0 {
-            let clean = color.green("no offenses detected");
-            let _ = writeln!(out, "\n{files} inspected, {clean}");
+            let clean = color.green("no offenses");
+            let _ = writeln!(out, "\n{files} inspected, {clean} detected");
         } else {
             let _ = writeln!(out, "\n{files} inspected, {offenses} detected");
         }
