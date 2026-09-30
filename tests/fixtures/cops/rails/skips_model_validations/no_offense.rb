@@ -1,4 +1,5 @@
 user.update(website: 'example.com')
+Model.delete(1)
 Model.delete_all
 Model.destroy_all
 FileUtils.touch('file')
