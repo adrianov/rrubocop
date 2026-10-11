@@ -44,6 +44,9 @@ fn aligned_expected(source: &SourceFile, node: Node<'_>, width: usize) -> usize 
 fn inside_paren_arg_list(node: Node<'_>) -> bool {
     let mut p = node.parent();
     while let Some(n) = p {
+        if n.kind() == "parenthesized_statements" {
+            return true;
+        }
         if n.kind() == "argument_list" {
             return n.child(0).is_some_and(|c| !c.is_named() && c.kind() == "(");
         }

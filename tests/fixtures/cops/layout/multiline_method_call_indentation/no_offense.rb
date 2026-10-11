@@ -20,3 +20,11 @@ allow(SearchProductsUsingAnyquery)
   )
   .and_call_original
 
+payload = {
+  serializer: (name || "x".camelize)
+          .new(params),
+}
+
+foo = (bar
+  .baz)
+
