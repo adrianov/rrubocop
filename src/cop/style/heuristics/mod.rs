@@ -39,11 +39,13 @@ pub use identical_branches::identical_branch_nodes;
 #[allow(unused_imports)]
 pub use identical_branches::matches_identical_conditional_branches;
 
+mod explicit_block_argument;
+pub use explicit_block_argument::matches_explicit_block_argument;
+
 mod stubs;
 pub use stubs::matches_block_delimiters;
 pub use stubs::matches_class_methods_definitions;
 pub use stubs::matches_conditional_assignment;
-pub use stubs::matches_explicit_block_argument;
 pub use stubs::matches_if_inside_else;
 pub use stubs::matches_if_with_boolean_literal_branches;
 pub use stubs::matches_line_end_concatenation;

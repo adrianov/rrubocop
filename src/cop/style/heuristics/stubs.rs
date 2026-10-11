@@ -9,8 +9,6 @@ pub fn matches_class_methods_definitions(_source: &SourceFile, _node: Node<'_>, 
 
 pub fn matches_conditional_assignment(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
 
-pub fn matches_explicit_block_argument(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
-
 pub fn matches_if_inside_else(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
 
 pub fn matches_if_with_boolean_literal_branches(_source: &SourceFile, _node: Node<'_>, _config: &CopConfig) -> bool { false }
