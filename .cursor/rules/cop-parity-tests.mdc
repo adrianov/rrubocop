@@ -1,5 +1,5 @@
 ---
-description: Add RuboCop/nitrocop-style cop fixtures when fixing FPs or parity gaps
+description: Cop parity fixtures, and discrepancy reports must match autocorrectable too
 alwaysApply: true
 ---
 
@@ -14,6 +14,15 @@ When comparing rrubocop output to RuboCop on a **Ruby project** (e.g. a client a
 3. Match scan scope: same cwd, paths, `-F 0` for full runs, `--cache false` when diffing, and the project's `.rubocop.yml` (not `--force-default-config`).
 
 rrubocop's built-in baseline (`src/resources/baseline.json`, shown in `--version`) is the implementation target; **`bundle exec rubocop` on the project under test** is the acceptance check.
+
+## Discrepancy reports
+
+A pasted rrubocop vs `bundle exec rubocop` report is not resolved when the offense list matches. Also compare autocorrect:
+
+- Offense line: RuboCop `C: [Correctable]` vs rrubocop `C:` with no status.
+- Summary: `1 offense detected, 1 offense autocorrectable` vs `1 offense detected`.
+
+If RuboCop marks the cop correctable, set `supports_autocorrect` and implement the real `-a` rewrite (same edit RuboCop applies). Do not stop at the `[Correctable]` flag. Cover that rewrite with a test. Bump `RULES_REV` in `src/cache/store.rs` when `correctable` or the stored diagnostic changes, so a same-version binary does not replay a cached result from before the fix.
 
 ## Fixture tests in this repo
 
