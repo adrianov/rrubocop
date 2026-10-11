@@ -1,0 +1,5 @@
+allow(foo).to receive(:bar)
+expect(foo).to have_received(:bar)
+expect(foo).to eq(1)
+expect(foo).not_to have_received(:bar)
+expect(foo).to have_received(:a).and receive(:b)
