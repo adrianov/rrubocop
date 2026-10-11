@@ -15,6 +15,7 @@ const MSG: &str =
 pub(super) const COP: &str = "Style/ExplicitBlockArgument";
 
 mod edit;
+mod name;
 mod rewrite;
 
 pub(super) fn host<'a>(node: Node<'a>) -> Node<'a> {
@@ -200,6 +201,29 @@ def destruct((a, b))
 end
 
 def endless = tap { yield }
+
+def uses_block
+  block = 1
+  bar { yield }
+  block
+end
+
+def uses_both
+  block = 1
+  block2 = 2
+  bar { yield }
+end
+
+def calls_block
+  block()
+  obj.block
+  bar { yield }
+end
+
+def inner_param
+  tap { |block| block }
+  bar { yield }
+end
 ";
         let want = "\
 def nine_times(&block)
@@ -294,6 +318,29 @@ def destruct((a, b), &block)
 end
 
 def endless(&block) = tap(&block)
+
+def uses_block(&block2)
+  block = 1
+  bar(&block2)
+  block
+end
+
+def uses_both(&block3)
+  block = 1
+  block2 = 2
+  bar(&block3)
+end
+
+def calls_block(&block)
+  block()
+  obj.block
+  bar(&block)
+end
+
+def inner_param(&block)
+  tap { |block| block }
+  bar(&block)
+end
 ";
         assert_eq!(corrected(src), want);
     }

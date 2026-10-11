@@ -2,11 +2,11 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared::node_bytes;
 use crate::correction::Correction;
 use crate::parse::source::SourceFile;
 
 use super::edit::{is_zsuper, list_edit, zsuper_args};
+use super::name::{block_param, pass_name};
 use super::{host, COP};
 
 pub(super) fn rewrite(
@@ -21,12 +21,15 @@ pub(super) fn rewrite(
     let Some(method) = def_node(block) else {
         return false;
     };
-    add_def_block(source, method, corrections);
+    let Some(name) = pass_name(source, method) else {
+        return false;
+    };
+    add_def_block(source, method, corrections, &name);
     push_edit(
         corrections,
         call.start_byte(),
         call.end_byte(),
-        call_replacement(source, call, method, &pass_name(source, method)),
+        call_replacement(source, call, method, &name),
     )
 }
 
@@ -39,28 +42,6 @@ fn def_node(node: Node<'_>) -> Option<Node<'_>> {
         p = n.parent();
     }
     None
-}
-
-/// Name of an existing `&param`, or `Some(b"")` for anonymous `&`.
-fn block_param<'a>(source: &'a SourceFile, params: Node<'_>) -> Option<&'a [u8]> {
-    let mut cur = params.walk();
-    let found = params
-        .named_children(&mut cur)
-        .find(|c| c.kind() == "block_parameter")?;
-    Some(
-        found
-            .child_by_field_name("name")
-            .map(|n| node_bytes(source, n))
-            .unwrap_or(b""),
-    )
-}
-
-fn pass_name(source: &SourceFile, method: Node<'_>) -> String {
-    method
-        .child_by_field_name("parameters")
-        .and_then(|p| block_param(source, p))
-        .map(|b| String::from_utf8_lossy(b).into_owned())
-        .unwrap_or_else(|| "block".to_string())
 }
 
 fn call_end_before_block(call: Node<'_>) -> usize {
@@ -121,23 +102,24 @@ fn add_def_block(
     source: &SourceFile,
     method: Node<'_>,
     corrections: &mut Option<&mut Vec<Correction>>,
+    name: &str,
 ) {
     let Some(params) = method.child_by_field_name("parameters") else {
-        let Some(name) = method.child_by_field_name("name") else {
+        let Some(method_name) = method.child_by_field_name("name") else {
             return;
         };
         push_edit(
             corrections,
-            name.end_byte(),
-            name.end_byte(),
-            "(&block)".into(),
+            method_name.end_byte(),
+            method_name.end_byte(),
+            format!("(&{name})"),
         );
         return;
     };
     if block_param(source, params).is_some() {
         return;
     }
-    if let Some((start, end, text)) = list_edit(source, params, "block") {
+    if let Some((start, end, text)) = list_edit(source, params, name) {
         push_edit(corrections, start, end, text);
     }
 }
