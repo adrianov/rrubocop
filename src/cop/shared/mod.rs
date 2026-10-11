@@ -1,6 +1,11 @@
 //! Shared tree-sitter helpers for cops (nitrocop-inspired, AST-adapted).
 
+mod bare_args;
+mod block_pass;
 mod node_util;
+
+pub use bare_args::replace_arg;
+pub use block_pass::{EXCLUDED_BLOCK_PARENTS, METHOD_STOPS, NESTED_SCOPES, Passes, ScanOpts, scan};
 
 pub use node_util::{
     child_kind, end_keyword, last_child_kind, line_blank, line_indent, named_kids, node_bytes,

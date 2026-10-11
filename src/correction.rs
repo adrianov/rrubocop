@@ -20,6 +20,13 @@ impl CorrectionSet {
         raw.sort_by(|a, b| a.start.cmp(&b.start).then(a.cop_index.cmp(&b.cop_index)));
         let mut accepted: Vec<Correction> = Vec::with_capacity(raw.len());
         for c in raw {
+            if c.start == c.end
+                && accepted
+                    .iter()
+                    .any(|a| a.start == c.start && a.end == c.end && a.replacement == c.replacement)
+            {
+                continue;
+            }
             if let Some(last) = accepted.last()
                 && c.start < last.end
             {
@@ -78,9 +85,11 @@ pub fn reconcile_corrected(
             d.corrected = false;
             continue;
         };
-        if !set.accepted().iter().any(|c| {
-            c.cop_name == d.cop_name && correction_covers(c, off)
-        }) {
+        if !set
+            .accepted()
+            .iter()
+            .any(|c| c.cop_name == d.cop_name && correction_covers(c, off))
+        {
             d.corrected = false;
         }
     }
