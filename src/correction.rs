@@ -13,29 +13,28 @@ pub struct Correction {
 
 pub struct CorrectionSet {
     corrections: Vec<Correction>,
+    /// Other cops that emitted the same edit and were dropped as duplicates.
+    aliases: Vec<Vec<&'static str>>,
 }
 
 impl CorrectionSet {
     pub fn from_vec(mut raw: Vec<Correction>) -> Self {
         raw.sort_by(|a, b| a.start.cmp(&b.start).then(a.cop_index.cmp(&b.cop_index)));
         let mut accepted: Vec<Correction> = Vec::with_capacity(raw.len());
+        let mut aliases = Vec::with_capacity(raw.len());
         for c in raw {
-            if c.start == c.end
-                && accepted
-                    .iter()
-                    .any(|a| a.start == c.start && a.end == c.end && a.replacement == c.replacement)
-            {
+            if note_same(&accepted, &mut aliases, &c) {
                 continue;
             }
-            if let Some(last) = accepted.last()
-                && c.start < last.end
-            {
+            if accepted.last().is_some_and(|last| c.start < last.end) {
                 continue;
             }
             accepted.push(c);
+            aliases.push(Vec::new());
         }
         Self {
             corrections: accepted,
+            aliases,
         }
     }
 
@@ -66,6 +65,16 @@ impl CorrectionSet {
     pub fn len(&self) -> usize {
         self.corrections.len()
     }
+
+    fn credits(&self, cop: &str, off: usize) -> bool {
+        self.corrections
+            .iter()
+            .zip(&self.aliases)
+            .any(|(edit, names)| {
+                correction_covers(edit, off)
+                    && (edit.cop_name == cop || names.iter().any(|n| *n == cop))
+            })
+    }
 }
 
 /// Clear `corrected` on diagnostics whose cop edit was dropped or not applied.
@@ -85,16 +94,88 @@ pub fn reconcile_corrected(
             d.corrected = false;
             continue;
         };
-        if !set
-            .accepted()
-            .iter()
-            .any(|c| c.cop_name == d.cop_name && correction_covers(c, off))
-        {
+        if !set.credits(&d.cop_name, off) {
             d.corrected = false;
         }
     }
 }
 
+fn note_same(accepted: &[Correction], aliases: &mut [Vec<&'static str>], c: &Correction) -> bool {
+    let Some(i) = accepted
+        .iter()
+        .position(|a| a.start == c.start && a.end == c.end && a.replacement == c.replacement)
+    else {
+        return false;
+    };
+    let name = c.cop_name;
+    if name != accepted[i].cop_name && !aliases[i].contains(&name) {
+        aliases[i].push(name);
+    }
+    true
+}
+
 fn correction_covers(c: &Correction, off: usize) -> bool {
     off >= c.start && off <= c.end.max(c.start)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+    use crate::diagnostic::{Diagnostic, Location, Severity};
+    use crate::parse::source::SourceFile;
+
+    fn edit(start: usize, end: usize, replacement: &str, cop: &'static str) -> Correction {
+        Correction {
+            start,
+            end,
+            replacement: replacement.into(),
+            cop_name: cop,
+            cop_index: 0,
+        }
+    }
+
+    fn diag(cop: &str, column: usize) -> Diagnostic {
+        Diagnostic {
+            path: "a.rb".into(),
+            cop_name: cop.into(),
+            message: "m".into(),
+            location: Location { line: 1, column },
+            severity: Severity::Convention,
+            corrected: true,
+            correctable: true,
+            source_line: String::new(),
+            highlight_length: 1,
+        }
+    }
+
+    #[test]
+    fn identical_edits_keep_both_cops_corrected() {
+        let source = SourceFile::from_bytes(Path::new("a.rb"), b"def foo(&block)\nend\n".to_vec());
+        let set = CorrectionSet::from_vec(vec![
+            edit(8, 14, "&", "Naming/BlockForwarding"),
+            edit(8, 14, "&", "Style/ArgumentsForwarding"),
+        ]);
+        assert_eq!(set.len(), 1);
+        assert_eq!(set.apply(source.as_bytes()), b"def foo(&)\nend\n");
+        let mut diags = vec![
+            diag("Naming/BlockForwarding", 8),
+            diag("Style/ArgumentsForwarding", 8),
+        ];
+        reconcile_corrected(&mut diags, &source, &set);
+        assert!(diags.iter().all(|d| d.corrected), "{diags:?}");
+    }
+
+    #[test]
+    fn conflicting_overlap_does_not_credit_the_dropped_cop() {
+        let source = SourceFile::from_bytes(Path::new("a.rb"), b"foo  \n".to_vec());
+        let set = CorrectionSet::from_vec(vec![
+            edit(3, 5, "", "Layout/Other"),
+            edit(3, 5, " ", "Layout/TrailingWhitespace"),
+        ]);
+        let mut diags = vec![diag("Layout/TrailingWhitespace", 4)];
+        reconcile_corrected(&mut diags, &source, &set);
+        assert!(!diags[0].corrected);
+    }
 }
