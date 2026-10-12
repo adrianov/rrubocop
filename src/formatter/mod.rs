@@ -105,13 +105,19 @@ impl<'a> ProgressSink<'a> {
     }
 }
 
-pub fn create_formatter(format: &str, color: Color) -> Box<dyn Formatter> {
+pub fn create_formatter(format: &str, color: Color, safe: bool) -> Box<dyn Formatter> {
     match format {
         "json" => Box::new(json::JsonFormatter),
         "github" => Box::new(github::GithubFormatter),
         "quiet" => Box::new(quiet::QuietFormatter { color }),
         "files" => Box::new(files::FilesFormatter),
-        "emacs" | "simple" | "text" => Box::new(text::TextFormatter { color }),
-        _ => Box::new(progress::ProgressFormatter { color }),
+        "emacs" | "simple" | "text" => Box::new(text::TextFormatter {
+            color,
+            safe_autocorrect: safe,
+        }),
+        _ => Box::new(progress::ProgressFormatter {
+            color,
+            safe_autocorrect: safe,
+        }),
     }
 }

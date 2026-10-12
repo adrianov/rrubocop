@@ -6,6 +6,8 @@ use crate::formatter::color::Color;
 
 pub struct TextFormatter {
     pub color: Color,
+    /// `-a`: remaining correctable offenses need `rubocop -A`.
+    pub safe_autocorrect: bool,
 }
 
 impl Formatter for TextFormatter {
@@ -18,7 +20,13 @@ impl Formatter for TextFormatter {
         for d in diagnostics {
             let _ = writeln!(out, "{}", d.render(self.color));
         }
-        write_summary(self.color, diagnostics, files.len(), out);
+        write_summary(
+            self.color,
+            diagnostics,
+            files.len(),
+            self.safe_autocorrect,
+            out,
+        );
     }
 }
 
@@ -45,6 +53,18 @@ fn colored_offense_count(color: Color, n: usize) -> String {
     }
 }
 
+fn correctable_clause(color: Color, n: usize, safe: bool) -> String {
+    let (word, tail) = if safe {
+        (
+            noun(n, "more offense", "more offenses"),
+            " can be corrected with `rubocop -A`",
+        )
+    } else {
+        (noun(n, "offense", "offenses"), " autocorrectable")
+    };
+    format!("{}{tail}", color.yellow(&format!("{n} {word}")))
+}
+
 fn write_with_corrected(
     color: Color,
     files: &str,
@@ -52,6 +72,7 @@ fn write_with_corrected(
     n: usize,
     corrected: usize,
     correctable: usize,
+    safe: bool,
     out: &mut dyn Write,
 ) {
     let corr_text = format!("{corrected} {}", noun(corrected, "offense", "offenses"));
@@ -67,11 +88,10 @@ fn write_with_corrected(
         );
         return;
     }
-    let more = format!("{correctable} {}", noun(correctable, "offense", "offenses"));
+    let more = correctable_clause(color, correctable, safe);
     let _ = writeln!(
         out,
-        "\n{files} inspected, {offenses} detected, {corr} corrected, {} autocorrectable",
-        color.yellow(&more)
+        "\n{files} inspected, {offenses} detected, {corr} corrected, {more}"
     );
 }
 
@@ -79,6 +99,7 @@ pub(crate) fn write_summary(
     color: Color,
     diagnostics: &[Diagnostic],
     file_count: usize,
+    safe: bool,
     out: &mut dyn Write,
 ) {
     let n = diagnostics.len();
@@ -93,13 +114,74 @@ pub(crate) fn write_summary(
             let _ = writeln!(out, "\n{files} inspected, {offenses} detected");
         }
     } else if corrected > 0 {
-        write_with_corrected(color, &files, &offenses, n, corrected, correctable, out);
-    } else {
-        let more = format!("{correctable} {}", noun(correctable, "offense", "offenses"));
-        let _ = writeln!(
+        write_with_corrected(
+            color,
+            &files,
+            &offenses,
+            n,
+            corrected,
+            correctable,
+            safe,
             out,
-            "\n{files} inspected, {offenses} detected, {} autocorrectable",
-            color.yellow(&more)
+        );
+    } else {
+        let more = correctable_clause(color, correctable, safe);
+        let _ = writeln!(out, "\n{files} inspected, {offenses} detected, {more}");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::diagnostic::{Location, Severity};
+
+    fn diag(correctable: bool, corrected: bool) -> Diagnostic {
+        Diagnostic {
+            path: "a.rb".into(),
+            location: Location { line: 1, column: 0 },
+            severity: Severity::Convention,
+            cop_name: "Style/ModuleFunction".into(),
+            message: "msg".into(),
+            corrected,
+            correctable,
+            source_line: String::new(),
+            highlight_length: 1,
+        }
+    }
+
+    fn summary(diags: &[Diagnostic], safe: bool) -> String {
+        let mut buf = Vec::new();
+        write_summary(Color::resolve(Some(false)), diags, 1, safe, &mut buf);
+        String::from_utf8(buf).unwrap()
+    }
+
+    #[test]
+    fn plain_run_says_autocorrectable() {
+        let s = summary(&[diag(true, false)], false);
+        assert!(
+            s.contains("1 file inspected, 1 offense detected, 1 offense autocorrectable"),
+            "{s}"
+        );
+    }
+
+    #[test]
+    fn safe_run_points_at_unsafe_flag() {
+        let s = summary(&[diag(true, false)], true);
+        assert!(
+            s.contains(
+                "1 file inspected, 1 offense detected, 1 more offense can be corrected with `rubocop -A`"
+            ),
+            "{s}"
+        );
+    }
+
+    #[test]
+    fn safe_run_plural_after_partial_correction() {
+        let diags = [diag(true, true), diag(true, false), diag(true, false)];
+        let s = summary(&diags, true);
+        assert!(
+            s.contains("1 offense corrected, 2 more offenses can be corrected with `rubocop -A`"),
+            "{s}"
         );
     }
 }

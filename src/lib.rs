@@ -98,8 +98,16 @@ fn exit_from_diags(diags: &[Diagnostic], fail_level: &str) -> ExitCode {
 }
 
 fn print_results(args: &Args, diags: &[Diagnostic], files: &[std::path::PathBuf]) -> ExitCode {
-    create_formatter(&args.format, Color::resolve(args.color_force())).print(diags, files);
+    formatter_for(args).print(diags, files);
     exit_from_diags(diags, &args.fail_level)
+}
+
+fn formatter_for(args: &Args) -> Box<dyn Formatter> {
+    create_formatter(
+        &args.format,
+        Color::resolve(args.color_force()),
+        args.autocorrect_mode() == AutocorrectMode::Safe,
+    )
 }
 
 fn list_target_files(args: &Args, config: &ResolvedConfig) -> Result<ExitCode> {
@@ -118,7 +126,7 @@ fn lint_paths(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> R
     if args.list_target_files {
         return list_target_files(args, config);
     }
-    let fmt = create_formatter(&args.format, Color::resolve(args.color_force()));
+    let fmt = formatter_for(args);
     if fmt.streams_marks() {
         return lint_paths_streaming(args, config, registry, fmt.as_ref());
     }

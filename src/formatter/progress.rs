@@ -10,6 +10,8 @@ use crate::formatter::text::write_summary;
 /// RuboCop progress formatter: Inspecting header, marks, then clang offenses.
 pub struct ProgressFormatter {
     pub color: Color,
+    /// `-a`: remaining correctable offenses need `rubocop -A`.
+    pub safe_autocorrect: bool,
 }
 
 impl Formatter for ProgressFormatter {
@@ -30,7 +32,13 @@ impl Formatter for ProgressFormatter {
     fn finished(&self, diagnostics: &[Diagnostic], files: &[PathBuf], out: &mut dyn Write) {
         let _ = writeln!(out);
         write_offense_block(self.color, diagnostics, out);
-        write_summary(self.color, diagnostics, files.len(), out);
+        write_summary(
+            self.color,
+            diagnostics,
+            files.len(),
+            self.safe_autocorrect,
+            out,
+        );
         let _ = out.flush();
     }
 
@@ -38,7 +46,13 @@ impl Formatter for ProgressFormatter {
         write_inspecting(files.len(), out);
         write_marks(self.color, diagnostics, files, out);
         write_offense_block(self.color, diagnostics, out);
-        write_summary(self.color, diagnostics, files.len(), out);
+        write_summary(
+            self.color,
+            diagnostics,
+            files.len(),
+            self.safe_autocorrect,
+            out,
+        );
     }
 }
 
@@ -116,6 +130,7 @@ mod tests {
     fn progress_colors_mark_and_summary() {
         let fmt = ProgressFormatter {
             color: Color::resolve(Some(true)),
+            safe_autocorrect: false,
         };
         let mut buf = Vec::new();
         fmt.format_to(&[sample()], &[PathBuf::from("a.rb")], &mut buf);
@@ -130,6 +145,7 @@ mod tests {
     fn progress_green_dot_when_clean() {
         let fmt = ProgressFormatter {
             color: Color::resolve(Some(true)),
+            safe_autocorrect: false,
         };
         let mut buf = Vec::new();
         fmt.format_to(&[], &[PathBuf::from("a.rb")], &mut buf);
@@ -142,6 +158,7 @@ mod tests {
     fn progress_streams_mark_then_summary() {
         let fmt = ProgressFormatter {
             color: Color::resolve(Some(false)),
+            safe_autocorrect: false,
         };
         let mut buf = Vec::new();
         fmt.started(2, &mut buf);
@@ -156,5 +173,22 @@ mod tests {
         assert!(s.starts_with("Inspecting 2 files\n.C\n"), "{s}");
         assert!(s.contains("Offenses:"), "{s}");
         assert!(s.contains("2 files inspected, 1 offense detected"), "{s}");
+    }
+
+    #[test]
+    fn progress_safe_summary_names_unsafe_flag() {
+        let mut offense = sample();
+        offense.correctable = true;
+        let fmt = ProgressFormatter {
+            color: Color::resolve(Some(false)),
+            safe_autocorrect: true,
+        };
+        let mut buf = Vec::new();
+        fmt.format_to(&[offense], &[PathBuf::from("a.rb")], &mut buf);
+        let s = String::from_utf8(buf).unwrap();
+        assert!(
+            s.contains("1 more offense can be corrected with `rubocop -A`"),
+            "{s}"
+        );
     }
 }
