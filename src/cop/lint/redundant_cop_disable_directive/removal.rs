@@ -7,8 +7,8 @@ use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
-use super::directives::{cop_token_column, disable_marker, nth_cop_token};
 use super::RedundantCopDisableDirective;
+use super::directives::{cop_token_column, disable_marker, nth_cop_token};
 
 fn line_bytes(source: &SourceFile, line_no: usize) -> Option<&[u8]> {
     let start = source.line_start(line_no)?;
@@ -29,13 +29,17 @@ fn trim_eol(slice: &[u8]) -> &[u8] {
 }
 
 fn comment_only_span(source: &SourceFile, line_start: usize, line: &[u8]) -> (usize, usize) {
-    let end = line_start
-        + line.len()
-        + usize::from(line_start + line.len() < source.as_bytes().len());
+    let end =
+        line_start + line.len() + usize::from(line_start + line.len() < source.as_bytes().len());
     (line_start, end)
 }
 
-fn inline_span(source: &SourceFile, line_start: usize, pos: usize, line_len: usize) -> (usize, usize) {
+fn inline_span(
+    source: &SourceFile,
+    line_start: usize,
+    pos: usize,
+    line_len: usize,
+) -> (usize, usize) {
     let mut remove_from = line_start + pos;
     while remove_from > line_start && matches!(source.as_bytes()[remove_from - 1], b' ' | b'\t') {
         remove_from -= 1;

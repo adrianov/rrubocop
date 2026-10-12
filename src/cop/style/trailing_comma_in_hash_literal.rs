@@ -12,9 +12,11 @@ pub struct TrailingCommaInHashLiteral;
 
 fn last_non_close<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
     let mut cur = node.walk();
-    node.children(&mut cur).collect::<Vec<_>>().into_iter().rev().find(|c| {
-        node_bytes(source, *c) != b"}" && c.kind() != "comment"
-    })
+    node.children(&mut cur)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .find(|c| node_bytes(source, *c) != b"}" && c.kind() != "comment")
 }
 
 fn last_item(source: &SourceFile, node: Node<'_>) -> Option<(bool, usize)> {
@@ -89,7 +91,10 @@ mod tests {
     use crate::cop::CopConfig;
     use crate::testutil::assert_cop_no_offenses_full_with_config;
 
-    crate::cop_fixture_tests!(TrailingCommaInHashLiteral, "cops/style/trailing_comma_in_hash_literal");
+    crate::cop_fixture_tests!(
+        TrailingCommaInHashLiteral,
+        "cops/style/trailing_comma_in_hash_literal"
+    );
 
     #[test]
     fn comma_before_trailing_comment_consistent() {

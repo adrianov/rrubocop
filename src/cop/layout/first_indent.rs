@@ -2,8 +2,8 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared;
 use crate::cop::Cop;
+use crate::cop::shared;
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -118,6 +118,15 @@ pub fn check_first(
     let expected = expected_col(source, node, width, style);
     let actual = shared::line_indent(source, first.start_byte());
     if actual != expected {
-        report_indent(cop, source, first, actual, expected, message, diagnostics, corrections);
+        report_indent(
+            cop,
+            source,
+            first,
+            actual,
+            expected,
+            message,
+            diagnostics,
+            corrections,
+        );
     }
 }

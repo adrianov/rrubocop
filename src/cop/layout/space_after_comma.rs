@@ -82,8 +82,7 @@ impl Cop for SpaceAfterComma {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let skip_rcurly =
-            config.get_str("__SpaceInsideHashBracesStyle", "space") == "no_space";
+        let skip_rcurly = config.get_str("__SpaceInsideHashBracesStyle", "space") == "no_space";
         let bytes = source.as_bytes();
         for i in 0..bytes.len() {
             if should_flag(bytes, i, code_map, skip_rcurly) {

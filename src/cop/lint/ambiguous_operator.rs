@@ -8,7 +8,10 @@ use crate::parse::source::SourceFile;
 /// Lint/AmbiguousOperator — ambiguous splat/block/unary in command-style call.
 pub struct AmbiguousOperator;
 
-fn unary_ops(source: &SourceFile, first: Node<'_>) -> Option<(&'static str, &'static str, &'static str)> {
+fn unary_ops(
+    source: &SourceFile,
+    first: Node<'_>,
+) -> Option<(&'static str, &'static str, &'static str)> {
     let t = node_text(source, first);
     if t.starts_with('+') {
         Some(("positive number", "an addition", "+"))

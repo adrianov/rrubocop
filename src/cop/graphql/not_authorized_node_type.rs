@@ -85,11 +85,13 @@ fn implements_node(source: &SourceFile, class_node: Node<'_>) -> bool {
 fn has_authorization(source: &SourceFile, class_node: Node<'_>) -> bool {
     find_method_def(class_node, source, "authorized?").is_some()
         || singleton_authorized(source, class_node)
-        || [b"can_can_action" as &[u8], b"pundit_role"].iter().any(|name| {
-            collect_calls_named(class_node, source, name)
-                .into_iter()
-                .any(|c| in_class(c, class_node))
-        })
+        || [b"can_can_action" as &[u8], b"pundit_role"]
+            .iter()
+            .any(|name| {
+                collect_calls_named(class_node, source, name)
+                    .into_iter()
+                    .any(|c| in_class(c, class_node))
+            })
 }
 
 fn singleton_authorized(source: &SourceFile, class_node: Node<'_>) -> bool {

@@ -7,10 +7,7 @@ use crate::cop::shared::node_bytes;
 use crate::parse::source::SourceFile;
 
 /// Branches that share identical source text (for reporting).
-pub fn identical_branch_nodes<'a>(
-    source: &SourceFile,
-    node: Node<'a>,
-) -> Option<Vec<Node<'a>>> {
+pub fn identical_branch_nodes<'a>(source: &SourceFile, node: Node<'a>) -> Option<Vec<Node<'a>>> {
     let branches = match node.kind() {
         "if" | "unless" | "conditional" => if_branches(node),
         "case" => case_branches(node),

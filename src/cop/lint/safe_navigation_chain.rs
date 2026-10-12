@@ -10,12 +10,53 @@ pub struct SafeNavigationChain;
 
 /// Methods that are safe on `nil` (NilClass + common stdlib) — RuboCop NilMethods.
 const NIL_METHODS: &[&[u8]] = &[
-    b"nil?", b"!", b"==", b"!=", b"=~", b"!~", b"<=>", b"===", b"eql?", b"equal?", b"hash",
-    b"to_s", b"to_str", b"to_a", b"to_ary", b"to_h", b"to_hash", b"to_i", b"to_int", b"to_f",
-    b"to_r", b"to_c", b"to_d", b"inspect", b"to_enum", b"enum_for", b"is_a?", b"kind_of?",
-    b"instance_of?", b"class", b"tap", b"yield_self", b"then", b"display", b"method",
-    b"public_method", b"singleton_method", b"define_singleton_method", b"freeze", b"frozen?",
-    b"object_id", b"itself", b"__id__", b"__send__", b"send", b"public_send", b"respond_to?",
+    b"nil?",
+    b"!",
+    b"==",
+    b"!=",
+    b"=~",
+    b"!~",
+    b"<=>",
+    b"===",
+    b"eql?",
+    b"equal?",
+    b"hash",
+    b"to_s",
+    b"to_str",
+    b"to_a",
+    b"to_ary",
+    b"to_h",
+    b"to_hash",
+    b"to_i",
+    b"to_int",
+    b"to_f",
+    b"to_r",
+    b"to_c",
+    b"to_d",
+    b"inspect",
+    b"to_enum",
+    b"enum_for",
+    b"is_a?",
+    b"kind_of?",
+    b"instance_of?",
+    b"class",
+    b"tap",
+    b"yield_self",
+    b"then",
+    b"display",
+    b"method",
+    b"public_method",
+    b"singleton_method",
+    b"define_singleton_method",
+    b"freeze",
+    b"frozen?",
+    b"object_id",
+    b"itself",
+    b"__id__",
+    b"__send__",
+    b"send",
+    b"public_send",
+    b"respond_to?",
 ];
 
 impl Cop for SafeNavigationChain {
@@ -52,9 +93,9 @@ impl Cop for SafeNavigationChain {
         if !immediate_safe_nav(source, recv) {
             return;
         }
-        if call_method_name(source, node).is_some_and(|m| {
-            NIL_METHODS.contains(&m) || allowed_method(config, m)
-        }) {
+        if call_method_name(source, node)
+            .is_some_and(|m| NIL_METHODS.contains(&m) || allowed_method(config, m))
+        {
             return;
         }
         let (line, col) = source.offset_to_line_col(op.start_byte());

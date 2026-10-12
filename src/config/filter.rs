@@ -42,7 +42,11 @@ impl CopFilter {
             return true;
         }
         let path_str = path.to_string_lossy();
-        if self.include_set.as_ref().is_some_and(|inc| inc.is_match(path)) {
+        if self
+            .include_set
+            .as_ref()
+            .is_some_and(|inc| inc.is_match(path))
+        {
             return true;
         }
         self.include_re
@@ -52,7 +56,11 @@ impl CopFilter {
 
     pub(crate) fn is_excluded(&self, path: &Path) -> bool {
         let path_str = path.to_string_lossy();
-        if self.exclude_set.as_ref().is_some_and(|exc| exc.is_match(path)) {
+        if self
+            .exclude_set
+            .as_ref()
+            .is_some_and(|exc| exc.is_match(path))
+        {
             return true;
         }
         self.exclude_re

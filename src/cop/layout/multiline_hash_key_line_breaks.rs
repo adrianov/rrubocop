@@ -11,18 +11,32 @@ use crate::parse::source::SourceFile;
 pub struct MultilineHashKeyLineBreaks;
 
 impl Cop for MultilineHashKeyLineBreaks {
-    fn name(&self) -> &'static str { "Layout/MultilineHashKeyLineBreaks" }
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["hash"] }
+    fn name(&self) -> &'static str {
+        "Layout/MultilineHashKeyLineBreaks"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["hash"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = config;
         line_breaks::check_breaks(
-            self, source, node, "Each key in a multi-line hash must start on a separate line.",
-            diagnostics, &mut corrections,
+            self,
+            source,
+            node,
+            "Each key in a multi-line hash must start on a separate line.",
+            diagnostics,
+            &mut corrections,
         );
     }
 }
@@ -30,5 +44,8 @@ impl Cop for MultilineHashKeyLineBreaks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(MultilineHashKeyLineBreaks, "cops/layout/multiline_hash_key_line_breaks");
+    crate::cop_fixture_tests!(
+        MultilineHashKeyLineBreaks,
+        "cops/layout/multiline_hash_key_line_breaks"
+    );
 }

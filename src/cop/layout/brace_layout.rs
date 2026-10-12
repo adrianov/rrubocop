@@ -2,8 +2,8 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared;
 use crate::cop::Cop;
+use crate::cop::shared;
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -195,7 +195,15 @@ fn report_bad_style(
         c,
         brace_message(style, new_line_open, method_call),
     );
-    if correct_braces(cop, source, node, elems, want_nl_close, close_on_same, corrections) {
+    if correct_braces(
+        cop,
+        source,
+        node,
+        elems,
+        want_nl_close,
+        close_on_same,
+        corrections,
+    ) {
         diag.corrected = true;
     }
     diagnostics.push(diag);

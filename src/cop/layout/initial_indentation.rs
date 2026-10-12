@@ -17,7 +17,10 @@ fn effective_line(i: usize, line: &[u8]) -> (&[u8], usize) {
 }
 
 fn is_code_line(effective: &[u8]) -> bool {
-    match effective.iter().find(|&&b| b != b' ' && b != b'\t' && b != b'\r') {
+    match effective
+        .iter()
+        .find(|&&b| b != b' ' && b != b'\t' && b != b'\r')
+    {
         None | Some(b'#') => false,
         _ => true,
     }
@@ -27,7 +30,12 @@ fn leading_ws(effective: &[u8]) -> Option<usize> {
     if effective.first() != Some(&b' ') && effective.first() != Some(&b'\t') {
         return None;
     }
-    Some(effective.iter().take_while(|&&b| b == b' ' || b == b'\t').count())
+    Some(
+        effective
+            .iter()
+            .take_while(|&&b| b == b' ' || b == b'\t')
+            .count(),
+    )
 }
 
 fn first_indent_offense(source: &SourceFile) -> Option<(usize, usize)> {

@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct AssertNot;
-
 
 impl Cop for AssertNot {
     fn name(&self) -> &'static str {
@@ -21,7 +20,6 @@ impl Cop for AssertNot {
     fn default_include(&self) -> &'static [&'static str] {
         &["**/test/**/*"]
     }
-
 
     fn check_node(
         &self,

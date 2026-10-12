@@ -84,7 +84,10 @@ fn single_ident_param(node: Node<'_>) -> Option<Node<'_>> {
     let params = node.child_by_field_name("parameters")?;
     let mut cur = params.walk();
     let mut only = None;
-    for n in params.named_children(&mut cur).filter(|n| n.kind() == "identifier") {
+    for n in params
+        .named_children(&mut cur)
+        .filter(|n| n.kind() == "identifier")
+    {
         if only.is_some() {
             return None;
         }
@@ -120,8 +123,7 @@ fn rename_target<'a>(source: &SourceFile, n: Node<'a>, old: &[u8]) -> Option<Nod
     if n.kind() != "identifier" || node_bytes(source, n) != old {
         return None;
     }
-    if n
-        .parent()
+    if n.parent()
         .is_some_and(|p| matches!(p.kind(), "method_parameters" | "parameters"))
     {
         return None;

@@ -2,9 +2,9 @@
 
 use tree_sitter::Node;
 
+use crate::cop::Cop;
 use crate::cop::layout::report;
 use crate::cop::shared;
-use crate::cop::Cop;
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -18,7 +18,16 @@ pub fn check_first_break(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    check_first_break_cfg(cop, source, node, 1, message, diagnostics, corrections, false);
+    check_first_break_cfg(
+        cop,
+        source,
+        node,
+        1,
+        message,
+        diagnostics,
+        corrections,
+        false,
+    );
 }
 
 pub fn check_first_break_min(
@@ -48,7 +57,12 @@ fn uses_parens(source: &SourceFile, node: Node<'_>, first: Node<'_>) -> bool {
     limit >= start && source.as_bytes()[start..limit].contains(&b'(')
 }
 
-fn span_end_line(source: &SourceFile, elems: &[Node<'_>], node: Node<'_>, allow_final: bool) -> usize {
+fn span_end_line(
+    source: &SourceFile,
+    elems: &[Node<'_>],
+    node: Node<'_>,
+    allow_final: bool,
+) -> usize {
     if allow_final {
         elems
             .iter()
@@ -56,7 +70,9 @@ fn span_end_line(source: &SourceFile, elems: &[Node<'_>], node: Node<'_>, allow_
             .max()
             .unwrap_or_else(|| shared::node_line(source, node))
     } else {
-        source.offset_to_line_col(node.end_byte().saturating_sub(1)).0
+        source
+            .offset_to_line_col(node.end_byte().saturating_sub(1))
+            .0
     }
 }
 

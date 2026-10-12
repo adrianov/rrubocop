@@ -20,8 +20,13 @@ fn keyword_end(node: Node<'_>) -> usize {
     node.start_byte() + node.kind().len()
 }
 
-fn same_line_body_range(source: &SourceFile, node: Node<'_>, cond: Node<'_>) -> Option<(usize, usize)> {
-    let body = node.child_by_field_name("consequence")
+fn same_line_body_range(
+    source: &SourceFile,
+    node: Node<'_>,
+    cond: Node<'_>,
+) -> Option<(usize, usize)> {
+    let body = node
+        .child_by_field_name("consequence")
         .or_else(|| node.child_by_field_name("body"))?;
     let (body_line, _) = source.offset_to_line_col(body.start_byte());
     let (cond_last, _) = source.offset_to_line_col(cond.end_byte().saturating_sub(1));
@@ -37,8 +42,12 @@ fn full_line_range(source: &SourceFile, cond: Node<'_>) -> (usize, usize) {
     let (line, _) = source.offset_to_line_col(cond.start_byte());
     let start = source.line_start(line).unwrap_or(cond.start_byte());
     let mut end = cond.end_byte();
-    while end < bytes.len() && bytes[end] != b'\n' { end += 1; }
-    if end < bytes.len() && bytes[end] == b'\n' { end += 1; }
+    while end < bytes.len() && bytes[end] != b'\n' {
+        end += 1;
+    }
+    if end < bytes.len() && bytes[end] == b'\n' {
+        end += 1;
+    }
     (start, end)
 }
 
@@ -48,8 +57,12 @@ fn removal_range(source: &SourceFile, node: Node<'_>, cond: Node<'_>) -> (usize,
 
 fn keyword_of(kind: &str) -> Option<&'static str> {
     match kind {
-        "if" => Some("if"), "unless" => Some("unless"), "while" => Some("while"),
-        "until" => Some("until"), "elsif" => Some("elsif"), _ => None,
+        "if" => Some("if"),
+        "unless" => Some("unless"),
+        "while" => Some("while"),
+        "until" => Some("until"),
+        "elsif" => Some("elsif"),
+        _ => None,
     }
 }
 
@@ -61,44 +74,71 @@ fn should_check(node: Node<'_>) -> bool {
 }
 
 fn apply_move(
-    cop: &dyn Cop, source: &SourceFile, node: Node<'_>, cond: Node<'_>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    cond: Node<'_>,
     corr: &mut Vec<Correction>,
 ) -> bool {
     let cond_src = shared::node_text(source, cond);
     let kw_end = keyword_end(node);
     let (rm_start, rm_end) = removal_range(source, node, cond);
     corr.push(Correction {
-        start: kw_end, end: kw_end, replacement: format!(" {cond_src}"),
-        cop_name: cop.name(), cop_index: 0,
+        start: kw_end,
+        end: kw_end,
+        replacement: format!(" {cond_src}"),
+        cop_name: cop.name(),
+        cop_index: 0,
     });
-    if rm_start < kw_end { return false; }
+    if rm_start < kw_end {
+        return false;
+    }
     corr.push(Correction {
-        start: rm_start, end: rm_end, replacement: String::new(),
-        cop_name: cop.name(), cop_index: 1,
+        start: rm_start,
+        end: rm_end,
+        replacement: String::new(),
+        cop_name: cop.name(),
+        cop_index: 1,
     });
     true
 }
 
 impl Cop for ConditionPosition {
-    fn name(&self) -> &'static str { "Layout/ConditionPosition" }
-    fn supports_autocorrect(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "Layout/ConditionPosition"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &["if", "unless", "while", "until", "elsif"]
     }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, _config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        _config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        if !should_check(node) { return; }
-        let Some(keyword) = keyword_of(node.kind()) else { return; };
-        let Some(cond) = node.child_by_field_name("condition") else { return; };
+        if !should_check(node) {
+            return;
+        }
+        let Some(keyword) = keyword_of(node.kind()) else {
+            return;
+        };
+        let Some(cond) = node.child_by_field_name("condition") else {
+            return;
+        };
         if shared::node_line(source, node) == source.offset_to_line_col(cond.start_byte()).0 {
             return;
         }
         let (pred_line, pred_col) = source.offset_to_line_col(cond.start_byte());
         let mut diag = self.diagnostic(
-            source, pred_line, pred_col,
+            source,
+            pred_line,
+            pred_col,
             format!("Place the condition on the same line as `{keyword}`."),
         );
         if let Some(corr) = corrections.as_mut() {

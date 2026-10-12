@@ -3,8 +3,8 @@
 use tree_sitter::Node;
 
 use super::helpers::{
-    class_body_stmts, consecutive_lines, correct_order, field_name, is_field_call, module_body_stmts,
-    nested_class, DEPT_INCLUDE,
+    DEPT_INCLUDE, class_body_stmts, consecutive_lines, correct_order, field_name, is_field_call,
+    module_body_stmts, nested_class,
 };
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
@@ -51,7 +51,9 @@ fn body_fields<'a>(source: &SourceFile, node: Node<'a>) -> Vec<Node<'a>> {
     } else {
         class_body_stmts(node)
     };
-    body.into_iter().filter(|n| is_field_call(source, *n)).collect()
+    body.into_iter()
+        .filter(|n| is_field_call(source, *n))
+        .collect()
 }
 
 fn check_pair(

@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct BulkChangeTable;
-
 
 impl Cop for BulkChangeTable {
     fn name(&self) -> &'static str {
@@ -21,7 +20,6 @@ impl Cop for BulkChangeTable {
     fn default_include(&self) -> &'static [&'static str] {
         &["**/db/**/*.rb"]
     }
-
 
     fn check_node(
         &self,

@@ -144,9 +144,7 @@ fn find_user_xdg_config() -> Option<PathBuf> {
     }
     let base = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config"))
-        })?;
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))?;
     let file = base.join("rubocop").join("config.yml");
     file.is_file().then_some(file)
 }

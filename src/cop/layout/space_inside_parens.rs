@@ -69,7 +69,14 @@ fn enforce_paren_spaces(
             );
         } else {
             space_delim::strip_space_after(
-                cop, source, bytes, d, msg.into(), diagnostics, corrections, &mut correctable,
+                cop,
+                source,
+                bytes,
+                d,
+                msg.into(),
+                diagnostics,
+                corrections,
+                &mut correctable,
             );
         }
     }
@@ -78,11 +85,24 @@ fn enforce_paren_spaces(
     }
     if want {
         space_delim::add_space_before(
-            cop, source, d, close_off, msg.into(), diagnostics, corrections,
+            cop,
+            source,
+            d,
+            close_off,
+            msg.into(),
+            diagnostics,
+            corrections,
         );
     } else {
         space_delim::strip_space_before(
-            cop, source, bytes, d, msg.into(), diagnostics, corrections, &mut correctable,
+            cop,
+            source,
+            bytes,
+            d,
+            msg.into(),
+            diagnostics,
+            corrections,
+            &mut correctable,
         );
     }
 }

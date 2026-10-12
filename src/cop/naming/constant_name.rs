@@ -2,7 +2,9 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared::{call_method_name, call_receiver, is_const_named, is_screaming_snake_case, node_bytes};
+use crate::cop::shared::{
+    call_method_name, call_receiver, is_const_named, is_screaming_snake_case, node_bytes,
+};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -34,8 +36,7 @@ impl Cop for ConstantName {
         }
         if allowed_assignment(
             source,
-            node
-                .child_by_field_name("right")
+            node.child_by_field_name("right")
                 .or_else(|| node.child_by_field_name("value")),
         ) {
             return;
@@ -124,9 +125,7 @@ fn contains_constant_branch(node: Node<'_>) -> bool {
     let mut cur = node.walk();
     node.named_children(&mut cur).any(|n| match n.kind() {
         "constant" | "scope_resolution" => true,
-        "then" | "else" | "elsif" | "when" | "in" | "body_statement" => {
-            contains_constant_branch(n)
-        }
+        "then" | "else" | "elsif" | "when" | "in" | "body_statement" => contains_constant_branch(n),
         _ => false,
     })
 }

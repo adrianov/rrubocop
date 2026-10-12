@@ -36,7 +36,14 @@ impl Cop for WhenThen {
         let Some(semi_offset) = find_semicolon(source, node) else {
             return;
         };
-        report(self, source, node, semi_offset, diagnostics, &mut corrections);
+        report(
+            self,
+            source,
+            node,
+            semi_offset,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 
@@ -107,7 +114,7 @@ fn scan_semi(between: &[u8]) -> Option<usize> {
     for (i, &b) in between.iter().enumerate() {
         match (in_comment, b) {
             (_, b'\n') => in_comment = false,
-            (false, b'#' ) => in_comment = true,
+            (false, b'#') => in_comment = true,
             (false, b';') => return Some(i),
             (false, b' ' | b'\t') => {}
             _ => {}

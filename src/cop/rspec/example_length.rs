@@ -3,7 +3,7 @@
 use tree_sitter::Node;
 
 use crate::cop::rspec::helpers::{
-    bare_rspec_call, block_body, call_block, code_lines, is_example, RSPEC_INCLUDE,
+    RSPEC_INCLUDE, bare_rspec_call, block_body, call_block, code_lines, is_example,
 };
 use crate::cop::shared::method_node;
 use crate::cop::{Cop, CopConfig};

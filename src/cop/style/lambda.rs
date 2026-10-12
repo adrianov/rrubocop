@@ -68,7 +68,11 @@ fn check_lambda_kw(
     }
     let msg = format!(
         "Use the `-> {{ ... }}` lambda literal syntax for {} lambdas.",
-        if multiline(block) { "all" } else { "single line" }
+        if multiline(block) {
+            "all"
+        } else {
+            "single line"
+        }
     );
     let (line, col) = source.offset_to_line_col(node.start_byte());
     diagnostics.push(cop.diagnostic(source, line, col, msg));

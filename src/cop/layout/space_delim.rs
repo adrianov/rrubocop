@@ -236,9 +236,25 @@ pub fn strip_spaces(
 ) {
     let mut correctable = true;
     strip_space_after(
-        cop, source, bytes, d, msg.clone(), diagnostics, corrections, &mut correctable,
+        cop,
+        source,
+        bytes,
+        d,
+        msg.clone(),
+        diagnostics,
+        corrections,
+        &mut correctable,
     );
-    strip_space_before(cop, source, bytes, d, msg, diagnostics, corrections, &mut correctable);
+    strip_space_before(
+        cop,
+        source,
+        bytes,
+        d,
+        msg,
+        diagnostics,
+        corrections,
+        &mut correctable,
+    );
 }
 
 /// Enforce spaces; after-open reports at `open_off`, before-close at `close_off` when adding.
@@ -255,8 +271,24 @@ pub fn enforce_spaces(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     if want {
-        add_space_after(cop, source, d, open_off, msg.into(), diagnostics, corrections);
-        add_space_before(cop, source, d, close_off, msg.into(), diagnostics, corrections);
+        add_space_after(
+            cop,
+            source,
+            d,
+            open_off,
+            msg.into(),
+            diagnostics,
+            corrections,
+        );
+        add_space_before(
+            cop,
+            source,
+            d,
+            close_off,
+            msg.into(),
+            diagnostics,
+            corrections,
+        );
     } else {
         strip_spaces(cop, source, bytes, d, msg.into(), diagnostics, corrections);
     }

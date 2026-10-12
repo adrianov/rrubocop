@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct DescribeClass;
-
 
 impl Cop for DescribeClass {
     fn name(&self) -> &'static str {
@@ -23,9 +22,14 @@ impl Cop for DescribeClass {
     }
 
     fn default_exclude(&self) -> &'static [&'static str] {
-        &["**/spec/features/**/*", "**/spec/requests/**/*", "**/spec/routing/**/*", "**/spec/system/**/*", "**/spec/views/**/*"]
+        &[
+            "**/spec/features/**/*",
+            "**/spec/requests/**/*",
+            "**/spec/routing/**/*",
+            "**/spec/system/**/*",
+            "**/spec/views/**/*",
+        ]
     }
-
 
     fn check_node(
         &self,

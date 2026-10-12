@@ -1,31 +1,55 @@
 //! Heuristic matchers for breadth-first Style cops.
-use tree_sitter::Node;
 use crate::cop::CopConfig;
 use crate::cop::style::heuristics::double_quotes_required;
 use crate::parse::source::SourceFile;
+use tree_sitter::Node;
 
-pub fn matches_redundant_capital_w(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "string_array" { return false; }
+pub fn matches_redundant_capital_w(
+    source: &SourceFile,
+    node: Node<'_>,
+    _config: &CopConfig,
+) -> bool {
+    if node.kind() != "string_array" {
+        return false;
+    }
     let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
     b.starts_with(b"%W")
 }
 
-pub fn matches_redundant_double_splat_hash_braces(_source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "hash_splat_argument" { return false; }
+pub fn matches_redundant_double_splat_hash_braces(
+    _source: &SourceFile,
+    node: Node<'_>,
+    _config: &CopConfig,
+) -> bool {
+    if node.kind() != "hash_splat_argument" {
+        return false;
+    }
     let mut cur = node.walk();
-    node.named_children(&mut cur).any(|ch| ch.kind() == "hash" && {
-        let mut c2 = ch.walk();
-        ch.named_children(&mut c2).next().is_none()
+    node.named_children(&mut cur).any(|ch| {
+        ch.kind() == "hash" && {
+            let mut c2 = ch.walk();
+            ch.named_children(&mut c2).next().is_none()
+        }
     })
 }
 
-pub fn matches_redundant_heredoc_delimiter_quotes(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "heredoc_beginning" { return false; }
+pub fn matches_redundant_heredoc_delimiter_quotes(
+    source: &SourceFile,
+    node: Node<'_>,
+    _config: &CopConfig,
+) -> bool {
+    if node.kind() != "heredoc_beginning" {
+        return false;
+    }
     let b = &source.as_bytes()[node.start_byte()..node.end_byte()];
     b.contains(&b'\'') || b.contains(&b'"')
 }
 
-pub fn matches_redundant_interpolation(_source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
+pub fn matches_redundant_interpolation(
+    _source: &SourceFile,
+    node: Node<'_>,
+    _config: &CopConfig,
+) -> bool {
     let Some(parent) = sole_interp_string(node) else {
         return false;
     };
@@ -48,17 +72,26 @@ fn sole_interp_string(node: Node<'_>) -> Option<Node<'_>> {
 
 fn skip_redundant_interp_string(string: Node<'_>) -> bool {
     // RuboCop skips parts of implicit concatenation (`"a" "b"` / line-continued).
-    if string.parent().is_some_and(|p| p.kind() == "chained_string") {
+    if string
+        .parent()
+        .is_some_and(|p| p.kind() == "chained_string")
+    {
         return true;
     }
     // `"#{x}": value` hash labels are not `dstr` in RuboCop's parser — don't flag.
     string.parent().is_some_and(|p| {
-        p.kind() == "pair" && p.child_by_field_name("key").is_some_and(|k| k.id() == string.id())
+        p.kind() == "pair"
+            && p.child_by_field_name("key")
+                .is_some_and(|k| k.id() == string.id())
     })
 }
 
 /// RuboCop Style/RedundantPercentQ: `%q`/`%Q` only when `'`/`"` would work equally.
-pub fn matches_redundant_percent_q(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
+pub fn matches_redundant_percent_q(
+    source: &SourceFile,
+    node: Node<'_>,
+    _config: &CopConfig,
+) -> bool {
     if node.kind() != "string" {
         return false;
     }

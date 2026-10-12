@@ -37,7 +37,9 @@ pub(super) fn erb_command(working_dir: &Path) -> Command {
 fn ruby_erb_cmd(has_gemfile: bool, working_dir: &Path) -> Command {
     if has_gemfile && gem_path::needs_mise_exec(working_dir) {
         let mut c = Command::new("mise");
-        c.args(["exec", "--", "bundle", "exec", "ruby", "-rerb", "-e", ERB_SCRIPT]);
+        c.args([
+            "exec", "--", "bundle", "exec", "ruby", "-rerb", "-e", ERB_SCRIPT,
+        ]);
         c
     } else if has_gemfile {
         let mut c = Command::new("bundle");

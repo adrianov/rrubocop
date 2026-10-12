@@ -132,11 +132,7 @@ fn merge_local_layer(base_layer: &mut ConfigLayer, raw: &Value) {
     base_layer
         .user_mentioned_depts
         .extend(local_layer.department_configs.keys().cloned());
-    merge_layer_into(
-        base_layer,
-        &local_layer,
-        Some(&local_layer.inherit_mode),
-    );
+    merge_layer_into(base_layer, &local_layer, Some(&local_layer.inherit_mode));
     // RuboCop plugins write Exclude into default_configuration; project
     // Exclude replace never removes them.
     base_layer.reapply_plugin_excludes();

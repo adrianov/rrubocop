@@ -37,7 +37,15 @@ impl Cop for DuplicatedAssignment {
             if trimmed.is_empty() || trimmed.starts_with('#') {
                 continue;
             }
-            record_attrs(self, source, line_str, line_idx + 1, trimmed, &mut seen, diagnostics);
+            record_attrs(
+                self,
+                source,
+                line_str,
+                line_idx + 1,
+                trimmed,
+                &mut seen,
+                diagnostics,
+            );
         }
     }
 }

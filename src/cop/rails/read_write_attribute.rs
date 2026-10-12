@@ -10,10 +10,7 @@ use crate::parse::source::SourceFile;
 
 pub struct ReadWriteAttribute;
 
-fn attribute_rewrite<'a>(
-    source: &'a SourceFile,
-    node: Node<'_>,
-) -> Option<(String, &'a str)> {
+fn attribute_rewrite<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<(String, &'a str)> {
     let method = call_method_name(source, node)?;
     let args = argument_nodes(node);
     let repl = match method {

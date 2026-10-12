@@ -11,18 +11,32 @@ use crate::parse::source::SourceFile;
 pub struct DefEndAlignment;
 
 impl Cop for DefEndAlignment {
-    fn name(&self) -> &'static str { "Layout/DefEndAlignment" }
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["method", "singleton_method"] }
+    fn name(&self) -> &'static str {
+        "Layout/DefEndAlignment"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["method", "singleton_method"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         end_align::check_end(
-            self, source, node, "def",
+            self,
+            source,
+            node,
+            "def",
             config.get_str("EnforcedStyleAlignWith", "keyword"),
-            diagnostics, &mut corrections,
+            diagnostics,
+            &mut corrections,
         );
     }
 }

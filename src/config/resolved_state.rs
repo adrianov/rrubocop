@@ -5,10 +5,10 @@ use std::path::Path;
 
 use crate::cop::{CopConfig, EnabledState};
 
+use super::ResolvedConfig;
 use super::globutil::glob_matches;
 use super::standard::is_plugin_department;
 use super::types::{DepartmentConfig, NewCopsPolicy};
-use super::ResolvedConfig;
 
 /// Inputs for RuboCop-style enable_cop? state resolution.
 pub(crate) struct EnableInputs {

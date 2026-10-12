@@ -115,7 +115,10 @@ pub fn parse_fixture(raw: &[u8]) -> ParsedFixture {
 }
 
 fn filename_header(elements: &[&str]) -> (Option<String>, usize) {
-    match elements.first().and_then(|l| try_parse_filename_directive(l)) {
+    match elements
+        .first()
+        .and_then(|l| try_parse_filename_directive(l))
+    {
         Some(name) => (Some(name), 1),
         None => (None, 0),
     }

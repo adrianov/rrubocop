@@ -98,7 +98,11 @@ impl Diagnostic {
         if self.source_line.is_empty() {
             return header;
         }
-        let caret = clang_caret(&self.source_line, self.location.column, self.highlight_length);
+        let caret = clang_caret(
+            &self.source_line,
+            self.location.column,
+            self.highlight_length,
+        );
         format!("{header}\n{}\n{caret}", self.source_line)
     }
 }
@@ -218,7 +222,10 @@ mod tests {
     fn display_strips_message_backticks() {
         let d = Diagnostic {
             path: "./lib/a.rb".into(),
-            location: Location { line: 10, column: 2 },
+            location: Location {
+                line: 10,
+                column: 2,
+            },
             severity: Severity::Convention,
             cop_name: "Metrics/AbcSize".into(),
             message: "Metrics/AbcSize: Assignment Branch Condition size for `foo` is too high."
@@ -260,7 +267,10 @@ mod tests {
         let line = "Rails.logger.debug { \"Начинаю\" } # rubocop:disable Rails/Output";
         let col = byte_index_to_column(line, line.find("Rails/Output").unwrap());
         let caret = clang_caret(line, col, "Rails/Output".len());
-        assert_eq!(caret, format!("{}{}", " ".repeat(col), "^".repeat("Rails/Output".len())));
+        assert_eq!(
+            caret,
+            format!("{}{}", " ".repeat(col), "^".repeat("Rails/Output".len()))
+        );
     }
 
     #[test]

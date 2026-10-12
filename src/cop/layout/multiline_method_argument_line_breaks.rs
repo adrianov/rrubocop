@@ -11,18 +11,32 @@ use crate::parse::source::SourceFile;
 pub struct MultilineMethodArgumentLineBreaks;
 
 impl Cop for MultilineMethodArgumentLineBreaks {
-    fn name(&self) -> &'static str { "Layout/MultilineMethodArgumentLineBreaks" }
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["argument_list", "command_argument_list"] }
+    fn name(&self) -> &'static str {
+        "Layout/MultilineMethodArgumentLineBreaks"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["argument_list", "command_argument_list"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         line_breaks::check_breaks_cfg(
-            self, source, node,
+            self,
+            source,
+            node,
             "Each argument in a multi-line method call must start on a separate line.",
-            diagnostics, &mut corrections, config.get_bool("AllowMultilineFinalElement", false),
+            diagnostics,
+            &mut corrections,
+            config.get_bool("AllowMultilineFinalElement", false),
         );
     }
 }

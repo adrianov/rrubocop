@@ -14,7 +14,10 @@ pub struct SpaceAroundOperators;
 
 fn space_ok(slice: &[u8]) -> bool {
     // RuboCop AllowForAlignment: any run of spaces (or a newline) is fine.
-    !slice.is_empty() && slice.iter().all(|&b| b == b' ' || b == b'\t' || b == b'\n' || b == b'\r')
+    !slice.is_empty()
+        && slice
+            .iter()
+            .all(|&b| b == b' ' || b == b'\t' || b == b'\n' || b == b'\r')
 }
 
 fn sides<'a>(n: Node<'a>) -> Option<(Node<'a>, Node<'a>, Node<'a>)> {
@@ -77,7 +80,16 @@ fn check_binary(
     if binary_spaces_ok(bytes, left, right, op) {
         return;
     }
-    report_op(cop, source, left, right, op, op_bytes, diagnostics, corrections);
+    report_op(
+        cop,
+        source,
+        left,
+        right,
+        op,
+        op_bytes,
+        diagnostics,
+        corrections,
+    );
 }
 
 fn binary_spaces_ok(bytes: &[u8], left: Node<'_>, right: Node<'_>, op: Node<'_>) -> bool {

@@ -142,7 +142,12 @@ fn push_op(
     };
     let (line, col) = source.offset_to_line_col(child.start_byte());
     let word = std::str::from_utf8(text).unwrap_or("");
-    let mut diag = cop.diagnostic(source, line, col, format!("Use `{repl}` instead of `{word}`."));
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        format!("Use `{repl}` instead of `{word}`."),
+    );
     if push_correction(cop, child, repl, corrections) {
         diag.corrected = true;
     }

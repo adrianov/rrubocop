@@ -23,7 +23,10 @@ fn unicode_symbol_tail(bytes: &[u8], start: usize) -> bool {
     let Some(prev) = chars.next() else {
         return false;
     };
-    is_unicode_ident(prev) && chars.take_while(|c| is_ident_char(*c) || *c == ':').any(|c| c == ':')
+    is_unicode_ident(prev)
+        && chars
+            .take_while(|c| is_ident_char(*c) || *c == ':')
+            .any(|c| c == ':')
 }
 
 fn is_unicode_ident(c: char) -> bool {

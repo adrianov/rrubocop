@@ -29,7 +29,10 @@ impl Cop for EndlessMethod {
     ) {
         // endless: has `=` after args, no `end`
         let mut cur = node.walk();
-        if node.children(&mut cur).any(|c| node_bytes(source, c) == b"end") {
+        if node
+            .children(&mut cur)
+            .any(|c| node_bytes(source, c) == b"end")
+        {
             return;
         }
         // if no end, likely endless (or error)
@@ -60,7 +63,9 @@ mod tests {
     fn no_offense_singleton_endless() {
         crate::testutil::assert_cop_no_offenses_full(
             &EndlessMethod,
-            include_bytes!("../../../tests/fixtures/cops/style/endless_method/no_offense_singleton.rb"),
+            include_bytes!(
+                "../../../tests/fixtures/cops/style/endless_method/no_offense_singleton.rb"
+            ),
         );
     }
 }

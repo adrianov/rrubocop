@@ -90,7 +90,10 @@ fn sym_key<'a>(source: &'a SourceFile, pair: Node<'_>) -> Option<&'a str> {
 }
 
 fn other_symbol(source: &SourceFile, pair: Node<'_>) -> bool {
-    !matches!(sym_key(source, pair), None | Some("returning" | "unique_by"))
+    !matches!(
+        sym_key(source, pair),
+        None | Some("returning" | "unique_by")
+    )
 }
 
 fn hash_pairs<'a>(hash: Node<'a>) -> Vec<Node<'a>> {

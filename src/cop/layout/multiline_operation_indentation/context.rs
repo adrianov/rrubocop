@@ -6,8 +6,8 @@ use crate::cop::layout::indentation_consistency_util as util;
 use crate::parse::source::SourceFile;
 
 use super::line_scan::{
-    has_assignment_before_col, keyword_on_line, line_ends_with_assignment, line_ends_with_logical,
-    line_indent_bytes, last_significant_index, KeywordContext,
+    KeywordContext, has_assignment_before_col, keyword_on_line, last_significant_index,
+    line_ends_with_assignment, line_ends_with_logical, line_indent_bytes,
 };
 
 #[derive(Clone, Copy)]
@@ -28,7 +28,10 @@ pub(super) fn keyword_context(
     if let Some(ctx) = keyword_from_ancestors(node) {
         return Some(ctx);
     }
-    let line = source.lines().nth(left_line.saturating_sub(1)).unwrap_or(b"");
+    let line = source
+        .lines()
+        .nth(left_line.saturating_sub(1))
+        .unwrap_or(b"");
     if let Some(ctx) = keyword_on_line(line, left_col) {
         return Some(ctx);
     }
@@ -97,7 +100,10 @@ pub(super) fn assignment_context(
     left_line: usize,
     left_col: usize,
 ) -> Option<AssignmentContext> {
-    let line = source.lines().nth(left_line.saturating_sub(1)).unwrap_or(b"");
+    let line = source
+        .lines()
+        .nth(left_line.saturating_sub(1))
+        .unwrap_or(b"");
     if has_assignment_before_col(line, left_col) {
         return Some(AssignmentContext {
             rhs_begins_line: false,

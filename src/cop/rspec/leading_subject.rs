@@ -3,7 +3,7 @@
 use tree_sitter::Node;
 
 use crate::cop::rspec::helpers::{
-    bare_rspec_call, block_body, call_block, is_group, is_let_helper, RSPEC_INCLUDE,
+    RSPEC_INCLUDE, bare_rspec_call, block_body, call_block, is_group, is_let_helper,
 };
 use crate::cop::shared::{call_method_name, method_node};
 use crate::cop::{Cop, CopConfig};
@@ -27,7 +27,12 @@ fn group_stmts(body: Node<'_>) -> Vec<Node<'_>> {
     }
 }
 
-fn report_subject(cop: &LeadingSubject, source: &SourceFile, call: Node<'_>, diagnostics: &mut Vec<Diagnostic>) {
+fn report_subject(
+    cop: &LeadingSubject,
+    source: &SourceFile,
+    call: Node<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     let (line, col) = source.offset_to_line_col(method_node(call).unwrap_or(call).start_byte());
     diagnostics.push(cop.diagnostic(source, line, col, MSG.into()));
 }

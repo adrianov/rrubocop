@@ -77,5 +77,8 @@ impl Cop for ConstantDefinitionInBlock {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(ConstantDefinitionInBlock, "cops/lint/constant_definition_in_block");
+    crate::cop_fixture_tests!(
+        ConstantDefinitionInBlock,
+        "cops/lint/constant_definition_in_block"
+    );
 }

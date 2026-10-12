@@ -3,8 +3,8 @@
 use tree_sitter::Node;
 
 use super::helpers::{
-    enclosing_class, find_method_def, has_kwarg, is_conflict_field_name, is_field_call,
-    resolver_method_name, CALL_KINDS, DEPT_INCLUDE,
+    CALL_KINDS, DEPT_INCLUDE, enclosing_class, find_method_def, has_kwarg, is_conflict_field_name,
+    is_field_call, resolver_method_name,
 };
 use crate::cop::shared::{argument_nodes, call_method_name, call_receiver, named_kids, node_text};
 use crate::cop::{Cop, CopConfig};
@@ -40,8 +40,7 @@ impl Cop for FieldMethod {
         let Some(class) = enclosing_class(node) else {
             return;
         };
-        let Some(method) =
-            find_method_def(class, source, &resolver_method_name(source, node))
+        let Some(method) = find_method_def(class, source, &resolver_method_name(source, node))
         else {
             return;
         };
@@ -52,12 +51,7 @@ impl Cop for FieldMethod {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            format!("Use method: :{suggested}"),
-        ));
+        diagnostics.push(self.diagnostic(source, line, col, format!("Use method: :{suggested}")));
     }
 }
 
@@ -78,7 +72,8 @@ fn method_from_body(source: &SourceFile, method: Node<'_>) -> Option<String> {
 
 fn call_uses_safe_navigation(call: Node<'_>) -> bool {
     let mut cur = call.walk();
-    call.children(&mut cur).any(|c| !c.is_named() && c.kind() == "&.")
+    call.children(&mut cur)
+        .any(|c| !c.is_named() && c.kind() == "&.")
 }
 
 fn sole_body_expr(method: Node<'_>) -> Option<Node<'_>> {

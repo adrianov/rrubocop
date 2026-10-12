@@ -72,11 +72,7 @@ pub fn correct_order(prev: &str, curr: &str, order: Option<&[String]>) -> bool {
     };
     let pi = order_index(prev, order);
     let ci = order_index(curr, order);
-    if pi == ci {
-        prev <= curr
-    } else {
-        pi < ci
-    }
+    if pi == ci { prev <= curr } else { pi < ci }
 }
 
 pub fn config_string_list(config: &crate::cop::CopConfig, key: &str) -> Vec<String> {
@@ -93,8 +89,22 @@ pub fn config_string_list(config: &crate::cop::CopConfig, key: &str) -> Vec<Stri
 }
 
 pub const CONFLICT_FIELD_NAMES: &[&str] = &[
-    "context", "object", "raw_value", "class", "module", "def", "end", "if", "unless", "true",
-    "false", "nil", "self", "and", "or", "not",
+    "context",
+    "object",
+    "raw_value",
+    "class",
+    "module",
+    "def",
+    "end",
+    "if",
+    "unless",
+    "true",
+    "false",
+    "nil",
+    "self",
+    "and",
+    "or",
+    "not",
 ];
 
 pub fn is_conflict_field_name(name: &str) -> bool {

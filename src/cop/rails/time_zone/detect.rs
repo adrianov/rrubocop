@@ -26,10 +26,8 @@ pub(super) const ACCEPTED: &[&[u8]] = &[
 /// ISO `Z`, numeric UTC offsets, or common zone abbreviations — not any trailing letter
 /// (avoids exempting `"March".to_time`).
 static TZ_SPEC: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"(?i)(?:\dZ|[+-]\d{2}:?\d{2}|\s(?:UTC|GMT|EST|EDT|CST|CDT|MST|MDT|PST|PDT))\z",
-    )
-    .unwrap()
+    Regex::new(r"(?i)(?:\dZ|[+-]\d{2}:?\d{2}|\s(?:UTC|GMT|EST|EDT|CST|CDT|MST|MDT|PST|PDT))\z")
+        .unwrap()
 });
 
 fn is_time_const(source: &SourceFile, node: Node<'_>) -> bool {
@@ -108,10 +106,11 @@ fn has_safe_nav(source: &SourceFile, recv: Node<'_>, parent: Node<'_>) -> bool {
     source
         .as_bytes()
         .get(
-            recv.end_byte()..parent
-                .child_by_field_name("method")
-                .map(|m| m.start_byte())
-                .unwrap_or(parent.end_byte()),
+            recv.end_byte()
+                ..parent
+                    .child_by_field_name("method")
+                    .map(|m| m.start_byte())
+                    .unwrap_or(parent.end_byte()),
         )
         .is_some_and(|b| b.windows(2).any(|w| w == b"&."))
 }

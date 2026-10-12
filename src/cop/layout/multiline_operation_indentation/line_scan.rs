@@ -81,10 +81,7 @@ fn modifier_keyword(before: &[u8]) -> Option<KeywordContext> {
         b" if ",
         b" if(",
     ];
-    NEEDLES
-        .iter()
-        .any(|n| contains_kw(before, n))
-        .then(special)
+    NEEDLES.iter().any(|n| contains_kw(before, n)).then(special)
 }
 
 fn contains_kw(hay: &[u8], needle: &[u8]) -> bool {

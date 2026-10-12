@@ -47,10 +47,7 @@ fn default_ignores_disabled(map: &serde_yml::Mapping) -> bool {
     map_get(map, "default_ignores").and_then(|v| v.as_bool()) == Some(false)
 }
 
-fn push_ignore_mapping(
-    m: &serde_yml::Mapping,
-    cop_disables: &mut Vec<(String, String)>,
-) {
+fn push_ignore_mapping(m: &serde_yml::Mapping, cop_disables: &mut Vec<(String, String)>) {
     for (k, v) in m {
         let (Some(glob), Some(cops)) = (k.as_str(), v.as_sequence()) else {
             continue;
@@ -63,9 +60,7 @@ fn push_ignore_mapping(
     }
 }
 
-fn collect_ignores(
-    map: &serde_yml::Mapping,
-) -> (Vec<String>, Vec<(String, String)>) {
+fn collect_ignores(map: &serde_yml::Mapping) -> (Vec<String>, Vec<(String, String)>) {
     let mut exclude_patterns: Vec<String> = Vec::new();
     if !default_ignores_disabled(map) {
         exclude_patterns.push("bin/*".to_string());
@@ -137,10 +132,7 @@ fn read_standard_doc(standard_path: &Path) -> Result<serde_yml::Value> {
         .map_err(|e| anyhow::anyhow!("failed to parse {}: {e}", standard_path.display()))
 }
 
-fn build_all_cops_section(
-    map: &serde_yml::Mapping,
-    exclude_patterns: &[String],
-) -> Option<String> {
+fn build_all_cops_section(map: &serde_yml::Mapping, exclude_patterns: &[String]) -> Option<String> {
     let mut all_cops_lines: Vec<String> = Vec::new();
     push_target_ruby(&mut all_cops_lines, map);
     push_exclude_list(&mut all_cops_lines, exclude_patterns);

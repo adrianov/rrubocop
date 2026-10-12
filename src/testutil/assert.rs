@@ -3,7 +3,7 @@
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 
-use super::parse::{parse_fixture, ExpectedOffense};
+use super::parse::{ExpectedOffense, parse_fixture};
 use super::run::run_cop_full_internal;
 
 fn format_diagnostics(diags: &[Diagnostic]) -> String {
@@ -29,14 +29,16 @@ fn format_expected(expected: &[ExpectedOffense]) -> String {
 
 fn assert_one_offense(i: usize, diag: &Diagnostic, exp: &ExpectedOffense) {
     assert_eq!(
-        diag.location.line, exp.line,
+        diag.location.line,
+        exp.line,
         "Offense #{} line: expected {} got {}\n  {diag}",
         i + 1,
         exp.line,
         diag.location.line
     );
     assert_eq!(
-        diag.location.column, exp.column,
+        diag.location.column,
+        exp.column,
         "Offense #{} column: expected {} got {}\n  {diag}",
         i + 1,
         exp.column,
@@ -44,7 +46,8 @@ fn assert_one_offense(i: usize, diag: &Diagnostic, exp: &ExpectedOffense) {
     );
     assert_eq!(diag.cop_name, exp.cop_name, "Offense #{} cop_name", i + 1);
     assert_eq!(
-        diag.message, exp.message,
+        diag.message,
+        exp.message,
         "Offense #{} message\n  expected: {:?}\n  actual:   {:?}",
         i + 1,
         exp.message,

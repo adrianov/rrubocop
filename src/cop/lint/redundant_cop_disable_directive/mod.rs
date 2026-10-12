@@ -146,8 +146,10 @@ mod tests {
 
     #[test]
     fn needed_disable_not_reported() {
-        let source =
-            SourceFile::from_bytes("test.rb", b"puts 'x' # rubocop:disable Rails/Output\n".to_vec());
+        let source = SourceFile::from_bytes(
+            "test.rb",
+            b"puts 'x' # rubocop:disable Rails/Output\n".to_vec(),
+        );
         let offenses = vec![offense("Rails/Output", 1)];
         let mut diags = Vec::new();
         let (cops, cfgs) = active_cops(&["Rails/Output"]);
@@ -221,7 +223,11 @@ mod tests {
         );
         assert_eq!(diags.len(), 2);
         assert!(diags.iter().any(|d| d.message.contains("Rails/Output")));
-        assert!(diags.iter().any(|d| d.message.contains("Layout/LineLength")));
+        assert!(
+            diags
+                .iter()
+                .any(|d| d.message.contains("Layout/LineLength"))
+        );
     }
 
     #[test]
@@ -409,16 +415,20 @@ mod tests {
                 .to_vec(),
         );
         let mut diags = Vec::new();
-        audit_redundant_disables(&RedundantCopDisableDirective, &source, &[], &[], &mut diags, None);
+        audit_redundant_disables(
+            &RedundantCopDisableDirective,
+            &source,
+            &[],
+            &[],
+            &mut diags,
+            None,
+        );
         assert!(diags.is_empty());
     }
 
     #[test]
     fn bare_disable_is_not_treated_as_all() {
-        let source = SourceFile::from_bytes(
-            "test.rb",
-            b"scope: 'x', # rubocop:disable\n".to_vec(),
-        );
+        let source = SourceFile::from_bytes("test.rb", b"scope: 'x', # rubocop:disable\n".to_vec());
         let (cops, cfgs) = active_cops(&["Style/StringLiterals"]);
         let mut diags = Vec::new();
         audit_redundant_disables(

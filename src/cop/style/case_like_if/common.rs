@@ -44,5 +44,8 @@ pub(super) fn literal_or_const(source: &SourceFile, n: Node<'_>) -> bool {
     matches!(
         n.kind(),
         "string" | "symbol" | "simple_symbol" | "integer" | "float" | "true" | "false" | "nil"
-    ) || (n.kind() == "constant" && node_bytes(source, n).iter().all(|&b| b.is_ascii_uppercase()))
+    ) || (n.kind() == "constant"
+        && node_bytes(source, n)
+            .iter()
+            .all(|&b| b.is_ascii_uppercase()))
 }

@@ -17,7 +17,6 @@ impl Cop for ZeroLengthPredicate {
         false
     }
 
-
     fn check_node(
         &self,
         source: &SourceFile,

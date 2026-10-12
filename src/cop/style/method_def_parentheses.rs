@@ -34,9 +34,7 @@ impl Cop for MethodDefParentheses {
             {
                 "Use parentheses for method definitions with parameters."
             }
-            "require_no_parentheses" if has_parens => {
-                "Omit parentheses for method definitions."
-            }
+            "require_no_parentheses" if has_parens => "Omit parentheses for method definitions.",
             _ => return,
         };
         let (line, col) = source.offset_to_line_col(node.start_byte());

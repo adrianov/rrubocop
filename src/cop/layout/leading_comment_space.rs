@@ -31,9 +31,7 @@ fn skip_rbs_annotation(config: &CopConfig, text: &[u8]) -> bool {
     if !config.get_bool("AllowRBSInlineAnnotation", false) {
         return false;
     }
-    text.starts_with(b"#:")
-        || text.starts_with(b"#[")
-        || text.starts_with(b"#|")
+    text.starts_with(b"#:") || text.starts_with(b"#[") || text.starts_with(b"#|")
 }
 
 fn skip_steep_annotation(config: &CopConfig, text: &[u8]) -> bool {
@@ -179,9 +177,10 @@ mod tests {
     #[test]
     fn rbs_inline_annotation_allowed() {
         let mut config = CopConfig::default();
-        config
-            .options
-            .insert("AllowRBSInlineAnnotation".into(), serde_yml::Value::Bool(true));
+        config.options.insert(
+            "AllowRBSInlineAnnotation".into(),
+            serde_yml::Value::Bool(true),
+        );
         assert_cop_no_offenses_full_with_config(
             &LeadingCommentSpace,
             b"x = false #:page_load\n",

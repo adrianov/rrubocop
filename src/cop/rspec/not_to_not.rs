@@ -39,7 +39,11 @@ impl Cop for NotToNot {
             return;
         };
         let prefer = config.get_str("EnforcedStyle", "not_to");
-        let wrong = if prefer == "not_to" { "to_not" } else { "not_to" };
+        let wrong = if prefer == "not_to" {
+            "to_not"
+        } else {
+            "not_to"
+        };
         if method != wrong.as_bytes() {
             return;
         }

@@ -28,7 +28,10 @@ fn matching_close(open: u8) -> u8 {
 }
 
 fn percent_span(text: &[u8]) -> Option<(usize, usize)> {
-    let open_idx = 2 + text[2..].iter().position(|&b| !b.is_ascii_alphanumeric()).unwrap_or(0);
+    let open_idx = 2 + text[2..]
+        .iter()
+        .position(|&b| !b.is_ascii_alphanumeric())
+        .unwrap_or(0);
     if open_idx >= text.len() {
         return None;
     }
@@ -87,7 +90,10 @@ fn double_space_abs(source: &SourceFile, node: Node<'_>) -> Option<(usize, usize
     }
     let (open_idx, crel, inner) = singleline_percent_inner(text)?;
     let rel = double_space_at(inner)?;
-    Some((node.start_byte() + open_idx + 1 + rel, node.start_byte() + crel))
+    Some((
+        node.start_byte() + open_idx + 1 + rel,
+        node.start_byte() + crel,
+    ))
 }
 
 impl Cop for SpaceInsideArrayPercentLiteral {
@@ -128,13 +134,18 @@ impl Cop for SpaceInsideArrayPercentLiteral {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(SpaceInsideArrayPercentLiteral, "cops/layout/space_inside_array_percent_literal");
+    crate::cop_fixture_tests!(
+        SpaceInsideArrayPercentLiteral,
+        "cops/layout/space_inside_array_percent_literal"
+    );
 
     #[test]
     fn no_offense_multiline_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &SpaceInsideArrayPercentLiteral,
-            include_bytes!("../../../tests/fixtures/cops/layout/space_inside_array_percent_literal/no_offense_multiline.rb"),
+            include_bytes!(
+                "../../../tests/fixtures/cops/layout/space_inside_array_percent_literal/no_offense_multiline.rb"
+            ),
         );
     }
 }

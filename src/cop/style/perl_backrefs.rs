@@ -64,13 +64,12 @@ fn report(
 ) {
     let preferred = format!("Regexp.last_match({digits})");
     let (line, col) = source.offset_to_line_col(node.start_byte());
-    let mut diag =
-        cop.diagnostic(
-            source,
-            line,
-            col,
-            format!("Prefer `{preferred}` over `${digits}`."),
-        );
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        format!("Prefer `{preferred}` over `${digits}`."),
+    );
     if let Some(corr) = corrections.as_mut() {
         corr.push(Correction {
             start: node.start_byte(),

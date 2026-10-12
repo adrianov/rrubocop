@@ -68,7 +68,12 @@ fn report(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (line, col) = source.offset_to_line_col(node.start_byte());
-    let mut diag = cop.diagnostic(source, line, col, "Redundant `return` detected.".to_string());
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        "Redundant `return` detected.".to_string(),
+    );
     if let Some(corr) = corrections.as_mut() {
         push_remove_return(cop, node, corr);
         diag.corrected = true;
@@ -134,10 +139,7 @@ fn is_trailing_return(node: Node<'_>) -> bool {
     } else {
         parent
     };
-    if !matches!(
-        container.kind(),
-        "method" | "singleton_method"
-    ) {
+    if !matches!(container.kind(), "method" | "singleton_method") {
         // `return` inside a block exits the enclosing method — never redundant.
         return false;
     }
@@ -167,9 +169,10 @@ mod tests {
     #[test]
     fn allow_multiple_return_values_no_offense() {
         let mut config = CopConfig::default();
-        config
-            .options
-            .insert("AllowMultipleReturnValues".into(), serde_yml::Value::Bool(true));
+        config.options.insert(
+            "AllowMultipleReturnValues".into(),
+            serde_yml::Value::Bool(true),
+        );
         assert_cop_no_offenses_full_with_config(
             &RedundantReturn,
             b"def foo\n  return a, b\nend\n",

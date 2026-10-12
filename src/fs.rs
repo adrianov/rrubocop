@@ -180,9 +180,31 @@ fn normalize_scan_path(path: PathBuf) -> PathBuf {
 }
 
 const RUBY_EXTENSIONS: &[&str] = &[
-    "rb", "arb", "axlsx", "builder", "fcgi", "gemfile", "gemspec", "god", "jb", "jbuilder",
-    "mspec", "opal", "pluginspec", "podspec", "rabl", "rake", "rbuild", "rbw", "rbx", "ru",
-    "ruby", "schema", "spec", "thor", "watchr",
+    "rb",
+    "arb",
+    "axlsx",
+    "builder",
+    "fcgi",
+    "gemfile",
+    "gemspec",
+    "god",
+    "jb",
+    "jbuilder",
+    "mspec",
+    "opal",
+    "pluginspec",
+    "podspec",
+    "rabl",
+    "rake",
+    "rbuild",
+    "rbw",
+    "rbx",
+    "ru",
+    "ruby",
+    "schema",
+    "spec",
+    "thor",
+    "watchr",
 ];
 
 const RUBY_FILENAMES: &[&str] = &[

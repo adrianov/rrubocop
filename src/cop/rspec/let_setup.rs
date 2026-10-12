@@ -5,9 +5,11 @@ use std::collections::HashSet;
 use tree_sitter::Node;
 
 use crate::cop::rspec::helpers::{
-    bare_rspec_call, block_body, call_block, first_sym_arg, is_group, RSPEC_INCLUDE,
+    RSPEC_INCLUDE, bare_rspec_call, block_body, call_block, first_sym_arg, is_group,
 };
-use crate::cop::shared::{call_method_name, call_receiver, for_each_descendant, method_node, node_bytes};
+use crate::cop::shared::{
+    call_method_name, call_receiver, for_each_descendant, method_node, node_bytes,
+};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -17,7 +19,10 @@ pub struct LetSetup;
 const MSG: &str = "Do not use `let!` to setup objects not referenced in tests.";
 
 fn skip_helper_name(name: &[u8]) -> bool {
-    matches!(name, b"let" | b"let!" | b"subject" | b"subject!" | b"expect")
+    matches!(
+        name,
+        b"let" | b"let!" | b"subject" | b"subject!" | b"expect"
+    )
 }
 
 /// Ruby 3.1 `foo(bar:)` — RuboCop treats the implicit value as `(send nil? bar)`.

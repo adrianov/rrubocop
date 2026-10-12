@@ -79,7 +79,15 @@ impl Cop for ActiveSupportAliases {
         if !call_receiver(node).is_some_and(|r| r.kind() == "string") {
             return;
         }
-        report_alias(self, source, node, method, prefer, diagnostics, &mut corrections);
+        report_alias(
+            self,
+            source,
+            node,
+            method,
+            prefer,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 

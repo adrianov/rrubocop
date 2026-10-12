@@ -141,7 +141,9 @@ fn hash_task_name(source: &SourceFile, node: Node<'_>) -> Option<String> {
         if child.kind() == "pair"
             && let Some(key) = child.child_by_field_name("key")
         {
-            return Some(String::from_utf8_lossy(strip_literal(node_bytes(source, key))).into_owned());
+            return Some(
+                String::from_utf8_lossy(strip_literal(node_bytes(source, key))).into_owned(),
+            );
         }
     }
     None
@@ -150,8 +152,7 @@ fn hash_task_name(source: &SourceFile, node: Node<'_>) -> Option<String> {
 fn strip_literal(b: &[u8]) -> &[u8] {
     let b = b.strip_prefix(b":").unwrap_or(b);
     if b.len() >= 2
-        && ((b[0] == b'\'' && b[b.len() - 1] == b'\'')
-            || (b[0] == b'"' && b[b.len() - 1] == b'"'))
+        && ((b[0] == b'\'' && b[b.len() - 1] == b'\'') || (b[0] == b'"' && b[b.len() - 1] == b'"'))
     {
         &b[1..b.len() - 1]
     } else {

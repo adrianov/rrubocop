@@ -9,7 +9,8 @@ use crate::parse::source::SourceFile;
 pub struct BinaryOperatorWithIdenticalOperands;
 
 const OPS: &[&[u8]] = &[
-    b"==", b"===", b"!=", b"=~", b"!~", b">", b">=", b"<", b"<=", b"<=>", b"||", b"&&", b"or", b"and",
+    b"==", b"===", b"!=", b"=~", b"!~", b">", b">=", b"<", b"<=", b"<=>", b"||", b"&&", b"or",
+    b"and",
 ];
 
 impl Cop for BinaryOperatorWithIdenticalOperands {

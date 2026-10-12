@@ -20,7 +20,10 @@ fn modifier_name<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<&'a [u8]>
 }
 
 fn is_modifier(name: &[u8]) -> bool {
-    matches!(name, b"private" | b"protected" | b"public" | b"module_function")
+    matches!(
+        name,
+        b"private" | b"protected" | b"public" | b"module_function"
+    )
 }
 
 fn enclosing_type(node: Node<'_>) -> Option<Node<'_>> {
@@ -78,7 +81,11 @@ fn report_modifier(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let mod_name = String::from_utf8_lossy(name);
-    let style_word = if style == "outdent" { "Outdent" } else { "Indent" };
+    let style_word = if style == "outdent" {
+        "Outdent"
+    } else {
+        "Indent"
+    };
     report::fix_indent(
         cop,
         source,
@@ -191,5 +198,8 @@ impl Cop for AccessModifierIndentation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(AccessModifierIndentation, "cops/layout/access_modifier_indentation");
+    crate::cop_fixture_tests!(
+        AccessModifierIndentation,
+        "cops/layout/access_modifier_indentation"
+    );
 }

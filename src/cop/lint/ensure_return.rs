@@ -12,7 +12,10 @@ fn find_return_offsets(node: Node<'_>, out: &mut Vec<usize>) {
     if node.kind() == "return" {
         out.push(node.start_byte());
     }
-    if matches!(node.kind(), "method" | "singleton_method" | "class" | "module") {
+    if matches!(
+        node.kind(),
+        "method" | "singleton_method" | "class" | "module"
+    ) {
         return;
     }
     let mut cur = node.walk();

@@ -119,7 +119,10 @@ mod tests {
     use crate::testutil::run_cop_full_with_config;
     use std::collections::HashMap;
 
-    crate::cop_fixture_tests!(RedundantRequireStatement, "cops/lint/redundant_require_statement");
+    crate::cop_fixture_tests!(
+        RedundantRequireStatement,
+        "cops/lint/redundant_require_statement"
+    );
 
     fn ruby_config(ver: f64) -> CopConfig {
         CopConfig {

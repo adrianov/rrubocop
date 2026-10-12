@@ -36,7 +36,10 @@ fn assigned_earlier(source: &SourceFile, stmts: &[Node<'_>], idx: usize, name: &
 }
 
 fn void_literal_msg(source: &SourceFile, stmt: Node<'_>) -> String {
-    format!("Literal `{}` used in void context.", node_text(source, stmt))
+    format!(
+        "Literal `{}` used in void context.",
+        node_text(source, stmt)
+    )
 }
 
 fn void_named_msg(kind: &str, source: &SourceFile, stmt: Node<'_>) -> String {
@@ -64,12 +67,7 @@ fn void_binary_msg(source: &SourceFile, stmt: Node<'_>) -> Option<String> {
         .then(|| format!("Operator `{op}` used in void context."))
 }
 
-fn void_msg(
-    source: &SourceFile,
-    stmts: &[Node<'_>],
-    idx: usize,
-    stmt: Node<'_>,
-) -> Option<String> {
+fn void_msg(source: &SourceFile, stmts: &[Node<'_>], idx: usize, stmt: Node<'_>) -> Option<String> {
     if let Some(msg) = void_literal_kind(source, stmt) {
         return Some(msg);
     }
@@ -123,11 +121,7 @@ fn check_void_stmts(
     cop: &Void,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
-    for (idx, stmt) in stmts
-        .iter()
-        .enumerate()
-        .take(stmts.len().saturating_sub(1))
-    {
+    for (idx, stmt) in stmts.iter().enumerate().take(stmts.len().saturating_sub(1)) {
         let Some(msg) = void_msg(source, stmts, idx, *stmt) else {
             continue;
         };

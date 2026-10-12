@@ -1,9 +1,9 @@
 //! Parallel file linting with discovery/lint pipeline and fail-fast.
 
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::mpsc::{self, Receiver};
-use std::sync::Mutex;
 use std::thread;
 
 use anyhow::Result;
@@ -17,8 +17,8 @@ use crate::diagnostic::Diagnostic;
 use crate::fs::discover_emitting;
 use crate::parse::source::SourceFile;
 
-use super::engine::lint_source;
 use super::RunPrep;
+use super::engine::lint_source;
 
 pub(super) struct LintBatch {
     pub diagnostics: Vec<Diagnostic>,
@@ -146,20 +146,22 @@ fn run_workers(
     fail_count: &AtomicU32,
     on_file: &(impl Fn(&[Diagnostic]) + Sync),
 ) -> Result<()> {
-    (0..rayon::current_num_threads().max(1)).into_par_iter().try_for_each(|_| {
-        worker_loop(
-            rx,
-            prep,
-            config,
-            registry,
-            settings,
-            diagnostics,
-            inspected,
-            stop,
-            fail_count,
-            on_file,
-        )
-    })
+    (0..rayon::current_num_threads().max(1))
+        .into_par_iter()
+        .try_for_each(|_| {
+            worker_loop(
+                rx,
+                prep,
+                config,
+                registry,
+                settings,
+                diagnostics,
+                inspected,
+                stop,
+                fail_count,
+                on_file,
+            )
+        })
 }
 
 fn worker_loop(

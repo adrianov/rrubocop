@@ -2,7 +2,7 @@
 
 use tree_sitter::Node;
 
-use crate::cop::rspec::helpers::{inside_spec_group, RSPEC_INCLUDE};
+use crate::cop::rspec::helpers::{RSPEC_INCLUDE, inside_spec_group};
 use crate::cop::shared::is_const_assign;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
@@ -54,5 +54,8 @@ impl Cop for LeakyConstantDeclaration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(LeakyConstantDeclaration, "cops/rspec/leaky_constant_declaration");
+    crate::cop_fixture_tests!(
+        LeakyConstantDeclaration,
+        "cops/rspec/leaky_constant_declaration"
+    );
 }

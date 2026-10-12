@@ -12,8 +12,12 @@ use crate::parse::source::SourceFile;
 pub struct EmptyLinesAroundExceptionHandlingKeywords;
 
 fn remove_blank_line(
-    cop: &dyn Cop, source: &SourceFile, line: usize, msg: String,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    line: usize,
+    msg: String,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let mut diag = cop.diagnostic(source, line, 0, msg);
     if let Some(corr) = corrections {
@@ -32,44 +36,75 @@ fn remove_blank_line(
 }
 
 fn check_before(
-    cop: &dyn Cop, source: &SourceFile, line: usize, kw: &str,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    line: usize,
+    kw: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    if line <= 1 || !shared::line_blank(source, line - 1) { return; }
+    if line <= 1 || !shared::line_blank(source, line - 1) {
+        return;
+    }
     remove_blank_line(
-        cop, source, line - 1,
+        cop,
+        source,
+        line - 1,
         format!("Extra empty line detected before the `{kw}`."),
-        diagnostics, corrections,
+        diagnostics,
+        corrections,
     );
 }
 
 fn check_after(
-    cop: &dyn Cop, source: &SourceFile, n: Node<'_>, line: usize, kw: &str,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    n: Node<'_>,
+    line: usize,
+    kw: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    if !shared::line_blank(source, line + 1) { return; }
+    if !shared::line_blank(source, line + 1) {
+        return;
+    }
     let (end_l, _) = source.offset_to_line_col(n.end_byte().saturating_sub(1));
-    if end_l <= line + 1 { return; }
+    if end_l <= line + 1 {
+        return;
+    }
     remove_blank_line(
-        cop, source, line + 1,
+        cop,
+        source,
+        line + 1,
         format!("Extra empty line detected after the `{kw}`."),
-        diagnostics, corrections,
+        diagnostics,
+        corrections,
     );
 }
 
 fn check_kw(
-    cop: &dyn Cop, source: &SourceFile, n: Node<'_>,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    n: Node<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    if !matches!(n.kind(), "rescue" | "ensure" | "else") { return; }
+    if !matches!(n.kind(), "rescue" | "ensure" | "else") {
+        return;
+    }
     // RuboCop only flags `else` inside begin/rescue — not if/case else.
     if n.kind() == "else" {
-        let Some(parent) = n.parent() else { return; };
+        let Some(parent) = n.parent() else {
+            return;
+        };
         if !matches!(parent.kind(), "begin" | "body_statement") {
             return;
         }
         let mut cur = parent.walk();
-        if !parent.named_children(&mut cur).any(|c| c.kind() == "rescue") {
+        if !parent
+            .named_children(&mut cur)
+            .any(|c| c.kind() == "rescue")
+        {
             return;
         }
     }
@@ -80,16 +115,24 @@ fn check_kw(
 }
 
 impl Cop for EmptyLinesAroundExceptionHandlingKeywords {
-    fn name(&self) -> &'static str { "Layout/EmptyLinesAroundExceptionHandlingKeywords" }
-    fn supports_autocorrect(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "Layout/EmptyLinesAroundExceptionHandlingKeywords"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
 
     fn uses_source_phase(&self) -> bool {
         true
     }
 
     fn check_source(
-        &self, source: &SourceFile, tree: &Tree, code_map: &CodeMap,
-        config: &CopConfig, diagnostics: &mut Vec<Diagnostic>,
+        &self,
+        source: &SourceFile,
+        tree: &Tree,
+        code_map: &CodeMap,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = (code_map, config);

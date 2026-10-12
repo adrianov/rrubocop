@@ -1,17 +1,19 @@
 //! Heuristic matchers for breadth-first Style cops.
-use tree_sitter::Node;
 use crate::cop::CopConfig;
 use crate::parse::source::SourceFile;
+use tree_sitter::Node;
 
 pub fn matches_empty_heredoc(source: &SourceFile, node: Node<'_>, _config: &CopConfig) -> bool {
-    if node.kind() != "heredoc_body" { return false; }
+    if node.kind() != "heredoc_body" {
+        return false;
+    }
     let mut cur = node.walk();
     node.children(&mut cur)
         .find(|ch| ch.kind() == "heredoc_content")
         .is_some_and(|c| {
-        let b = &source.as_bytes()[c.start_byte()..c.end_byte()];
-        b.is_empty() || b == b"\n"
-    })
+            let b = &source.as_bytes()[c.start_byte()..c.end_byte()];
+            b.is_empty() || b == b"\n"
+        })
 }
 
 pub fn matches_hash_syntax(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
@@ -23,7 +25,9 @@ pub fn matches_hash_syntax(source: &SourceFile, node: Node<'_>, config: &CopConf
     match style {
         // RuboCop ruby19: only rewrite when *every* key is a word symbol.
         "ruby19" | "ruby19_no_mixed_keys" => {
-            has_rocket && pair_key_is_symbol(source, node) && hash_all_word_symbol_keys(source, node)
+            has_rocket
+                && pair_key_is_symbol(source, node)
+                && hash_all_word_symbol_keys(source, node)
         }
         "hash_rockets" => has_anon_child(node, ":"),
         _ => false,
@@ -51,7 +55,8 @@ fn sibling_pairs(pair: Node<'_>) -> Vec<Node<'_>> {
 
 fn has_anon_child(node: Node<'_>, kind: &str) -> bool {
     let mut cur = node.walk();
-    node.children(&mut cur).any(|ch| !ch.is_named() && ch.kind() == kind)
+    node.children(&mut cur)
+        .any(|ch| !ch.is_named() && ch.kind() == kind)
 }
 
 fn pair_key_is_symbol(source: &SourceFile, node: Node<'_>) -> bool {
@@ -119,11 +124,17 @@ pub fn matches_symbol_array(_source: &SourceFile, node: Node<'_>, config: &CopCo
     let style = config.get_str("EnforcedStyle", "percent_i");
     match node.kind() {
         "array" => {
-            if style != "percent_i" { return false; }
+            if style != "percent_i" {
+                return false;
+            }
             let mut cur = node.walk();
             let elems: Vec<_> = node.named_children(&mut cur).collect();
-            if elems.len() < 2 { return false; }
-            elems.iter().all(|e| matches!(e.kind(), "simple_symbol" | "delimited_symbol"))
+            if elems.len() < 2 {
+                return false;
+            }
+            elems
+                .iter()
+                .all(|e| matches!(e.kind(), "simple_symbol" | "delimited_symbol"))
         }
         "symbol_array" => style == "brackets",
         _ => false,
@@ -134,10 +145,14 @@ pub fn matches_word_array(_source: &SourceFile, node: Node<'_>, config: &CopConf
     let style = config.get_str("EnforcedStyle", "percent_w");
     match node.kind() {
         "array" => {
-            if style != "percent_w" { return false; }
+            if style != "percent_w" {
+                return false;
+            }
             let mut cur = node.walk();
             let elems: Vec<_> = node.named_children(&mut cur).collect();
-            if elems.len() < 2 { return false; }
+            if elems.len() < 2 {
+                return false;
+            }
             elems.iter().all(|e| e.kind() == "string")
         }
         "string_array" => style == "brackets",

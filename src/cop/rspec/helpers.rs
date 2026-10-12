@@ -88,7 +88,9 @@ pub fn code_lines(source: &SourceFile, node: Node<'_>) -> usize {
     }
     let (lo, _) = source.offset_to_line_col(start);
     let (hi, _) = source.offset_to_line_col(end.saturating_sub(1));
-    (lo..=hi).filter(|&n| line_is_code(bytes, n, source)).count()
+    (lo..=hi)
+        .filter(|&n| line_is_code(bytes, n, source))
+        .count()
 }
 
 fn trim_ws(line: &[u8]) -> &[u8] {
@@ -115,7 +117,9 @@ fn unquote(b: &[u8]) -> &[u8] {
 
 /// First symbol / string arg of a call (let(:name), subject(:name), …).
 pub fn first_sym_arg<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<&'a [u8]> {
-    let first = crate::cop::shared::argument_nodes(node).into_iter().next()?;
+    let first = crate::cop::shared::argument_nodes(node)
+        .into_iter()
+        .next()?;
     match first.kind() {
         "simple_symbol" | "symbol" => {
             let b = node_bytes(source, first);

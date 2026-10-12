@@ -4,8 +4,8 @@ mod items;
 
 use tree_sitter::Node;
 
-use crate::cop::shared;
 use crate::cop::Cop;
+use crate::cop::shared;
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -80,7 +80,15 @@ fn check_one(
     }
     let expected = expected_col(style, fixed_col, base_col);
     if shared::node_col(source, item) != expected {
-        report_misaligned(cop, source, item, expected, message, diagnostics, corrections);
+        report_misaligned(
+            cop,
+            source,
+            item,
+            expected,
+            message,
+            diagnostics,
+            corrections,
+        );
     }
 }
 
@@ -134,7 +142,9 @@ fn selector_line_indent(source: &SourceFile, arg_list: Node<'_>) -> usize {
 
 fn items_span_lines(source: &SourceFile, items: &[Node<'_>]) -> bool {
     let first_line = shared::node_line(source, items[0]);
-    items.iter().any(|i| shared::node_line(source, *i) != first_line)
+    items
+        .iter()
+        .any(|i| shared::node_line(source, *i) != first_line)
 }
 
 /// Align named children of `node` that span multiple lines.

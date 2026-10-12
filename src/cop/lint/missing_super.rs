@@ -8,11 +8,7 @@ use crate::parse::source::SourceFile;
 /// Lint/MissingSuper — initialize/callback without super.
 pub struct MissingSuper;
 
-const CALLBACKS: &[&[u8]] = &[
-    b"initialize",
-    b"method_missing",
-    b"respond_to_missing?",
-];
+const CALLBACKS: &[&[u8]] = &[b"initialize", b"method_missing", b"respond_to_missing?"];
 
 fn enclosing_class(node: Node<'_>) -> Option<Node<'_>> {
     let mut parent = node.parent();

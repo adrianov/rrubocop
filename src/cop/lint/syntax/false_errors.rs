@@ -34,11 +34,7 @@ pub(super) fn endless_eq_offset(source: &SourceFile, node: Node<'_>) -> Option<u
             _ => {}
         }
     }
-    if has_end {
-        None
-    } else {
-        eq_off
-    }
+    if has_end { None } else { eq_off }
 }
 
 fn unicode_symbol_error(source: &SourceFile, node: Node<'_>) -> bool {

@@ -44,7 +44,9 @@ impl Cop for GraphqlName {
 fn name_offense(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Option<&'static str> {
     let specified = find_graphql_name(source, node);
     if config.get_str("EnforcedStyle", "only_override") == "required" {
-        return specified.is_none().then_some("graphql_name should be configured.");
+        return specified
+            .is_none()
+            .then_some("graphql_name should be configured.");
     }
     let spec = specified?;
     let leaf = class_leaf_name(source, node)?;

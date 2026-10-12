@@ -100,7 +100,15 @@ fn run_file_cops(
     if syntax_gate::run(source, tree, config, active, mode, diagnostics, corrections) {
         return Ok(());
     }
-    run_non_syntax(source, tree, active, registry, mode, diagnostics, corrections);
+    run_non_syntax(
+        source,
+        tree,
+        active,
+        registry,
+        mode,
+        diagnostics,
+        corrections,
+    );
     Ok(())
 }
 
@@ -201,7 +209,15 @@ fn run_phases(
 ) {
     source_phase::run_line_phase(source, active, mode, diagnostics, corrections);
     source_phase::run_source_phase(source, tree, active, mode, diagnostics, corrections);
-    node_phase::run_node_phase(source, tree, active, registry, mode, diagnostics, corrections);
+    node_phase::run_node_phase(
+        source,
+        tree,
+        active,
+        registry,
+        mode,
+        diagnostics,
+        corrections,
+    );
 }
 
 fn filter_directives(source: &SourceFile, ignore_disable: bool, diagnostics: &mut Vec<Diagnostic>) {
@@ -296,4 +312,3 @@ pub(super) fn finish_cop_pass(
         }
     }
 }
-

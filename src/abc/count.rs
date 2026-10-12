@@ -136,8 +136,7 @@ impl<'f> Calc<'f> {
     }
 
     fn count_block_argument(&mut self, n: Node) {
-        if n
-            .parent()
+        if n.parent()
             .and_then(|al| al.parent())
             .is_some_and(|c| c.kind() == "call" && iterating_call(self.fm, c))
         {
@@ -146,8 +145,7 @@ impl<'f> Calc<'f> {
     }
 
     fn count_block(&mut self, n: Node) {
-        if n
-            .parent()
+        if n.parent()
             .is_some_and(|p| p.kind() == "call" && iterating_call(self.fm, p))
         {
             self.c += 1;

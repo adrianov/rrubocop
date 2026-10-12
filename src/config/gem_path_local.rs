@@ -109,7 +109,11 @@ pub fn resolve_local_root(gem_name: &str, working_dir: &Path) -> Result<PathBuf>
     if let Some(path) = cached_path(working_dir, gem_name, mtime) {
         return Ok(path);
     }
-    let path = root_from_bundle_output(gem_name, working_dir, run_bundle_info(gem_name, working_dir)?)?;
+    let path = root_from_bundle_output(
+        gem_name,
+        working_dir,
+        run_bundle_info(gem_name, working_dir)?,
+    )?;
     store_path(working_dir, gem_name, mtime, path.clone());
     Ok(path)
 }

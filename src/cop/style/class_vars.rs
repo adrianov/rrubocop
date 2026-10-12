@@ -43,7 +43,9 @@ fn class_var_msg(source: &SourceFile, node: Node<'_>) -> Option<String> {
         return None;
     }
     let name = String::from_utf8_lossy(node_bytes(source, left));
-    Some(format!("Replace class var `{name}` with a class instance var."))
+    Some(format!(
+        "Replace class var `{name}` with a class instance var."
+    ))
 }
 
 fn class_var_loc(node: Node<'_>) -> usize {

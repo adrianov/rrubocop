@@ -89,7 +89,9 @@ fn deprecated_lhs<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<(&'a [u8
         return None;
     }
     let method = call_method_name(source, left)?;
-    DEPRECATED.contains(&method).then_some((method, left.start_byte()))
+    DEPRECATED
+        .contains(&method)
+        .then_some((method, left.start_byte()))
 }
 
 fn full_line_range(bytes: &[u8], node: Node<'_>) -> (usize, usize) {

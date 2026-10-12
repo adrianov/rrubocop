@@ -76,7 +76,10 @@ fn allowable_kwbegin(node: Node<'_>) -> bool {
     if kids.is_empty() {
         return true;
     }
-    if kids.iter().any(|k| matches!(k.kind(), "rescue" | "ensure" | "else")) {
+    if kids
+        .iter()
+        .any(|k| matches!(k.kind(), "rescue" | "ensure" | "else"))
+    {
         return true;
     }
     // RuboCop: two or more body statements → keep begin.

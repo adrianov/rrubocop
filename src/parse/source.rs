@@ -65,11 +65,12 @@ impl SourceFile {
     pub fn line_text(&self, line: usize) -> Option<&str> {
         let start = self.line_start(line)?;
         std::str::from_utf8(trim_line_ending(
-            &self.content[start..self
-                .line_starts
-                .get(line)
-                .copied()
-                .unwrap_or(self.content.len())],
+            &self.content[start
+                ..self
+                    .line_starts
+                    .get(line)
+                    .copied()
+                    .unwrap_or(self.content.len())],
         ))
         .ok()
     }

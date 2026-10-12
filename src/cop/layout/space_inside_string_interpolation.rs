@@ -35,8 +35,7 @@ impl Cop for SpaceInsideStringInterpolation {
             return;
         }
         let inner_s = node.start_byte() + 2;
-        let Some(d) =
-            space_delim::scan_inner(bytes, inner_s, node.end_byte().saturating_sub(1))
+        let Some(d) = space_delim::scan_inner(bytes, inner_s, node.end_byte().saturating_sub(1))
         else {
             return;
         };

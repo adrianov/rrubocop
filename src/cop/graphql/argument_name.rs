@@ -2,7 +2,7 @@
 
 use tree_sitter::Node;
 
-use super::helpers::{argument_name, is_argument_call, is_snake_case, CALL_KINDS, DEPT_INCLUDE};
+use super::helpers::{CALL_KINDS, DEPT_INCLUDE, argument_name, is_argument_call, is_snake_case};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;

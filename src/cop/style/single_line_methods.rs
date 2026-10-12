@@ -27,14 +27,13 @@ fn is_endless_method(source: &SourceFile, node: Node<'_>) -> bool {
 
 fn shared_has_end(node: Node<'_>) -> bool {
     let mut cur = node.walk();
-    node.children(&mut cur).any(|c| !c.is_named() && c.kind() == "end")
+    node.children(&mut cur)
+        .any(|c| !c.is_named() && c.kind() == "end")
 }
 
 fn body_is_empty(body: Node<'_>) -> bool {
     let mut cur = body.walk();
-    !body
-        .named_children(&mut cur)
-        .any(|n| n.kind() != "comment")
+    !body.named_children(&mut cur).any(|n| n.kind() != "comment")
 }
 
 impl Cop for SingleLineMethods {

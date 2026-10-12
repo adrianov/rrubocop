@@ -12,9 +12,7 @@ use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
-use scope::{
-    alias_method_value_used, inside_method_def, lexical_scope_label, scope_of, Scope,
-};
+use scope::{Scope, alias_method_value_used, inside_method_def, lexical_scope_label, scope_of};
 
 pub struct Alias;
 

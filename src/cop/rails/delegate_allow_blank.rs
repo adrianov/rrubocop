@@ -56,8 +56,7 @@ impl Cop for DelegateAllowBlank {
             source,
             line,
             col,
-            "`allow_blank` is not a valid option for `delegate`. Did you mean `allow_nil`?"
-                .into(),
+            "`allow_blank` is not a valid option for `delegate`. Did you mean `allow_nil`?".into(),
         );
         if push_replace(
             &mut corrections,
@@ -94,6 +93,10 @@ fn pair_allow_blank_key<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<
         return None;
     }
     let key = node.child_by_field_name("key")?;
-    (node_text(source, key).trim().trim_start_matches(':').trim_end_matches(':') == "allow_blank")
+    (node_text(source, key)
+        .trim()
+        .trim_start_matches(':')
+        .trim_end_matches(':')
+        == "allow_blank")
         .then_some(key)
 }

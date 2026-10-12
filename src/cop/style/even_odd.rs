@@ -34,7 +34,15 @@ impl Cop for EvenOdd {
         let Some((method, recv)) = even_odd_fix(source, node) else {
             return;
         };
-        report(self, source, node, method, &recv, diagnostics, &mut corrections);
+        report(
+            self,
+            source,
+            node,
+            method,
+            &recv,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 
@@ -49,10 +57,7 @@ fn even_odd_fix(source: &SourceFile, node: Node<'_>) -> Option<(&'static str, St
     ))
 }
 
-fn cmp_parts<'a>(
-    source: &'a SourceFile,
-    node: Node<'a>,
-) -> Option<(&'a [u8], Node<'a>, Node<'a>)> {
+fn cmp_parts<'a>(source: &'a SourceFile, node: Node<'a>) -> Option<(&'a [u8], Node<'a>, Node<'a>)> {
     let mut cur = node.walk();
     let kids: Vec<_> = node.children(&mut cur).collect();
     if kids.len() < 3 {
@@ -75,7 +80,9 @@ fn mod2_parts<'a>(
     }
     let mut lcur = left.walk();
     let lkids: Vec<_> = left.children(&mut lcur).collect();
-    if lkids.len() < 3 || node_bytes(source, lkids[1]) != b"%" || node_bytes(source, lkids[2]) != b"2"
+    if lkids.len() < 3
+        || node_bytes(source, lkids[1]) != b"%"
+        || node_bytes(source, lkids[2]) != b"2"
     {
         return None;
     }
@@ -96,7 +103,12 @@ fn report(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (line, col) = source.offset_to_line_col(node.start_byte());
-    let mut diag = cop.diagnostic(source, line, col, format!("Replace with `Integer#{method}`."));
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        format!("Replace with `Integer#{method}`."),
+    );
     if let Some(corr) = corrections.as_mut() {
         corr.push(Correction {
             start: node.start_byte(),

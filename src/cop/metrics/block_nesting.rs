@@ -80,7 +80,16 @@ fn visit(
     };
     let mut cur = node.walk();
     for child in node.children(&mut cur) {
-        visit(source, child, next, max, count_blocks, count_modifiers, cop, diagnostics);
+        visit(
+            source,
+            child,
+            next,
+            max,
+            count_blocks,
+            count_modifiers,
+            cop,
+            diagnostics,
+        );
     }
 }
 

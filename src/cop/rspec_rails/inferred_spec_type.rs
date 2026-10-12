@@ -169,12 +169,7 @@ impl Cop for InferredSpecType {
             return;
         }
         let (line, col) = source.offset_to_line_col(off_node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Remove redundant spec type.".into(),
-        ));
+        diagnostics.push(self.diagnostic(source, line, col, "Remove redundant spec type.".into()));
     }
 }
 

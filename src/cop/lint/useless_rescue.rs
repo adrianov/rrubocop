@@ -30,14 +30,12 @@ fn rescue_body(node: Node<'_>) -> Option<Node<'_>> {
 
 fn exception_variable<'a>(source: &'a SourceFile, rescue: Node<'_>) -> Option<&'a [u8]> {
     // tree-sitter-ruby: field `variable` → node kind `exception_variable`
-    let ev = rescue
-        .child_by_field_name("variable")
-        .or_else(|| {
-            let mut cur = rescue.walk();
-            rescue
-                .named_children(&mut cur)
-                .find(|n| n.kind() == "exception_variable")
-        })?;
+    let ev = rescue.child_by_field_name("variable").or_else(|| {
+        let mut cur = rescue.walk();
+        rescue
+            .named_children(&mut cur)
+            .find(|n| n.kind() == "exception_variable")
+    })?;
     let mut cur = ev.walk();
     ev.named_children(&mut cur)
         .find(|n| n.kind() == "identifier")
@@ -59,11 +57,7 @@ fn only_reraising(source: &SourceFile, rescue: Node<'_>) -> bool {
     is_reraise_expression(source, stmts[0], exception_variable(source, rescue))
 }
 
-fn is_reraise_expression(
-    source: &SourceFile,
-    node: Node<'_>,
-    rescue_var: Option<&[u8]>,
-) -> bool {
+fn is_reraise_expression(source: &SourceFile, node: Node<'_>, rescue_var: Option<&[u8]>) -> bool {
     if !is_raise_call(source, node) {
         return false;
     }

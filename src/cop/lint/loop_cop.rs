@@ -41,8 +41,7 @@ impl Cop for Loop {
             source,
             line,
             col,
-            "Use `Kernel#loop` with `break` rather than `begin/end/until`(or `while`)."
-                .to_string(),
+            "Use `Kernel#loop` with `break` rather than `begin/end/until`(or `while`).".to_string(),
         ));
     }
 }

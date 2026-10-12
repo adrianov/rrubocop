@@ -234,5 +234,8 @@ impl Cop for RedundantSplatExpansion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(RedundantSplatExpansion, "cops/lint/redundant_splat_expansion");
+    crate::cop_fixture_tests!(
+        RedundantSplatExpansion,
+        "cops/lint/redundant_splat_expansion"
+    );
 }

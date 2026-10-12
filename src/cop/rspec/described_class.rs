@@ -2,10 +2,8 @@
 
 use tree_sitter::Node;
 
-use crate::cop::rspec::helpers::{bare_rspec_call, call_block, is_group, RSPEC_INCLUDE};
-use crate::cop::shared::{
-    call_method_name, for_each_descendant, node_bytes, push_replace,
-};
+use crate::cop::rspec::helpers::{RSPEC_INCLUDE, bare_rspec_call, call_block, is_group};
+use crate::cop::shared::{call_method_name, for_each_descendant, node_bytes, push_replace};
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
@@ -14,9 +12,10 @@ use crate::parse::source::SourceFile;
 pub struct DescribedClass;
 
 fn described_const<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<&'a [u8]> {
-    let first = crate::cop::shared::argument_nodes(node).into_iter().next()?;
-    matches!(first.kind(), "constant" | "scope_resolution")
-        .then(|| node_bytes(source, first))
+    let first = crate::cop::shared::argument_nodes(node)
+        .into_iter()
+        .next()?;
+    matches!(first.kind(), "constant" | "scope_resolution").then(|| node_bytes(source, first))
 }
 
 fn is_matching_const(source: &SourceFile, node: Node<'_>, want: &[u8]) -> bool {
@@ -27,7 +26,9 @@ fn is_matching_const(source: &SourceFile, node: Node<'_>, want: &[u8]) -> bool {
     if node.kind() == "constant" {
         if let Some(parent) = node.parent() {
             if parent.kind() == "scope_resolution"
-                && parent.child_by_field_name("name").is_some_and(|n| n.id() == node.id())
+                && parent
+                    .child_by_field_name("name")
+                    .is_some_and(|n| n.id() == node.id())
                 && parent.child_by_field_name("scope").is_some()
             {
                 return false;

@@ -26,7 +26,11 @@ fn excluded_method(method: &[u8]) -> bool {
 }
 
 fn is_setter_name(method: &[u8]) -> bool {
-    method.ends_with(b"=") && method != b"==" && method != b"!=" && method != b"=~" && method != b"!~"
+    method.ends_with(b"=")
+        && method != b"=="
+        && method != b"!="
+        && method != b"=~"
+        && method != b"!~"
 }
 
 fn is_simple_method_name(method: &[u8]) -> bool {

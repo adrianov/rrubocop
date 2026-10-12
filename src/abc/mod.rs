@@ -211,7 +211,9 @@ mod tests {
     fn file_magic_not_a_branch() {
         // tree-sitter often emits __FILE__/__LINE__/__ENCODING__ as identifier;
         // RuboCop's parser gem does not count them as sends.
-        let s = scores("def f\n  p = File.expand_path(__FILE__)\n  q = __LINE__ + __ENCODING__.size\nend\n");
+        let s = scores(
+            "def f\n  p = File.expand_path(__FILE__)\n  q = __LINE__ + __ENCODING__.size\nend\n",
+        );
         // A: p,q; B: expand_path, +, size — magic constants are not branches
         assert_eq!(s[0].vector, "<2, 3, 0>", "got {}", s[0].vector);
     }

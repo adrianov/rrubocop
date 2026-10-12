@@ -3,7 +3,7 @@
 use tree_sitter::Node;
 
 use super::helpers::{
-    class_body_stmts, effective_arg_name, is_argument_call, nested_class, DEPT_INCLUDE,
+    DEPT_INCLUDE, class_body_stmts, effective_arg_name, is_argument_call, nested_class,
 };
 use crate::cop::shared::{named_kids, node_text};
 use crate::cop::{Cop, CopConfig};

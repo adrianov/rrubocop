@@ -10,7 +10,13 @@ use crate::parse::source::SourceFile;
 pub struct SpaceInsidePercentLiteralDelimiters;
 
 fn matching_close(open: u8) -> u8 {
-    match open { b'(' => b')', b'[' => b']', b'{' => b'}', b'<' => b'>', c => c }
+    match open {
+        b'(' => b')',
+        b'[' => b']',
+        b'{' => b'}',
+        b'<' => b'>',
+        c => c,
+    }
 }
 
 fn percent_type(text: &[u8]) -> Option<u8> {
@@ -26,8 +32,14 @@ fn percent_type(text: &[u8]) -> Option<u8> {
 }
 
 fn find_open(text: &[u8]) -> Option<usize> {
-    if !text.starts_with(b"%") || text.len() < 4 { return None; }
-    Some(text.iter().position(|&b| !b.is_ascii_alphanumeric() && b != b'%').unwrap_or(1))
+    if !text.starts_with(b"%") || text.len() < 4 {
+        return None;
+    }
+    Some(
+        text.iter()
+            .position(|&b| !b.is_ascii_alphanumeric() && b != b'%')
+            .unwrap_or(1),
+    )
 }
 
 fn percent_inner(bytes: &[u8], node: Node<'_>) -> Option<(usize, usize)> {
@@ -40,29 +52,60 @@ fn percent_inner(bytes: &[u8], node: Node<'_>) -> Option<(usize, usize)> {
 }
 
 fn strip_sides(
-    corr: &mut Vec<Correction>, cop_name: &'static str, bytes: &[u8],
-    inner_s: usize, inner_e: usize, sp_a: bool, sp_b: bool,
+    corr: &mut Vec<Correction>,
+    cop_name: &'static str,
+    bytes: &[u8],
+    inner_s: usize,
+    inner_e: usize,
+    sp_a: bool,
+    sp_b: bool,
 ) {
     if sp_a {
         let mut e = inner_s;
-        while e < inner_e && matches!(bytes[e], b' ' | b'\t') { e += 1; }
-        corr.push(Correction { start: inner_s, end: e, replacement: String::new(), cop_name, cop_index: 0 });
+        while e < inner_e && matches!(bytes[e], b' ' | b'\t') {
+            e += 1;
+        }
+        corr.push(Correction {
+            start: inner_s,
+            end: e,
+            replacement: String::new(),
+            cop_name,
+            cop_index: 0,
+        });
     }
     if sp_b {
         let mut s = inner_e;
-        while s > inner_s && matches!(bytes[s - 1], b' ' | b'\t') { s -= 1; }
-        corr.push(Correction { start: s, end: inner_e, replacement: String::new(), cop_name, cop_index: 0 });
+        while s > inner_s && matches!(bytes[s - 1], b' ' | b'\t') {
+            s -= 1;
+        }
+        corr.push(Correction {
+            start: s,
+            end: inner_e,
+            replacement: String::new(),
+            cop_name,
+            cop_index: 0,
+        });
     }
 }
 
 fn report_spaces(
-    cop: &dyn Cop, source: &SourceFile, bytes: &[u8], node: Node<'_>,
-    inner_s: usize, inner_e: usize, sp_a: bool, sp_b: bool,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    bytes: &[u8],
+    node: Node<'_>,
+    inner_s: usize,
+    inner_e: usize,
+    sp_a: bool,
+    sp_b: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (l, c) = source.offset_to_line_col(node.start_byte());
     let mut diag = cop.diagnostic(
-        source, l, c, "Do not use spaces inside percent literal delimiters.".into(),
+        source,
+        l,
+        c,
+        "Do not use spaces inside percent literal delimiters.".into(),
     );
     if let Some(corr) = corrections {
         strip_sides(corr, cop.name(), bytes, inner_s, inner_e, sp_a, sp_b);
@@ -72,16 +115,24 @@ fn report_spaces(
 }
 
 impl Cop for SpaceInsidePercentLiteralDelimiters {
-    fn name(&self) -> &'static str { "Layout/SpaceInsidePercentLiteralDelimiters" }
-    fn supports_autocorrect(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "Layout/SpaceInsidePercentLiteralDelimiters"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         // RuboCop only checks %i/%I/%w/%W/%x — not %() / %Q / %r / %s strings.
         &["string_array", "symbol_array", "%w", "%W", "%i", "%I", "%x"]
     }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = config;
         let bytes = source.as_bytes();
@@ -93,7 +144,9 @@ impl Cop for SpaceInsidePercentLiteralDelimiters {
         ) {
             return;
         }
-        let Some((inner_s, inner_e)) = percent_inner(bytes, node) else { return; };
+        let Some((inner_s, inner_e)) = percent_inner(bytes, node) else {
+            return;
+        };
         let sp_a = matches!(bytes.get(inner_s), Some(b' ') | Some(b'\t'));
         let sp_b = matches!(bytes.get(inner_e - 1), Some(b' ') | Some(b'\t'));
         let inner = &bytes[inner_s..inner_e];
@@ -102,7 +155,18 @@ impl Cop for SpaceInsidePercentLiteralDelimiters {
             return;
         }
         if sp_a || sp_b {
-            report_spaces(self, source, bytes, node, inner_s, inner_e, sp_a, sp_b, diagnostics, &mut corrections);
+            report_spaces(
+                self,
+                source,
+                bytes,
+                node,
+                inner_s,
+                inner_e,
+                sp_a,
+                sp_b,
+                diagnostics,
+                &mut corrections,
+            );
         }
     }
 }

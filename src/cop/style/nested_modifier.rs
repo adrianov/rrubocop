@@ -54,6 +54,5 @@ fn has_nested_mod(node: Node<'_>) -> bool {
             return false;
         }
     }
-    node.parent()
-        .is_some_and(|p| MODS.contains(&p.kind()))
+    node.parent().is_some_and(|p| MODS.contains(&p.kind()))
 }

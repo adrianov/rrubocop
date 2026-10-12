@@ -26,8 +26,10 @@ fn named_count(node: Node<'_>, kind: Option<&str>) -> usize {
 }
 
 fn single_message_arg(source: &SourceFile, arg: Node<'_>) -> bool {
-    if matches!(arg.kind(), "string" | "string_content" | "interpolated_string")
-        && node_text(source, arg).contains('.')
+    if matches!(
+        arg.kind(),
+        "string" | "string_content" | "interpolated_string"
+    ) && node_text(source, arg).contains('.')
     {
         return false;
     }

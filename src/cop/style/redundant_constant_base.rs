@@ -70,7 +70,12 @@ fn report(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (line, col) = source.offset_to_line_col(node.start_byte());
-    let mut diag = cop.diagnostic(source, line, col, "Remove redundant leading `::`.".to_string());
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        "Remove redundant leading `::`.".to_string(),
+    );
     if let Some(corr) = corrections.as_mut() {
         corr.push(Correction {
             start: node.start_byte(),

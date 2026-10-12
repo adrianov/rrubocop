@@ -30,12 +30,15 @@ impl Cop for OpenStructUse {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Avoid using `OpenStruct`; use `Struct`, `Hash`, a class, or `Data` instead.".to_string(),
-        ));
+        diagnostics.push(
+            self.diagnostic(
+                source,
+                line,
+                col,
+                "Avoid using `OpenStruct`; use `Struct`, `Hash`, a class, or `Data` instead."
+                    .to_string(),
+            ),
+        );
         let _ = node_bytes;
     }
 }

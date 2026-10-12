@@ -53,13 +53,12 @@ fn collect_call_condition(source: &SourceFile, n: Node<'_>, target: Node<'_>) ->
     let meth = call_method_name(source, n).unwrap_or(b"");
     let recv = call_receiver(n);
     match meth {
-        b"=~" | b"match" | b"match?" => match (
-            recv,
-            crate::cop::shared::argument_nodes(n).first().copied(),
-        ) {
-            (Some(r), Some(a)) => match_side(source, r, a, target).is_some(),
-            _ => false,
-        },
+        b"=~" | b"match" | b"match?" => {
+            match (recv, crate::cop::shared::argument_nodes(n).first().copied()) {
+                (Some(r), Some(a)) => match_side(source, r, a, target).is_some(),
+                _ => false,
+            }
+        }
         b"is_a?" => recv.is_some_and(|r| same_target(source, r, target)),
         _ => false,
     }

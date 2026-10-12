@@ -18,7 +18,7 @@ use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{
     CallToolResult, ContentBlock, Implementation, ProtocolVersion, ServerCapabilities, ServerConfig,
 };
-use rmcp::{tool, tool_handler, tool_router, ErrorData as McpError, ServerHandler, ServiceExt};
+use rmcp::{ErrorData as McpError, ServerHandler, ServiceExt, tool, tool_handler, tool_router};
 use serde::Deserialize;
 use tokio::runtime::Runtime;
 
@@ -82,7 +82,7 @@ impl RuboCopMcp {
     /// Built-in defaults only (ignores project / home `.rubocop.yml`). For tests.
     #[cfg(test)]
     fn with_defaults() -> Self {
-        use crate::config::{load_default_config, CopFilterSet};
+        use crate::config::{CopFilterSet, load_default_config};
 
         let registry = CopRegistry::default_registry();
         let config = load_default_config(None, None);
@@ -318,11 +318,13 @@ mod tests {
             assert_eq!(result.is_error, Some(false));
             let offenses: serde_json::Value =
                 serde_json::from_str(result.content[0].as_text().unwrap().text.as_str()).unwrap();
-            assert!(offenses
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|o| o["code"] == "Style/CharacterLiteral"));
+            assert!(
+                offenses
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|o| o["code"] == "Style/CharacterLiteral")
+            );
             let _ = client.cancel().await;
         })
         .await;
@@ -389,9 +391,8 @@ mod tests {
         with_client(|client| async move {
             let result = client
                 .call_tool(
-                    CallToolRequestParams::new("rubocop_autocorrection").with_arguments(args_map(
-                        serde_json::json!({ "safety": true }),
-                    )),
+                    CallToolRequestParams::new("rubocop_autocorrection")
+                        .with_arguments(args_map(serde_json::json!({ "safety": true }))),
                 )
                 .await
                 .expect("call");
@@ -416,11 +417,7 @@ mod tests {
                 .expect("call");
             assert_eq!(result.is_error, Some(false));
             assert!(
-                result.content[0]
-                    .as_text()
-                    .unwrap()
-                    .text
-                    .contains("'a'"),
+                result.content[0].as_text().unwrap().text.contains("'a'"),
                 "got: {:?}",
                 result.content[0].as_text().unwrap().text
             );
@@ -457,7 +454,10 @@ mod tests {
             .await;
             let files = body["files"].as_array().unwrap();
             assert_eq!(files.len(), 1, "{body}");
-            assert!(files[0]["path"].as_str().unwrap().ends_with("a.rb"), "{body}");
+            assert!(
+                files[0]["path"].as_str().unwrap().ends_with("a.rb"),
+                "{body}"
+            );
             assert_eq!(body["summary"]["target_file_count"], 1, "{body}");
             assert_eq!(body["summary"]["offense_count"], 1, "{body}");
             let _ = client.cancel().await;
@@ -481,7 +481,10 @@ mod tests {
             .await;
             let files = body["files"].as_array().unwrap();
             assert_eq!(files.len(), 1, "{body}");
-            assert!(files[0]["path"].as_str().unwrap().ends_with("a.rb"), "{body}");
+            assert!(
+                files[0]["path"].as_str().unwrap().ends_with("a.rb"),
+                "{body}"
+            );
             assert_eq!(files[0]["corrected"], true, "{body}");
             assert_eq!(body["summary"]["target_file_count"], 1, "{body}");
             assert_eq!(body["summary"]["corrected_file_count"], 1, "{body}");

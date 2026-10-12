@@ -2,8 +2,8 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared;
 use crate::cop::Cop;
+use crate::cop::shared;
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;

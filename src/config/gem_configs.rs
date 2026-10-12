@@ -14,10 +14,7 @@ include!(concat!(env!("OUT_DIR"), "/gem_configs_embed.rs"));
 /// Return file contents for `gem` / `version` / `rel_path`, if embedded.
 pub fn file(gem: &str, version: &str, rel_path: &str) -> Option<&'static str> {
     let key = format!("{gem}/{version}/{rel_path}");
-    FILES
-        .iter()
-        .find(|(k, _)| *k == key)
-        .map(|(_, body)| *body)
+    FILES.iter().find(|(k, _)| *k == key).map(|(_, body)| *body)
 }
 
 /// Distinct versions embedded for `gem`, sorted ascending.

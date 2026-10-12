@@ -49,7 +49,13 @@ fn has_keyword_arg(node: Node<'_>) -> bool {
         .any(|c| matches!(c.kind(), "pair" | "hash" | "bare_hash"))
 }
 
-fn report(cop: &AssociationStyle, source: &SourceFile, node: Node<'_>, msg: &str, diagnostics: &mut Vec<Diagnostic>) {
+fn report(
+    cop: &AssociationStyle,
+    source: &SourceFile,
+    node: Node<'_>,
+    msg: &str,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
     let (line, col) = source.offset_to_line_col(method_node(node).unwrap_or(node).start_byte());
     diagnostics.push(cop.diagnostic(source, line, col, msg.into()));
 }
@@ -61,7 +67,13 @@ fn check_implicit(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     if is_explicit_association(source, child) && !has_keyword_arg(child) {
-        report(cop, source, child, "Use implicit style to define associations.", diagnostics);
+        report(
+            cop,
+            source,
+            child,
+            "Use implicit style to define associations.",
+            diagnostics,
+        );
     }
 }
 
@@ -95,7 +107,13 @@ fn check_explicit(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     if is_implicit_assoc_candidate(source, child) {
-        report(cop, source, child, "Use explicit style to define associations.", diagnostics);
+        report(
+            cop,
+            source,
+            child,
+            "Use explicit style to define associations.",
+            diagnostics,
+        );
     }
 }
 

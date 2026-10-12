@@ -17,7 +17,9 @@ fn trailing_whitespace_info(bytes: &[u8]) -> (usize, usize) {
     for &b in bytes.iter().rev() {
         if matches!(b, b' ' | b'\t' | b'\r' | b'\n' | b'\x0b' | b'\x0c') {
             ws_len += 1;
-            if b == b'\n' { newline_count += 1; }
+            if b == b'\n' {
+                newline_count += 1;
+            }
         } else {
             break;
         }
@@ -27,8 +29,12 @@ fn trailing_whitespace_info(bytes: &[u8]) -> (usize, usize) {
 
 fn first_trailing_blank_line_offset(bytes: &[u8], trailing_start: usize) -> usize {
     let mut offset = trailing_start;
-    if bytes.get(offset) == Some(&b'\r') { offset += 1; }
-    if bytes.get(offset) == Some(&b'\n') { offset += 1; }
+    if bytes.get(offset) == Some(&b'\r') {
+        offset += 1;
+    }
+    if bytes.get(offset) == Some(&b'\n') {
+        offset += 1;
+    }
     offset.min(bytes.len().saturating_sub(1))
 }
 
@@ -52,7 +58,11 @@ fn blank_message(blank_lines: isize, wanted: isize) -> String {
 }
 
 fn report_loc(
-    source: &SourceFile, bytes: &[u8], begin_pos: usize, blank_lines: isize, ws_len: usize,
+    source: &SourceFile,
+    bytes: &[u8],
+    begin_pos: usize,
+    blank_lines: isize,
+    ws_len: usize,
 ) -> (usize, usize) {
     if blank_lines == 0 {
         missing_blank_loc(source, bytes, begin_pos)
@@ -65,12 +75,18 @@ fn report_loc(
     }
 }
 
-fn apply_fix(
-    cop: &dyn Cop, style: &str, begin_pos: usize, end: usize, corr: &mut Vec<Correction>,
-) {
-    let replacement = if style == "final_blank_line" { "\n\n".into() } else { "\n".into() };
+fn apply_fix(cop: &dyn Cop, style: &str, begin_pos: usize, end: usize, corr: &mut Vec<Correction>) {
+    let replacement = if style == "final_blank_line" {
+        "\n\n".into()
+    } else {
+        "\n".into()
+    };
     corr.push(Correction {
-        start: begin_pos, end, replacement, cop_name: cop.name(), cop_index: 0,
+        start: begin_pos,
+        end,
+        replacement,
+        cop_name: cop.name(),
+        cop_index: 0,
     });
 }
 

@@ -63,8 +63,11 @@ fn report(
 ) {
     let method_str = std::str::from_utf8(method).unwrap_or("");
     let recv = call_receiver(node).unwrap_or(node);
-    let (line, column) = source
-        .offset_to_line_col(node.child_by_field_name("method").unwrap_or(node).start_byte());
+    let (line, column) = source.offset_to_line_col(
+        node.child_by_field_name("method")
+            .unwrap_or(node)
+            .start_byte(),
+    );
     let mut diag = cop.diagnostic(
         source,
         line,
@@ -111,7 +114,11 @@ fn arg_starts_with_pipe(source: &SourceFile, node: Node<'_>) -> bool {
 
 fn string_inner(bytes: &[u8]) -> &[u8] {
     match std::str::from_utf8(bytes) {
-        Ok(s) => s.trim().trim_matches(|c| c == '"' || c == '\'').trim().as_bytes(),
+        Ok(s) => s
+            .trim()
+            .trim_matches(|c| c == '"' || c == '\'')
+            .trim()
+            .as_bytes(),
         Err(_) => b"",
     }
 }

@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use tree_sitter::Node;
 
 use super::helpers::{
-    class_body_stmts, field_name, is_field_call, kwarg_false, nested_class, DEPT_INCLUDE,
+    DEPT_INCLUDE, class_body_stmts, field_name, is_field_call, kwarg_false, nested_class,
 };
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;

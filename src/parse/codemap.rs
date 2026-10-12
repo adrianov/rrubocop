@@ -17,9 +17,7 @@ impl CodeMap {
     }
 
     pub fn covers(&self, offset: usize) -> bool {
-        self.ranges
-            .iter()
-            .any(|&(s, e)| offset >= s && offset < e)
+        self.ranges.iter().any(|&(s, e)| offset >= s && offset < e)
     }
 }
 

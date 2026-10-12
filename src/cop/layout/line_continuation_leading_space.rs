@@ -82,7 +82,9 @@ impl Cop for LineContinuationLeadingSpace {
             return;
         }
         let start_line = source.offset_to_line_col(node.start_byte()).0;
-        let end_line = source.offset_to_line_col(node.end_byte().saturating_sub(1)).0;
+        let end_line = source
+            .offset_to_line_col(node.end_byte().saturating_sub(1))
+            .0;
         for line_no in start_line..end_line {
             report_continuation(self, source, line_no, style, diagnostics, &mut corrections);
         }
@@ -100,7 +102,8 @@ fn report_continuation(
     let Some((line_start, next_start, line, next)) = continuation_pair(source, line_no) else {
         return;
     };
-    let Some((byte, len, insert_at)) = offense_fix(style, line_start, next_start, line, next) else {
+    let Some((byte, len, insert_at)) = offense_fix(style, line_start, next_start, line, next)
+    else {
         return;
     };
     let (l, c) = source.offset_to_line_col(byte);
@@ -178,9 +181,7 @@ fn continuation_pair<'a>(
         line_start,
         next_start,
         line,
-        trim_line_ending(
-            &bytes[next_start..source.line_start(line_no + 2).unwrap_or(bytes.len())],
-        ),
+        trim_line_ending(&bytes[next_start..source.line_start(line_no + 2).unwrap_or(bytes.len())]),
     ))
 }
 

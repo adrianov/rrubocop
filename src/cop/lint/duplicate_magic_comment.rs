@@ -96,7 +96,15 @@ fn process_line(
     if let Some(kind) = magic_kind(&s)
         && !seen.insert(kind)
     {
-        report_dup(cop, source, line_no, line_start, line_end, corrections, diagnostics);
+        report_dup(
+            cop,
+            source,
+            line_no,
+            line_start,
+            line_end,
+            corrections,
+            diagnostics,
+        );
     }
     Some(line_end)
 }

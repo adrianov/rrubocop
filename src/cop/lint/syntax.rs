@@ -109,7 +109,14 @@ fn check_error(
         return;
     }
     let (line, col) = source.offset_to_line_col(node.start_byte());
-    diagnostics.push(syntax_diag(cop, source, line, col, "unexpected token", ruby_ver));
+    diagnostics.push(syntax_diag(
+        cop,
+        source,
+        line,
+        col,
+        "unexpected token",
+        ruby_ver,
+    ));
 }
 
 fn check_endless(
@@ -128,7 +135,14 @@ fn check_endless(
         return;
     };
     let (line, col) = source.offset_to_line_col(eq_off);
-    diagnostics.push(syntax_diag(cop, source, line, col, "unexpected token tEQL", ruby_ver));
+    diagnostics.push(syntax_diag(
+        cop,
+        source,
+        line,
+        col,
+        "unexpected token tEQL",
+        ruby_ver,
+    ));
     // Nested inside an outer method (depth before entering this node >= 1).
     if method_depth >= 1 {
         *nested_endless = true;
@@ -166,11 +180,27 @@ fn walk(
 ) {
     let next_depth = method_depth_after(node, method_depth);
     check_error(source, node, cop, ruby_ver, diagnostics);
-    check_endless(source, node, cop, ruby_ver, method_depth, nested_endless, diagnostics);
+    check_endless(
+        source,
+        node,
+        cop,
+        ruby_ver,
+        method_depth,
+        nested_endless,
+        diagnostics,
+    );
     check_bare_not(source, node, cop, ruby_ver, diagnostics);
     let mut cur = node.walk();
     for child in node.children(&mut cur) {
-        walk(source, child, cop, ruby_ver, next_depth, nested_endless, diagnostics);
+        walk(
+            source,
+            child,
+            cop,
+            ruby_ver,
+            next_depth,
+            nested_endless,
+            diagnostics,
+        );
     }
 }
 
@@ -275,7 +305,9 @@ mod tests {
     fn no_offense_anonymous_block() {
         assert_cop_no_offenses_full(
             &Syntax,
-            include_bytes!("../../../tests/fixtures/cops/lint/syntax/no_offense_anonymous_block.rb"),
+            include_bytes!(
+                "../../../tests/fixtures/cops/lint/syntax/no_offense_anonymous_block.rb"
+            ),
         );
     }
 

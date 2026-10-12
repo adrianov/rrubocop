@@ -109,10 +109,6 @@ mod tests {
             b"    line = headers['TS-API-TIMESTAMP'].to_s +\n      headers['TS-API-API-KEY'].to_s +\n      payload\n",
             indented_config(),
         );
-        assert!(
-            diags.is_empty(),
-            "indented assignment + chain: {:?}",
-            diags
-        );
+        assert!(diags.is_empty(), "indented assignment + chain: {:?}", diags);
     }
 }

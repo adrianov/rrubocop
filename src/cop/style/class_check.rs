@@ -34,11 +34,20 @@ impl Cop for ClassCheck {
         let Some(method) = call_method_name(source, node) else {
             return;
         };
-        let Some((prefer, current)) = preferred_pair(config.get_str("EnforcedStyle", "is_a?"), method)
+        let Some((prefer, current)) =
+            preferred_pair(config.get_str("EnforcedStyle", "is_a?"), method)
         else {
             return;
         };
-        report(self, source, node, prefer, current, diagnostics, &mut corrections);
+        report(
+            self,
+            source,
+            node,
+            prefer,
+            current,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 

@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use sha2::{Digest, Sha256};
 
 use crate::cli::AutocorrectMode;
@@ -13,7 +13,7 @@ use crate::correction::CorrectionSet;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
-use super::{lint_source, LintOutput};
+use super::{LintOutput, lint_source};
 
 pub(crate) const MAX_ITERATIONS: usize = 200;
 
@@ -212,7 +212,11 @@ mod tests {
 
     #[test]
     fn no_duplicate_remaining_offenses() {
-        let diags = lint_only("Gemfile", &mut b"gem 'b'\ngem 'a'\n".to_vec(), "Bundler/OrderedGems");
+        let diags = lint_only(
+            "Gemfile",
+            &mut b"gem 'b'\ngem 'a'\n".to_vec(),
+            "Bundler/OrderedGems",
+        );
         let n = diags
             .iter()
             .filter(|d| d.cop_name == "Bundler/OrderedGems")
@@ -238,7 +242,7 @@ mod tests {
 
     #[test]
     fn reconcile_clears_false_corrected_flags() {
-        use crate::correction::{reconcile_corrected, Correction, CorrectionSet};
+        use crate::correction::{Correction, CorrectionSet, reconcile_corrected};
         use crate::diagnostic::{Diagnostic, Location, Severity};
         use crate::parse::source::SourceFile;
 

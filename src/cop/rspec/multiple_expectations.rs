@@ -3,9 +3,11 @@
 use tree_sitter::Node;
 
 use crate::cop::rspec::helpers::{
-    bare_rspec_call, block_body, call_block, is_example, is_group, RSPEC_INCLUDE,
+    RSPEC_INCLUDE, bare_rspec_call, block_body, call_block, is_example, is_group,
 };
-use crate::cop::shared::{argument_nodes, call_method_name, call_receiver, method_node, node_bytes};
+use crate::cop::shared::{
+    argument_nodes, call_method_name, call_receiver, method_node, node_bytes,
+};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -41,8 +43,11 @@ fn af_from_arg(source: &SourceFile, arg: Node<'_>) -> Option<bool> {
         "pair" => pair_af_value(source, arg),
         "hash" | "bare_hash" => {
             let mut cur = arg.walk();
-            arg.named_children(&mut cur)
-                .find_map(|c| (c.kind() == "pair").then(|| pair_af_value(source, c)).flatten())
+            arg.named_children(&mut cur).find_map(|c| {
+                (c.kind() == "pair")
+                    .then(|| pair_af_value(source, c))
+                    .flatten()
+            })
         }
         _ => None,
     }

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::parse::source::{byte_index_to_column, SourceFile};
+use crate::parse::source::{SourceFile, byte_index_to_column};
 
 #[derive(Clone, Debug)]
 pub(super) struct DisableDirective {
@@ -16,7 +16,10 @@ pub(super) fn disable_marker(line: &str) -> Option<(usize, &str)> {
     let lower = line.to_ascii_lowercase();
     let marker = "# rubocop:disable";
     let pos = lower.find(marker)?;
-    Some((byte_index_to_column(line, pos), line[pos + marker.len()..].trim()))
+    Some((
+        byte_index_to_column(line, pos),
+        line[pos + marker.len()..].trim(),
+    ))
 }
 
 fn enable_marker(line: &str) -> Option<&str> {

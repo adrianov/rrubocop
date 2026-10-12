@@ -21,42 +21,67 @@ fn has_space_before(bytes: &[u8], i: usize) -> bool {
 
 fn strip_start(bytes: &[u8], i: usize) -> usize {
     let mut s = i;
-    while s > 0 && matches!(bytes[s - 1], b' ' | b'\t') { s -= 1; }
+    while s > 0 && matches!(bytes[s - 1], b' ' | b'\t') {
+        s -= 1;
+    }
     s
 }
 
 fn check_at(
-    cop: &dyn Cop, source: &SourceFile, bytes: &[u8], i: usize, want: bool,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    bytes: &[u8],
+    i: usize,
+    want: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let has_space = has_space_before(bytes, i);
     if want && !has_space {
         report::insert_space(
-            cop, source, i,
+            cop,
+            source,
+            i,
             "Use one space before backslash for line continuation.".into(),
-            diagnostics, corrections, i,
+            diagnostics,
+            corrections,
+            i,
         );
     } else if !want && has_space {
         let s = strip_start(bytes, i);
         report::report_fix(
-            cop, source, s,
+            cop,
+            source,
+            s,
             "Do not use space before backslash for line continuation.".into(),
-            diagnostics, corrections, s, i, String::new(),
+            diagnostics,
+            corrections,
+            s,
+            i,
+            String::new(),
         );
     }
 }
 
 impl Cop for LineContinuationSpacing {
-    fn name(&self) -> &'static str { "Layout/LineContinuationSpacing" }
-    fn supports_autocorrect(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "Layout/LineContinuationSpacing"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
 
     fn uses_source_phase(&self) -> bool {
         true
     }
 
     fn check_source(
-        &self, source: &SourceFile, tree: &Tree, code_map: &CodeMap,
-        config: &CopConfig, diagnostics: &mut Vec<Diagnostic>,
+        &self,
+        source: &SourceFile,
+        tree: &Tree,
+        code_map: &CodeMap,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = tree;

@@ -2,8 +2,8 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared::{call_method_name, node_bytes};
 use crate::cop::CopConfig;
+use crate::cop::shared::{call_method_name, node_bytes};
 use crate::parse::source::SourceFile;
 
 fn wayward(name: &[u8], config: &CopConfig) -> bool {

@@ -53,7 +53,10 @@ impl Cop for RequireRangeParentheses {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(RequireRangeParentheses, "cops/lint/require_range_parentheses");
+    crate::cop_fixture_tests!(
+        RequireRangeParentheses,
+        "cops/lint/require_range_parentheses"
+    );
 }
 
 fn needs_parens(source: &SourceFile, node: Node<'_>) -> bool {

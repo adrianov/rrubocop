@@ -17,10 +17,7 @@ fn single_char(s: &str) -> Option<char> {
 }
 
 fn char_content(source: &SourceFile, node: Node<'_>) -> Option<char> {
-    single_char(
-        node_text(source, node)
-            .trim_matches(|c| c == '\'' || c == '"'),
-    )
+    single_char(node_text(source, node).trim_matches(|c| c == '\'' || c == '"'))
 }
 
 fn mixed_case(a: char, b: char) -> bool {

@@ -64,7 +64,11 @@ fn partial_token_span(line: &str, byte: usize, len: usize) -> (usize, usize) {
     (byte, ws_comma_right(line, byte + len))
 }
 
-fn partial_enable_cop_range(source: &SourceFile, line_no: usize, cop: &str) -> Option<(usize, usize)> {
+fn partial_enable_cop_range(
+    source: &SourceFile,
+    line_no: usize,
+    cop: &str,
+) -> Option<(usize, usize)> {
     let line_start = source.line_start(line_no)?;
     let line = source.line_text(line_no)?;
     nth_cop_token(&line, cop, 1).map(|(start, end)| {
@@ -250,9 +254,7 @@ mod tests {
         let mut config = CopConfig::default();
         config.options.insert(
             "ConfigDisabledCops".into(),
-            serde_yml::Value::Sequence(vec![serde_yml::Value::String(
-                "Layout/LineLength".into(),
-            )]),
+            serde_yml::Value::Sequence(vec![serde_yml::Value::String("Layout/LineLength".into())]),
         );
         crate::testutil::assert_cop_no_offenses_full_with_config(
             &RedundantCopEnableDirective,

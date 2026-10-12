@@ -17,7 +17,6 @@ impl Cop for RedundantCurrentDirectoryInPath {
         false
     }
 
-
     fn check_node(
         &self,
         source: &SourceFile,

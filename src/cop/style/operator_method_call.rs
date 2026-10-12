@@ -34,7 +34,16 @@ impl Cop for OperatorMethodCall {
         let Some((method, recv, op)) = detect(source, node) else {
             return;
         };
-        report(self, source, node, method, recv, op, diagnostics, &mut corrections);
+        report(
+            self,
+            source,
+            node,
+            method,
+            recv,
+            op,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 
@@ -70,12 +79,7 @@ fn report(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (line, col) = source.offset_to_line_col(op.start_byte());
-    let mut diag = cop.diagnostic(
-        source,
-        line,
-        col,
-        "Redundant dot detected.".to_string(),
-    );
+    let mut diag = cop.diagnostic(source, line, col, "Redundant dot detected.".to_string());
     if let Some(corr) = corrections.as_mut() {
         push_op_form(cop, source, node, method, recv, corr, &mut diag);
     }

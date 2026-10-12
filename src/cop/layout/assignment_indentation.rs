@@ -28,28 +28,49 @@ fn assignment_eq_line(
 }
 
 impl Cop for AssignmentIndentation {
-    fn name(&self) -> &'static str { "Layout/AssignmentIndentation" }
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["assignment", "operator_assignment"] }
+    fn name(&self) -> &'static str {
+        "Layout/AssignmentIndentation"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["assignment", "operator_assignment"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let width = config.get_usize("IndentationWidth", 2);
-        let Some(left) = node.child_by_field_name("left") else { return; };
-        let Some(right) = node.child_by_field_name("right") else { return; };
+        let Some(left) = node.child_by_field_name("left") else {
+            return;
+        };
+        let Some(right) = node.child_by_field_name("right") else {
+            return;
+        };
         // RuboCop keys off the `=` line — mass-assign `a,\n b = x` keeps `=` with last LHS.
         if shared::node_line(source, right) <= assignment_eq_line(source, node, left, right) {
             return;
         }
         let expected = shared::line_indent(source, left.start_byte()) + width;
         let actual = shared::line_indent(source, right.start_byte());
-        if actual == expected { return; }
+        if actual == expected {
+            return;
+        }
         report::fix_indent(
-            self, source, right.start_byte(),
+            self,
+            source,
+            right.start_byte(),
             "Indent the first line of the right-hand-side of a multi-line assignment.".into(),
-            diagnostics, &mut corrections, actual, expected,
+            diagnostics,
+            &mut corrections,
+            actual,
+            expected,
         );
     }
 }

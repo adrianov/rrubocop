@@ -10,7 +10,7 @@ use crate::cop::EnabledState;
 use super::gem_path;
 use super::load_recursive::{load_config_recursive, load_config_recursive_inner};
 use super::merge::merge_layer_into;
-use super::standard::{standard_gem_config_path, PLUGIN_GEM_DEPARTMENTS};
+use super::standard::{PLUGIN_GEM_DEPARTMENTS, standard_gem_config_path};
 use super::types::ConfigLayer;
 
 fn yaml_string_list(val: &Value) -> Vec<String> {
@@ -43,7 +43,12 @@ fn needs_wrapper(gems: &[String], injected: &[(usize, String)], name: &str) -> b
     !gems.iter().any(|g| g == name) && !injected.iter().any(|(_, g)| g == name)
 }
 
-fn inject_one_wrapper(gems: &[String], injected: &mut Vec<(usize, String)>, wrapper: &str, rubocop: &str) {
+fn inject_one_wrapper(
+    gems: &[String],
+    injected: &mut Vec<(usize, String)>,
+    wrapper: &str,
+    rubocop: &str,
+) {
     for (i, gem) in gems.iter().enumerate() {
         if gem == wrapper && needs_wrapper(gems, injected, rubocop) {
             injected.push((i, rubocop.to_string()));
@@ -130,13 +135,7 @@ fn load_one_require_gem(
     let Some(config_rel_path) = gem_config_rel_path(gem_name, ruby_version) else {
         return;
     };
-    match load_gem_yaml_layer(
-        gem_name,
-        &config_rel_path,
-        working_dir,
-        visited,
-        gem_cache,
-    ) {
+    match load_gem_yaml_layer(gem_name, &config_rel_path, working_dir, visited, gem_cache) {
         Ok(layer) => merge_require_layer(base_layer, layer),
         Err(e) => {
             if gem_name.starts_with("rubocop-") {

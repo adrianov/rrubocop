@@ -37,10 +37,7 @@ pub(crate) fn inject_sibling_str(
         .or_insert_with(|| Value::String(style.to_string()));
 }
 
-pub(crate) fn sibling_enabled(
-    configs: &HashMap<String, CopConfig>,
-    sibling: &str,
-) -> bool {
+pub(crate) fn sibling_enabled(configs: &HashMap<String, CopConfig>, sibling: &str) -> bool {
     configs
         .get(sibling)
         .map(|cc| !matches!(cc.enabled, EnabledState::False))
@@ -215,10 +212,7 @@ pub(crate) fn inject_first_hash_indent(cfg: &ResolvedConfig, name: &str, config:
         ("EnforcedColonStyle", "key"),
         ("EnforcedHashRocketStyle", "key"),
     ] {
-        config
-            .options
-            .entry(key.to_string())
-            .or_insert(
+        config.options.entry(key.to_string()).or_insert(
             cfg.cop_configs
                 .get("Layout/HashAlignment")
                 .and_then(|cc| cc.options.get(key))

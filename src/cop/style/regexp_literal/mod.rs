@@ -10,7 +10,10 @@ use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
-use rewrite::{delimiter_pair_ok, regex_body, rewrite_regexp, split_body_flags, PREFERRED_CLOSE, PREFERRED_OPEN};
+use rewrite::{
+    PREFERRED_CLOSE, PREFERRED_OPEN, delimiter_pair_ok, regex_body, rewrite_regexp,
+    split_body_flags,
+};
 
 pub struct RegexpLiteral;
 
@@ -47,7 +50,17 @@ impl Cop for RegexpLiteral {
         if is_slash && want_percent && percent_r_delimiters_conflict(b) {
             return;
         }
-        report(self, source, node, b, is_slash, is_pct, want_percent, diagnostics, &mut corrections);
+        report(
+            self,
+            source,
+            node,
+            b,
+            is_slash,
+            is_pct,
+            want_percent,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 
@@ -59,7 +72,9 @@ fn want_percent_r(
     allow_inner: bool,
 ) -> bool {
     let multiline = source.offset_to_line_col(node.start_byte()).0
-        != source.offset_to_line_col(node.end_byte().saturating_sub(1)).0;
+        != source
+            .offset_to_line_col(node.end_byte().saturating_sub(1))
+            .0;
     let disallowed_slash = !allow_inner && regex_body(bytes).contains(&b'/');
     style == "percent_r"
         || (style == "mixed" && (multiline || disallowed_slash))

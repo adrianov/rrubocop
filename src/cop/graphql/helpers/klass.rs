@@ -84,11 +84,7 @@ pub fn consecutive_lines(a: Node<'_>, b: Node<'_>) -> bool {
     a.end_position().row + 1 == b.start_position().row
 }
 
-pub fn collect_calls_named<'a>(
-    root: Node<'a>,
-    source: &SourceFile,
-    name: &[u8],
-) -> Vec<Node<'a>> {
+pub fn collect_calls_named<'a>(root: Node<'a>, source: &SourceFile, name: &[u8]) -> Vec<Node<'a>> {
     let mut out = Vec::new();
     walk_calls(root, source, name, &mut out);
     out
@@ -107,5 +103,8 @@ fn walk_calls<'a>(node: Node<'a>, source: &SourceFile, name: &[u8], out: &mut Ve
 pub fn superclass_name(source: &SourceFile, class_node: Node<'_>) -> Option<String> {
     let sc = class_node.child_by_field_name("superclass")?;
     let mut cur = sc.walk();
-    Some(node_text(source, sc.named_children(&mut cur).next().unwrap_or(sc)))
+    Some(node_text(
+        source,
+        sc.named_children(&mut cur).next().unwrap_or(sc),
+    ))
 }

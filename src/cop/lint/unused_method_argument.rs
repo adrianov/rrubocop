@@ -68,8 +68,14 @@ fn is_keyword_param(tree: &tree_sitter::Tree, intro_byte: usize) -> bool {
     found
 }
 
-fn skip_method(source: &SourceFile, fm: &FileModel<'_>, entered_at: usize, config: &CopConfig) -> bool {
-    let empty = config.get_bool("IgnoreEmptyMethods", true) && method_body_empty(&fm.tree, entered_at);
+fn skip_method(
+    source: &SourceFile,
+    fm: &FileModel<'_>,
+    entered_at: usize,
+    config: &CopConfig,
+) -> bool {
+    let empty =
+        config.get_bool("IgnoreEmptyMethods", true) && method_body_empty(&fm.tree, entered_at);
     let nyi = config.get_bool("IgnoreNotImplementedMethods", true)
         && body_not_implemented(source, &fm.tree, entered_at);
     empty || nyi
@@ -162,7 +168,8 @@ impl Cop for UnusedMethodArgument {
     ) {
         let allow_kw = config.get_bool("AllowUnusedKeywordArguments", false);
         for scope in &file_model.scopes {
-            if scope.kind != ScopeKind::Method || skip_method(source, file_model, scope.entered_at, config)
+            if scope.kind != ScopeKind::Method
+                || skip_method(source, file_model, scope.entered_at, config)
             {
                 continue;
             }

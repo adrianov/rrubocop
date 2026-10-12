@@ -5,10 +5,10 @@ use std::path::Path;
 
 use crate::cop::EnabledState;
 
+use super::ResolvedConfig;
 use super::filter_path::path_under_dir;
 use super::merge::merge_layer_into;
 use super::types::{ConfigLayer, NewCopsPolicy};
-use super::ResolvedConfig;
 
 impl ResolvedConfig {
     /// True when a nested `.rubocop.yml` disables this cop for `file_path`.
@@ -55,7 +55,9 @@ impl ResolvedConfig {
     }
 
     fn find_dir_layer_relativized(&self, file_path: &Path) -> Option<&ConfigLayer> {
-        if let Some(layer) = self.find_dir_layer_relativized_under(file_path, self.scan_root.as_deref()) {
+        if let Some(layer) =
+            self.find_dir_layer_relativized_under(file_path, self.scan_root.as_deref())
+        {
             return Some(layer);
         }
         if self.scan_root.as_deref() == self.config_dir.as_deref() {
@@ -158,16 +160,16 @@ impl ResolvedConfig {
             .project_mentioned_depts
             .extend(layer.department_configs.keys().cloned());
         for (dept_name, dept_cfg) in &layer.department_configs {
-            update_enabled_dept(&mut effective.project_enabled_depts, dept_name, dept_cfg.enabled);
+            update_enabled_dept(
+                &mut effective.project_enabled_depts,
+                dept_name,
+                dept_cfg.enabled,
+            );
         }
     }
 }
 
-fn update_enabled_dept(
-    depts: &mut HashSet<String>,
-    dept_name: &str,
-    enabled: EnabledState,
-) {
+fn update_enabled_dept(depts: &mut HashSet<String>, dept_name: &str, enabled: EnabledState) {
     if enabled == EnabledState::True {
         depts.insert(dept_name.to_string());
     } else if enabled != EnabledState::Unset {

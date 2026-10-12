@@ -110,8 +110,7 @@ impl Builder<'_> {
     /// Safe-navigation on a local receiver: recorded for the ABC
     /// repeated-csend discount.
     fn note_csend_site(&mut self, n: Node, scope: ScopeId) {
-        if n
-            .child_by_field_name("operator")
+        if n.child_by_field_name("operator")
             .is_some_and(|o| self.text(o) == "&.")
             && let Some(recv) = n.child_by_field_name("receiver")
             && recv.kind() == "identifier"

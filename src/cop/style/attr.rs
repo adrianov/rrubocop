@@ -96,7 +96,17 @@ fn report(
         col,
         format!("Do not use `attr`. Use `{replacement}` instead."),
     );
-    apply_corr(cop, source, node, args, meth, replacement, has_boolean_last, corrections, &mut diag);
+    apply_corr(
+        cop,
+        source,
+        node,
+        args,
+        meth,
+        replacement,
+        has_boolean_last,
+        corrections,
+        &mut diag,
+    );
     diagnostics.push(diag);
 }
 
@@ -104,7 +114,11 @@ fn attr_replacement(source: &SourceFile, args: &[Node<'_>]) -> (&'static str, bo
     let last = args.last().copied();
     let has_true = last.is_some_and(|a| node_bytes(source, a) == b"true");
     let has_false = last.is_some_and(|a| node_bytes(source, a) == b"false");
-    let replacement = if has_true { "attr_accessor" } else { "attr_reader" };
+    let replacement = if has_true {
+        "attr_accessor"
+    } else {
+        "attr_reader"
+    };
     (replacement, has_true || has_false)
 }
 

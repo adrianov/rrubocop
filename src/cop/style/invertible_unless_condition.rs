@@ -33,7 +33,8 @@ impl Cop for InvertibleUnlessCondition {
         if !matches_invertible_unless_condition(source, node, config) {
             return;
         }
-        let (line, col) = source.offset_to_line_col(unless_keyword_start(node).unwrap_or(node.start_byte()));
+        let (line, col) =
+            source.offset_to_line_col(unless_keyword_start(node).unwrap_or(node.start_byte()));
         diagnostics.push(self.diagnostic(
             source,
             line,

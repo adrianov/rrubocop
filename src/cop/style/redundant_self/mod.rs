@@ -78,7 +78,10 @@ fn report(
     if let Some(corr) = corrections.as_mut() {
         corr.push(Correction {
             start: recv.start_byte(),
-            end: node.child_by_field_name("method").unwrap_or(node).start_byte(),
+            end: node
+                .child_by_field_name("method")
+                .unwrap_or(node)
+                .start_byte(),
             replacement: String::new(),
             cop_name: cop.name(),
             cop_index: 0,

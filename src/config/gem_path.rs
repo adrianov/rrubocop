@@ -36,7 +36,10 @@ pub fn resolve_gem_config(
         let (version, yaml) = embedded_yaml(gem_name, rel_path, working_dir)?;
         return Ok(GemConfigSrc::Embed { version, yaml });
     }
-    Ok(GemConfigSrc::Disk(resolve_local_root(gem_name, working_dir)?))
+    Ok(GemConfigSrc::Disk(resolve_local_root(
+        gem_name,
+        working_dir,
+    )?))
 }
 
 /// Select lockfile/baseline version and return embedded YAML for `rel_path`.

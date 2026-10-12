@@ -7,7 +7,12 @@ use crate::parse::source::SourceFile;
 fn collect_items<'a>(node: Node<'a>) -> Vec<Node<'a>> {
     let mut cur = node.walk();
     node.named_children(&mut cur)
-        .filter(|n| !matches!(n.kind(), "comment" | "hash_splat_argument" | "forward_argument"))
+        .filter(|n| {
+            !matches!(
+                n.kind(),
+                "comment" | "hash_splat_argument" | "forward_argument"
+            )
+        })
         .collect()
 }
 
@@ -100,7 +105,11 @@ pub(super) fn hash_alignment_items<'a>(node: Node<'a>) -> Vec<Node<'a>> {
     }
 }
 
-pub(super) fn alignment_items<'a>(source: &SourceFile, node: Node<'a>, style: &str) -> Vec<Node<'a>> {
+pub(super) fn alignment_items<'a>(
+    source: &SourceFile,
+    node: Node<'a>,
+    style: &str,
+) -> Vec<Node<'a>> {
     if node.kind() == "argument_list" {
         collect_argument_items(source, node, style)
     } else {

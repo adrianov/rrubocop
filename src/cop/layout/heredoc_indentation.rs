@@ -20,7 +20,9 @@ fn skip_name(bytes: &[u8], mut j: usize) -> usize {
 }
 
 fn try_opener_at(bytes: &[u8], i: usize) -> Option<(usize, usize, bool)> {
-    if bytes[i] != b'<' || i == 0 || bytes[i - 1] != b'<' { return None; }
+    if bytes[i] != b'<' || i == 0 || bytes[i - 1] != b'<' {
+        return None;
+    }
     let start = i - 1;
     let mut j = i + 1;
     let mut squiggly = false;
@@ -36,7 +38,9 @@ fn find_opener(source: &SourceFile, body: Node<'_>) -> Option<(usize, usize, boo
     let mut i = body.start_byte();
     while i > 0 {
         i -= 1;
-        if let Some(found) = try_opener_at(bytes, i) { return Some(found); }
+        if let Some(found) = try_opener_at(bytes, i) {
+            return Some(found);
+        }
     }
     None
 }
@@ -46,7 +50,11 @@ fn body_indents(body: &[u8]) -> Vec<usize> {
     lines[..lines.len().saturating_sub(1)]
         .iter()
         .filter(|l| !l.is_empty())
-        .map(|line| line.iter().take_while(|&&b| b == b' ' || b == b'\t').count())
+        .map(|line| {
+            line.iter()
+                .take_while(|&&b| b == b' ' || b == b'\t')
+                .count()
+        })
         .collect()
 }
 
@@ -61,8 +69,15 @@ fn opener_info(source: &SourceFile, node: Node<'_>) -> (Option<(usize, usize, bo
     )
 }
 
-fn has_offense(indents: &[usize], width: usize, needs_squiggly: bool, opener_indent: usize) -> bool {
-    let Some(&min_i) = indents.iter().min() else { return false; };
+fn has_offense(
+    indents: &[usize],
+    width: usize,
+    needs_squiggly: bool,
+    opener_indent: usize,
+) -> bool {
+    let Some(&min_i) = indents.iter().min() else {
+        return false;
+    };
     if needs_squiggly {
         min_i == 0
     } else {
@@ -72,31 +87,55 @@ fn has_offense(indents: &[usize], width: usize, needs_squiggly: bool, opener_ind
     }
 }
 
-fn fix_to_squiggly(cop: &dyn Cop, bytes: &[u8], start: usize, end: usize, corr: &mut Vec<Correction>) {
+fn fix_to_squiggly(
+    cop: &dyn Cop,
+    bytes: &[u8],
+    start: usize,
+    end: usize,
+    corr: &mut Vec<Correction>,
+) {
     let op = &bytes[start..end];
-    let rest = if op.starts_with(b"<<-") { &op[3..] } else { &op[2..] };
+    let rest = if op.starts_with(b"<<-") {
+        &op[3..]
+    } else {
+        &op[2..]
+    };
     corr.push(Correction {
-        start, end,
+        start,
+        end,
         replacement: format!("<<~{}", String::from_utf8_lossy(rest)),
-        cop_name: cop.name(), cop_index: 0,
+        cop_name: cop.name(),
+        cop_index: 0,
     });
 }
 
 fn fix_body_indents(
-    cop: &dyn Cop, source: &SourceFile, node: Node<'_>, lines: &[&[u8]],
-    indents: &[usize], start: usize, width: usize, corr: &mut Vec<Correction>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    lines: &[&[u8]],
+    indents: &[usize],
+    start: usize,
+    width: usize,
+    corr: &mut Vec<Correction>,
 ) {
     let target = shared::line_indent(source, start) + width;
     let mut off = node.start_byte();
     let mut ci = 0usize;
     for line_bytes in &lines[..lines.len().saturating_sub(1)] {
-        if line_bytes.is_empty() { off += 1; continue; }
+        if line_bytes.is_empty() {
+            off += 1;
+            continue;
+        }
         let ind = indents[ci];
         ci += 1;
         if ind != target {
             corr.push(Correction {
-                start: off, end: off + ind, replacement: " ".repeat(target),
-                cop_name: cop.name(), cop_index: ci,
+                start: off,
+                end: off + ind,
+                replacement: " ".repeat(target),
+                cop_name: cop.name(),
+                cop_index: ci,
             });
         }
         off += line_bytes.len() + 1;
@@ -104,8 +143,14 @@ fn fix_body_indents(
 }
 
 fn apply_fix(
-    cop: &dyn Cop, source: &SourceFile, node: Node<'_>, lines: &[&[u8]],
-    indents: &[usize], opener: (usize, usize, bool), width: usize, corr: &mut Vec<Correction>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    lines: &[&[u8]],
+    indents: &[usize],
+    opener: (usize, usize, bool),
+    width: usize,
+    corr: &mut Vec<Correction>,
 ) {
     let (start, end, squiggly) = opener;
     if squiggly {
@@ -124,9 +169,16 @@ fn offense_msg(width: usize, needs_squiggly: bool) -> String {
 }
 
 fn maybe_report(
-    cop: &dyn Cop, source: &SourceFile, node: Node<'_>, lines: &[&[u8]],
-    indents: &[usize], opener: Option<(usize, usize, bool)>, width: usize, needs_squiggly: bool,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    lines: &[&[u8]],
+    indents: &[usize],
+    opener: Option<(usize, usize, bool)>,
+    width: usize,
+    needs_squiggly: bool,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (l, _) = source.offset_to_line_col(node.start_byte());
     let mut diag = cop.diagnostic(source, l, 0, offense_msg(width, needs_squiggly));
@@ -138,24 +190,46 @@ fn maybe_report(
 }
 
 impl Cop for HeredocIndentation {
-    fn name(&self) -> &'static str { "Layout/HeredocIndentation" }
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["heredoc_body"] }
+    fn name(&self) -> &'static str {
+        "Layout/HeredocIndentation"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["heredoc_body"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let width = config.get_usize("IndentationWidth", 2);
         let body = shared::node_bytes(source, node);
         let lines: Vec<&[u8]> = body.split(|&b| b == b'\n').collect();
-        if lines.len() < 2 { return; }
+        if lines.len() < 2 {
+            return;
+        }
         let indents = body_indents(body);
         let (opener, needs_squiggly, opener_indent) = opener_info(source, node);
-        if !has_offense(&indents, width, needs_squiggly, opener_indent) { return; }
+        if !has_offense(&indents, width, needs_squiggly, opener_indent) {
+            return;
+        }
         maybe_report(
-            self, source, node, &lines, &indents, opener, width, needs_squiggly,
-            diagnostics, &mut corrections,
+            self,
+            source,
+            node,
+            &lines,
+            &indents,
+            opener,
+            width,
+            needs_squiggly,
+            diagnostics,
+            &mut corrections,
         );
     }
 }

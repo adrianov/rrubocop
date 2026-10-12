@@ -215,7 +215,10 @@ impl Cop for TrailingCommaInArguments {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(TrailingCommaInArguments, "cops/style/trailing_comma_in_arguments");
+    crate::cop_fixture_tests!(
+        TrailingCommaInArguments,
+        "cops/style/trailing_comma_in_arguments"
+    );
 
     fn comma_cfg() -> CopConfig {
         let mut c = CopConfig::default();

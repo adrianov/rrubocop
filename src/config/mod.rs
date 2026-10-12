@@ -3,47 +3,47 @@
 //! Supports `inherit_from`, `inherit_gem`, `require`/`plugins`, `inherit_mode`,
 //! nested configs, `DisabledByDefault`, and `NewCops` / `Enabled: pending`.
 
-pub mod gem_path;
 mod gem_configs;
+pub mod gem_path;
 mod gem_path_local;
 mod gem_path_version;
 mod gem_path_version_override;
 
-mod types;
-mod yaml_read;
-mod globutil;
-mod filter;
-mod filter_path;
-mod filter_match;
 mod discover;
-mod standard_convert;
-mod standard;
+mod filter;
+mod filter_match;
+mod filter_path;
+mod globutil;
+mod load;
+mod load_defaults;
+mod load_gems;
+mod load_lockfile;
+mod load_recursive;
+mod load_require;
+mod load_resolve;
 mod merge;
 mod merge_cop;
 mod parse;
 mod parse_allcops;
 mod parse_cop;
-mod load_defaults;
-mod load_require;
-mod load_gems;
-mod load_recursive;
-mod load_lockfile;
-mod load_resolve;
 mod rails_app;
-mod load;
-mod ruby_ver;
 mod resolved;
-mod resolved_state;
-mod resolved_enabled;
-mod resolved_inject;
 mod resolved_cop_cfg;
-mod resolved_filters;
 mod resolved_effective;
+mod resolved_enabled;
+mod resolved_filters;
 mod resolved_fingerprint;
+mod resolved_inject;
+mod resolved_state;
+mod ruby_ver;
+mod standard;
+mod standard_convert;
+mod types;
+mod yaml_read;
 
 pub use filter::{CopFilter, CopFilterSet};
-pub use gem_path_version_override::validate_rubocop_version;
 pub(crate) use gem_path_version_override::set_rubocop_version_override;
+pub use gem_path_version_override::validate_rubocop_version;
 pub use load::{load_config, load_default_config};
 pub use resolved::ResolvedConfig;
 pub use types::NewCopsPolicy;
@@ -51,9 +51,9 @@ pub use types::NewCopsPolicy;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cop::EnabledState;
     use std::fs;
     use std::path::{Path, PathBuf};
-    use crate::cop::EnabledState;
 
     fn write_yaml(dir: &Path, name: &str, content: &str) -> PathBuf {
         let path = dir.join(name);
@@ -406,18 +406,8 @@ mod tests {
 
     // Omakase disables whole departments and re-enables select cops.
     fn assert_omakase_applied(config: &ResolvedConfig) {
-        assert!(config.is_cop_enabled(
-            "Layout/SpaceInsideParens",
-            Path::new("a.rb"),
-            &[],
-            &[]
-        ));
-        assert!(!config.is_cop_enabled(
-            "Style/Documentation",
-            Path::new("a.rb"),
-            &[],
-            &[]
-        ));
+        assert!(config.is_cop_enabled("Layout/SpaceInsideParens", Path::new("a.rb"), &[], &[]));
+        assert!(!config.is_cop_enabled("Style/Documentation", Path::new("a.rb"), &[], &[]));
     }
 
     #[test]
@@ -443,12 +433,7 @@ mod tests {
         discover::with_user_config_suppressed(|| {
             let config =
                 load_config(None, Some(tempfile::tempdir().unwrap().path()), None).unwrap();
-            assert!(config.is_cop_enabled(
-                "Style/Documentation",
-                Path::new("a.rb"),
-                &[],
-                &[]
-            ));
+            assert!(config.is_cop_enabled("Style/Documentation", Path::new("a.rb"), &[], &[]));
         });
     }
 
@@ -493,10 +478,7 @@ mod tests {
 
     fn assert_nested_cop_state(config: &ResolvedConfig, dir: &Path) {
         assert!(config.has_dir_overrides());
-        assert_eq!(
-            config.cop_config("Style/Foo").enabled,
-            EnabledState::True
-        );
+        assert_eq!(config.cop_config("Style/Foo").enabled, EnabledState::True);
         let nested = config.cop_config_for_file("Style/Foo", &dir.join("spec/a.rb"));
         assert_eq!(nested.enabled, EnabledState::False);
     }
@@ -535,14 +517,18 @@ mod tests {
     }
 
     fn assert_nested_overrides_scoped_to_scan_root(config: &ResolvedConfig) {
-        assert!(config
-            .dir_overrides
-            .iter()
-            .any(|(d, _)| d.ends_with("spec")));
-        assert!(!config
-            .dir_overrides
-            .iter()
-            .any(|(d, _)| d.ends_with("sibling")));
+        assert!(
+            config
+                .dir_overrides
+                .iter()
+                .any(|(d, _)| d.ends_with("spec"))
+        );
+        assert!(
+            !config
+                .dir_overrides
+                .iter()
+                .any(|(d, _)| d.ends_with("sibling"))
+        );
         assert_eq!(
             config
                 .cop_config_for_file("Style/Foo", Path::new("spec/a.rb"))
@@ -699,12 +685,7 @@ mod tests {
             &[],
             &[]
         ));
-        assert!(config.is_cop_enabled(
-            "Lint/UselessAssignment",
-            Path::new("x.rb"),
-            &[],
-            &[]
-        ));
+        assert!(config.is_cop_enabled("Lint/UselessAssignment", Path::new("x.rb"), &[], &[]));
         assert!(config.is_cop_enabled("Layout/LineLength", Path::new("x.rb"), &[], &[]));
     }
 }

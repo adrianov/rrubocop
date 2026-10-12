@@ -10,9 +10,7 @@ use anyhow::Result;
 static VERSION_OVERRIDE: RwLock<Option<String>> = RwLock::new(None);
 
 pub(crate) fn set_rubocop_version_override(version: Option<String>) {
-    *VERSION_OVERRIDE
-        .write()
-        .expect("VERSION_OVERRIDE poisoned") = version;
+    *VERSION_OVERRIDE.write().expect("VERSION_OVERRIDE poisoned") = version;
 }
 
 pub(crate) fn rubocop_version_override() -> Option<String> {

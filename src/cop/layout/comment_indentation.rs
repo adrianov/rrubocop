@@ -13,9 +13,7 @@ use crate::parse::source::SourceFile;
 pub struct CommentIndentation;
 
 fn standalone_comment(bytes: &[u8], ls: usize, start: usize) -> bool {
-    !bytes[ls..start]
-        .iter()
-        .any(|&b| b != b' ' && b != b'\t')
+    !bytes[ls..start].iter().any(|&b| b != b' ' && b != b'\t')
 }
 
 fn line_body(bytes: &[u8], nls: usize) -> &[u8] {
@@ -27,17 +25,26 @@ fn line_body(bytes: &[u8], nls: usize) -> &[u8] {
 }
 
 fn content_indent(line: &[u8]) -> Option<usize> {
-    let i = line.iter().take_while(|&&b| matches!(b, b' ' | b'\t')).count();
+    let i = line
+        .iter()
+        .take_while(|&&b| matches!(b, b' ' | b'\t'))
+        .count();
     (i < line.len() && line[i] != b'#').then_some(i)
 }
 
 fn stripped(line: &[u8]) -> &[u8] {
-    &line[line.iter().take_while(|&&b| matches!(b, b' ' | b'\t')).count()..]
+    &line[line
+        .iter()
+        .take_while(|&&b| matches!(b, b' ' | b'\t'))
+        .count()..]
 }
 
 fn less_indented(line: &[u8]) -> bool {
     let rest = stripped(line);
-    rest.starts_with(b"end") || rest.first().is_some_and(|b| matches!(b, b'}' | b')' | b']'))
+    rest.starts_with(b"end")
+        || rest
+            .first()
+            .is_some_and(|b| matches!(b, b'}' | b')' | b']'))
 }
 
 fn two_alternatives(line: &[u8]) -> bool {

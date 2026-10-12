@@ -1,9 +1,13 @@
 //! Heuristic matchers for breadth-first Style cops.
-use tree_sitter::Node;
 use crate::cop::CopConfig;
 use crate::parse::source::SourceFile;
+use tree_sitter::Node;
 
-pub fn matches_class_and_module_children(_source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {
+pub fn matches_class_and_module_children(
+    _source: &SourceFile,
+    node: Node<'_>,
+    config: &CopConfig,
+) -> bool {
     if !matches!(node.kind(), "class" | "module") {
         return false;
     }

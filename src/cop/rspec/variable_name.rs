@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct VariableName;
-
 
 impl Cop for VariableName {
     fn name(&self) -> &'static str {
@@ -21,7 +20,6 @@ impl Cop for VariableName {
     fn default_include(&self) -> &'static [&'static str] {
         &["**/*_spec.rb", "**/spec/**/*"]
     }
-
 
     fn check_node(
         &self,

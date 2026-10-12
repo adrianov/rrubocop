@@ -94,7 +94,16 @@ impl Cop for CaseIndentation {
         if shared::node_col(source, node) == expected {
             return;
         }
-        report_branch(self, source, node, parent, style, expected, diagnostics, corrections);
+        report_branch(
+            self,
+            source,
+            node,
+            parent,
+            style,
+            expected,
+            diagnostics,
+            corrections,
+        );
     }
 }
 

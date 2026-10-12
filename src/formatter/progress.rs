@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::diagnostic::{smart_path, Diagnostic, Severity};
+use crate::diagnostic::{Diagnostic, Severity, smart_path};
+use crate::formatter::Formatter;
 use crate::formatter::color::Color;
 use crate::formatter::text::write_summary;
-use crate::formatter::Formatter;
 
 /// RuboCop progress formatter: Inspecting header, marks, then clang offenses.
 pub struct ProgressFormatter {
@@ -69,12 +69,7 @@ fn write_mark(color: Color, diagnostics: &[Diagnostic], out: &mut dyn Write) {
     let _ = write!(out, "{mark}");
 }
 
-fn write_marks(
-    color: Color,
-    diagnostics: &[Diagnostic],
-    files: &[PathBuf],
-    out: &mut dyn Write,
-) {
+fn write_marks(color: Color, diagnostics: &[Diagnostic], files: &[PathBuf], out: &mut dyn Write) {
     let worst = worst_severity(diagnostics);
     for f in files {
         let mark = match worst.get(&smart_path(&f.to_string_lossy())) {
@@ -152,7 +147,11 @@ mod tests {
         fmt.started(2, &mut buf);
         fmt.file_finished(&[], &mut buf);
         fmt.file_finished(&[sample()], &mut buf);
-        fmt.finished(&[sample()], &[PathBuf::from("a.rb"), PathBuf::from("b.rb")], &mut buf);
+        fmt.finished(
+            &[sample()],
+            &[PathBuf::from("a.rb"), PathBuf::from("b.rb")],
+            &mut buf,
+        );
         let s = String::from_utf8(buf).unwrap();
         assert!(s.starts_with("Inspecting 2 files\n.C\n"), "{s}");
         assert!(s.contains("Offenses:"), "{s}");

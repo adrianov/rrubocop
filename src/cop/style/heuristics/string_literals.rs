@@ -1,7 +1,7 @@
 //! Style/StringLiterals heuristic matchers and quote helpers.
-use tree_sitter::Node;
 use crate::cop::CopConfig;
 use crate::parse::source::SourceFile;
+use tree_sitter::Node;
 
 /// RuboCop `Util#double_quotes_required?` — `'` or a non-`\\`/`"` escape needs `"…"`.
 fn odd_escape_needs_double(src: &[u8], i: usize) -> (usize, bool) {
@@ -45,7 +45,10 @@ fn double_quotes_preferred(src: &[u8]) -> bool {
             b'\\' if i + 1 < src.len() && !matches!(src[i + 1], b'\'' | b'\\') => {
                 return true;
             }
-            b'#' if src.get(i + 1).is_some_and(|b| matches!(b, b'@' | b'$' | b'{')) => {
+            b'#' if src
+                .get(i + 1)
+                .is_some_and(|b| matches!(b, b'@' | b'$' | b'{')) =>
+            {
                 return true;
             }
             _ => {}
@@ -71,7 +74,9 @@ fn quote_mismatch(style: &str, b: &[u8]) -> bool {
 
 fn is_multiline_string(source: &SourceFile, node: Node<'_>) -> bool {
     source.offset_to_line_col(node.start_byte()).0
-        != source.offset_to_line_col(node.end_byte().saturating_sub(1)).0
+        != source
+            .offset_to_line_col(node.end_byte().saturating_sub(1))
+            .0
 }
 
 pub fn matches_string_literals(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> bool {

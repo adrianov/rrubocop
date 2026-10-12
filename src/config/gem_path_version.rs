@@ -33,17 +33,17 @@ pub(crate) fn select_version(gem_name: &str, working_dir: &Path) -> Result<Strin
         }
     }
     if let Some(locked) = lockfile_gem_version_str(working_dir, gem_name) {
-        return Ok(pick_locked_version(gem_name, &locked, &available, "Gemfile.lock"));
+        return Ok(pick_locked_version(
+            gem_name,
+            &locked,
+            &available,
+            "Gemfile.lock",
+        ));
     }
     Ok(pick_unlocked_version(gem_name, &available))
 }
 
-fn pick_locked_version(
-    gem_name: &str,
-    locked: &str,
-    available: &[String],
-    source: &str,
-) -> String {
+fn pick_locked_version(gem_name: &str, locked: &str, available: &[String], source: &str) -> String {
     if available.iter().any(|v| v == locked) {
         return locked.to_string();
     }
@@ -200,27 +200,14 @@ mod tests {
     #[test]
     fn nearest_prefers_le() {
         let avail = vec!["2.32.0".into(), "2.34.3".into()];
-        assert_eq!(
-            nearest_version("2.33.0", &avail).as_deref(),
-            Some("2.32.0")
-        );
-        assert_eq!(
-            nearest_version("2.34.3", &avail).as_deref(),
-            Some("2.34.3")
-        );
-        assert_eq!(
-            nearest_version("2.30.0", &avail).as_deref(),
-            Some("2.32.0")
-        );
+        assert_eq!(nearest_version("2.33.0", &avail).as_deref(), Some("2.32.0"));
+        assert_eq!(nearest_version("2.34.3", &avail).as_deref(), Some("2.34.3"));
+        assert_eq!(nearest_version("2.30.0", &avail).as_deref(), Some("2.32.0"));
     }
 
     #[test]
     fn pick_locked_prefers_same_as() {
-        let avail = vec![
-            "1.77.0".into(),
-            "1.79.0".into(),
-            "1.84.2".into(),
-        ];
+        let avail = vec!["1.77.0".into(), "1.79.0".into(), "1.84.2".into()];
         assert_eq!(
             pick_locked_version("rubocop", "1.79.2", &avail, "Gemfile.lock"),
             "1.79.0"

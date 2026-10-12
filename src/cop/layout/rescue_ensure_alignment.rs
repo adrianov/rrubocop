@@ -62,7 +62,10 @@ fn alignment_col(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Opt
 /// Parser `block` nodes start at the send; tree-sitter `do_block` starts at `do`.
 fn block_expression_col(source: &SourceFile, ancestor: Node<'_>) -> Option<usize> {
     let send = block_send_node(ancestor)?;
-    Some(shared::line_indent(source, outermost_send(send).start_byte()))
+    Some(shared::line_indent(
+        source,
+        outermost_send(send).start_byte(),
+    ))
 }
 
 /// Accept rescue/ensure aligned with `.` / `&.` or the method on the `do` line.

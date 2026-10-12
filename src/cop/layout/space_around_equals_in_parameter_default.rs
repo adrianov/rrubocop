@@ -27,32 +27,56 @@ fn spacing_ok(want: bool, before: &[u8], after: &[u8]) -> bool {
 }
 
 fn eq_span(bytes: &[u8], name_end: usize, value_start: usize) -> Option<(usize, &[u8], &[u8])> {
-    let rel = bytes[name_end..value_start].iter().position(|&b| b == b'=')?;
+    let rel = bytes[name_end..value_start]
+        .iter()
+        .position(|&b| b == b'=')?;
     let eq = name_end + rel;
     Some((eq, &bytes[name_end..eq], &bytes[eq + 1..value_start]))
 }
 
 impl Cop for SpaceAroundEqualsInParameterDefault {
-    fn name(&self) -> &'static str { "Layout/SpaceAroundEqualsInParameterDefault" }
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["optional_parameter"] }
+    fn name(&self) -> &'static str {
+        "Layout/SpaceAroundEqualsInParameterDefault"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["optional_parameter"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let want = config.get_str("EnforcedStyle", "space") != "no_space";
         let bytes = source.as_bytes();
-        let Some(name) = node.child_by_field_name("name") else { return; };
-        let Some(value) = node.child_by_field_name("value") else { return; };
-        let Some((eq, before, after)) = eq_span(bytes, name.end_byte(), value.start_byte()) else { return; };
-        if spacing_ok(want, before, after) { return; }
+        let Some(name) = node.child_by_field_name("name") else {
+            return;
+        };
+        let Some(value) = node.child_by_field_name("value") else {
+            return;
+        };
+        let Some((eq, before, after)) = eq_span(bytes, name.end_byte(), value.start_byte()) else {
+            return;
+        };
+        if spacing_ok(want, before, after) {
+            return;
+        }
         let ty = if want { "missing" } else { "detected" };
         report::report_fix(
-            self, source, eq,
+            self,
+            source,
+            eq,
             format!("Surrounding space {ty} in default value assignment."),
-            diagnostics, &mut corrections,
-            name.end_byte(), value.start_byte(),
+            diagnostics,
+            &mut corrections,
+            name.end_byte(),
+            value.start_byte(),
             if want { " = ".into() } else { "=".into() },
         );
     }

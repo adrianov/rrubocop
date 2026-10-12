@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct LexicallyScopedActionFilter;
-
 
 impl Cop for LexicallyScopedActionFilter {
     fn name(&self) -> &'static str {
@@ -21,7 +20,6 @@ impl Cop for LexicallyScopedActionFilter {
     fn default_include(&self) -> &'static [&'static str] {
         &["**/app/controllers/**/*.rb", "**/app/mailers/**/*.rb"]
     }
-
 
     fn check_node(
         &self,

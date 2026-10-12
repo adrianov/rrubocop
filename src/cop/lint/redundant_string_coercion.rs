@@ -20,7 +20,9 @@ fn to_s_call<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
     if call_method_name(source, call) != Some(b"to_s") {
         return None;
     }
-    call.child_by_field_name("arguments").is_none().then_some(call)
+    call.child_by_field_name("arguments")
+        .is_none()
+        .then_some(call)
 }
 
 fn strip_to_s(source: &SourceFile, call: Node<'_>, recv: Node<'_>) -> Correction {
@@ -99,8 +101,11 @@ impl Cop for RedundantStringCoercion {
         } else {
             "Redundant use of `Object#to_s` in interpolation."
         };
-        let (line, col) = source
-            .offset_to_line_col(call.child_by_field_name("method").unwrap_or(call).start_byte());
+        let (line, col) = source.offset_to_line_col(
+            call.child_by_field_name("method")
+                .unwrap_or(call)
+                .start_byte(),
+        );
         let mut diag = self.diagnostic(source, line, col, msg.to_string());
         if maybe_correct(source, call, recv, corrections) {
             diag.corrected = true;

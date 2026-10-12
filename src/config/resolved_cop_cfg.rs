@@ -2,13 +2,14 @@
 
 use crate::cop::CopConfig;
 
-use super::resolved_inject::{
-    inject_active_support, inject_config_disabled_cops, inject_end_alignment, inject_first_argument,
-    inject_first_hash_indent, inject_globals, inject_hash_alignment, inject_indentation_width,
-    inject_line_length, inject_missing_else, inject_quoted_symbols, inject_rack_version,
-    inject_redundant_line_break, inject_rescue_ensure_alignment, inject_space_after_comma,
-};
 use super::ResolvedConfig;
+use super::resolved_inject::{
+    inject_active_support, inject_config_disabled_cops, inject_end_alignment,
+    inject_first_argument, inject_first_hash_indent, inject_globals, inject_hash_alignment,
+    inject_indentation_width, inject_line_length, inject_missing_else, inject_quoted_symbols,
+    inject_rack_version, inject_redundant_line_break, inject_rescue_ensure_alignment,
+    inject_space_after_comma,
+};
 
 impl ResolvedConfig {
     /// Get the resolved config for a specific cop.

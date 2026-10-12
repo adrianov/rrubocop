@@ -175,9 +175,7 @@ module M\n\
 end\n",
             opts(&[(
                 "ContextCreatingMethods",
-                serde_yml::Value::Sequence(vec![serde_yml::Value::String(
-                    "class_methods".into(),
-                )]),
+                serde_yml::Value::Sequence(vec![serde_yml::Value::String("class_methods".into())]),
             )]),
         );
     }
@@ -195,7 +193,10 @@ module M\n\
   private\n\
   def b; end\n\
 end\n",
-            opts(&[("ActiveSupportExtensionsEnabled", serde_yml::Value::Bool(true))]),
+            opts(&[(
+                "ActiveSupportExtensionsEnabled",
+                serde_yml::Value::Bool(true),
+            )]),
         );
     }
 }

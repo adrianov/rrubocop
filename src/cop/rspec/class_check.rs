@@ -11,17 +11,17 @@ use crate::parse::source::SourceFile;
 pub struct ClassCheck;
 
 fn style_prefer(style: &str, method: &[u8]) -> Option<&'static str> {
-    let is_candidate = matches!(
-        method,
-        b"be_a" | b"be_an" | b"be_kind_of" | b"be_a_kind_of"
-    );
+    let is_candidate = matches!(method, b"be_a" | b"be_an" | b"be_kind_of" | b"be_a_kind_of");
     if !is_candidate {
         return None;
     }
     let (ok, prefer) = if style == "be_a" {
         (matches!(method, b"be_a" | b"be_an"), "be_a")
     } else {
-        (matches!(method, b"be_kind_of" | b"be_a_kind_of"), "be_kind_of")
+        (
+            matches!(method, b"be_kind_of" | b"be_a_kind_of"),
+            "be_kind_of",
+        )
     };
     (!ok).then_some(prefer)
 }

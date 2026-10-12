@@ -38,38 +38,74 @@ fn replacement_for(style: &str, indent: &[u8], width: usize) -> String {
 }
 
 fn check_line(
-    cop: &dyn Cop, source: &SourceFile, code_map: &CodeMap, style: &str, width: usize,
-    offset: usize, line: &[u8],
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    code_map: &CodeMap,
+    style: &str,
+    width: usize,
+    offset: usize,
+    line: &[u8],
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let indent_end = line.iter().position(|&b| b != b' ' && b != b'\t').unwrap_or(line.len());
+    let indent_end = line
+        .iter()
+        .position(|&b| b != b' ' && b != b'\t')
+        .unwrap_or(line.len());
     let indent = &line[..indent_end];
-    if indent.is_empty() || !indent_bad(style, indent) || code_map.covers(offset) { return; }
+    if indent.is_empty() || !indent_bad(style, indent) || code_map.covers(offset) {
+        return;
+    }
     let ty = if style == "tabs" { "Space" } else { "Tab" };
     report::report_fix(
-        cop, source, offset, format!("{ty} detected in indentation."),
-        diagnostics, corrections, offset, offset + indent_end, replacement_for(style, indent, width),
+        cop,
+        source,
+        offset,
+        format!("{ty} detected in indentation."),
+        diagnostics,
+        corrections,
+        offset,
+        offset + indent_end,
+        replacement_for(style, indent, width),
     );
 }
 
 impl Cop for IndentationStyle {
-    fn name(&self) -> &'static str { "Layout/IndentationStyle" }
-    fn supports_autocorrect(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "Layout/IndentationStyle"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
 
     fn uses_source_phase(&self) -> bool {
         true
     }
 
     fn check_source(
-        &self, source: &SourceFile, _tree: &Tree, code_map: &CodeMap,
-        config: &CopConfig, diagnostics: &mut Vec<Diagnostic>,
+        &self,
+        source: &SourceFile,
+        _tree: &Tree,
+        code_map: &CodeMap,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let style = config.get_str("EnforcedStyle", "spaces");
         let width = config.get_usize("IndentationWidth", 2);
         let mut offset = 0usize;
         for line in source.lines() {
-            check_line(self, source, code_map, style, width, offset, line, diagnostics, &mut corrections);
+            check_line(
+                self,
+                source,
+                code_map,
+                style,
+                width,
+                offset,
+                line,
+                diagnostics,
+                &mut corrections,
+            );
             offset += line.len() + 1;
         }
     }

@@ -47,7 +47,15 @@ impl Cop for NegatedIf {
         let Some(inner) = negated_operand(source, cond) else {
             return;
         };
-        report(self, source, node, cond, inner, diagnostics, &mut corrections);
+        report(
+            self,
+            source,
+            node,
+            cond,
+            inner,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 

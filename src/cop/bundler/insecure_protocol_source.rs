@@ -42,10 +42,33 @@ impl Cop for InsecureProtocolSource {
                 continue;
             }
             let line_num = i + 1;
-            flag_deprecated_syms(self, source, line_str, line_num, diagnostics, &mut corrections);
+            flag_deprecated_syms(
+                self,
+                source,
+                line_str,
+                line_num,
+                diagnostics,
+                &mut corrections,
+            );
             if !allow_http {
-                fix_http(self, source, line_str, line_num, '\'', diagnostics, &mut corrections);
-                fix_http(self, source, line_str, line_num, '"', diagnostics, &mut corrections);
+                fix_http(
+                    self,
+                    source,
+                    line_str,
+                    line_num,
+                    '\'',
+                    diagnostics,
+                    &mut corrections,
+                );
+                fix_http(
+                    self,
+                    source,
+                    line_str,
+                    line_num,
+                    '"',
+                    diagnostics,
+                    &mut corrections,
+                );
             }
         }
     }
@@ -71,8 +94,15 @@ fn flag_deprecated_syms(
                 "The source `{sym}` is deprecated because HTTP requests are insecure. Please change your source to 'https://rubygems.org' if possible, or 'http://rubygems.org' if not."
             ),
         );
-        if push_replace(corrections, source, line_num, col, sym.len(), "'https://rubygems.org'", cop.name())
-        {
+        if push_replace(
+            corrections,
+            source,
+            line_num,
+            col,
+            sym.len(),
+            "'https://rubygems.org'",
+            cop.name(),
+        ) {
             diag.corrected = true;
         }
         diagnostics.push(diag);
@@ -101,7 +131,15 @@ fn fix_http(
         format!("Use `{https_url}` instead of `{url}`."),
     );
     if let Some(http_col) = line_str.find("http://")
-        && push_replace(corrections, source, line_num, http_col, 7, "https://", cop.name())
+        && push_replace(
+            corrections,
+            source,
+            line_num,
+            http_col,
+            7,
+            "https://",
+            cop.name(),
+        )
     {
         diag.corrected = true;
     }

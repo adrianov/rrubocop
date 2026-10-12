@@ -3,8 +3,8 @@
 use tree_sitter::Node;
 
 use super::helpers::{
-    enclosing_class, find_method_def, is_conflict_field_name, is_field_call, resolver_method_name,
-    CALL_KINDS, DEPT_INCLUDE,
+    CALL_KINDS, DEPT_INCLUDE, enclosing_class, find_method_def, is_conflict_field_name,
+    is_field_call, resolver_method_name,
 };
 use crate::cop::shared::{argument_nodes, call_method_name, call_receiver, named_kids, node_text};
 use crate::cop::{Cop, CopConfig};
@@ -40,8 +40,7 @@ impl Cop for FieldHashKey {
         let Some(class) = enclosing_class(node) else {
             return;
         };
-        let Some(method) =
-            find_method_def(class, source, &resolver_method_name(source, node))
+        let Some(method) = find_method_def(class, source, &resolver_method_name(source, node))
         else {
             return;
         };
@@ -52,12 +51,7 @@ impl Cop for FieldHashKey {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            format!("Use hash_key: :{key}"),
-        ));
+        diagnostics.push(self.diagnostic(source, line, col, format!("Use hash_key: :{key}")));
     }
 }
 
@@ -117,12 +111,7 @@ fn sym_or_str(source: &SourceFile, node: Node<'_>) -> Option<String> {
             || t.starts_with('"')
             || t.starts_with('\'')
         {
-            Some(
-                t.trim()
-                    .trim_matches('"')
-                    .trim_matches('\'')
-                    .to_string(),
-            )
+            Some(t.trim().trim_matches('"').trim_matches('\'').to_string())
         } else {
             None
         }

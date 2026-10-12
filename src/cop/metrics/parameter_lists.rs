@@ -64,9 +64,7 @@ fn report_if_over(
     let msg = if kind == "parameters" {
         format!("Avoid parameter lists longer than {max} parameters. [{count}/{max}]")
     } else {
-        format!(
-            "Avoid optional parameters that take longer than {max} arguments. [{count}/{max}]"
-        )
+        format!("Avoid optional parameters that take longer than {max} arguments. [{count}/{max}]")
     };
     diagnostics.push(cop.diagnostic(source, line, column, msg));
 }
@@ -77,9 +75,10 @@ fn count_params(params: Node<'_>, count_kw: bool) -> (usize, usize) {
     let mut cur = params.walk();
     for child in params.named_children(&mut cur) {
         match child.kind() {
-            "identifier" | "destructured_parameter" | "splat_parameter" | "hash_splat_parameter" => {
-                total += 1
-            }
+            "identifier"
+            | "destructured_parameter"
+            | "splat_parameter"
+            | "hash_splat_parameter" => total += 1,
             "optional_parameter" => {
                 total += 1;
                 optional += 1;

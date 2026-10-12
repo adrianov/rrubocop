@@ -52,12 +52,7 @@ impl<'m> Builder<'m> {
         let pos = w.byte;
         match self.lookup(scope, pos, name) {
             Some(s) => {
-                self.scopes[s]
-                    .entries
-                    .get_mut(name)
-                    .unwrap()
-                    .writes
-                    .push(w);
+                self.scopes[s].entries.get_mut(name).unwrap().writes.push(w);
             }
             None => {
                 let e = Entry {
@@ -75,12 +70,7 @@ impl<'m> Builder<'m> {
         let Some(s) = self.lookup(scope, r.byte, name) else {
             return;
         };
-        self.scopes[s]
-            .entries
-            .get_mut(name)
-            .unwrap()
-            .reads
-            .push(r);
+        self.scopes[s].entries.get_mut(name).unwrap().reads.push(r);
     }
 
     /// Bind a callable parameter. Method scopes use [`IntroKind::Param`]

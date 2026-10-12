@@ -71,7 +71,10 @@ fn merge_layer_scalars(base: &mut ConfigLayer, overlay: &ConfigLayer) {
     overlay_copy(&mut base.display_cop_names, overlay.display_cop_names);
     overlay_copy(&mut base.display_style_guide, overlay.display_style_guide);
     overlay_copy(&mut base.extra_details, overlay.extra_details);
-    overlay_clone(&mut base.style_guide_base_url, &overlay.style_guide_base_url);
+    overlay_clone(
+        &mut base.style_guide_base_url,
+        &overlay.style_guide_base_url,
+    );
 }
 
 fn merge_inherit_mode(base: &mut InheritMode, overlay: &InheritMode) {

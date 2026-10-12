@@ -2,8 +2,8 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared;
 use crate::cop::Cop;
+use crate::cop::shared;
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -44,9 +44,7 @@ fn named_elems<'a>(node: Node<'a>) -> Vec<Node<'a>> {
 
 fn all_first_lines_equal(source: &SourceFile, elems: &[Node<'_>]) -> bool {
     let first = shared::node_line(source, elems[0]);
-    elems
-        .iter()
-        .all(|e| shared::node_line(source, *e) == first)
+    elems.iter().all(|e| shared::node_line(source, *e) == first)
 }
 
 /// RuboCop `MultilineElementLineBreaks#all_on_same_line?` (without `ignore_last`):
@@ -116,7 +114,12 @@ fn call_or_node_line(source: &SourceFile, node: Node<'_>, fallback: usize) -> us
         .unwrap_or(fallback)
 }
 
-fn breaks_end_line(source: &SourceFile, node: Node<'_>, elems: &[Node<'_>], allow_final: bool) -> usize {
+fn breaks_end_line(
+    source: &SourceFile,
+    node: Node<'_>,
+    elems: &[Node<'_>],
+    allow_final: bool,
+) -> usize {
     if allow_final {
         elems
             .iter()

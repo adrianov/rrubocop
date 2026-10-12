@@ -3,8 +3,8 @@
 use tree_sitter::Node;
 
 use super::helpers::{
-    argument_name, consecutive_lines, correct_order, enclosing_class, is_argument_call, nested_class,
-    DEPT_INCLUDE,
+    DEPT_INCLUDE, argument_name, consecutive_lines, correct_order, enclosing_class,
+    is_argument_call, nested_class,
 };
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;

@@ -33,16 +33,19 @@ impl Cop for MaxDepthSchema {
         if nested_class(node) {
             return;
         }
-        if collect_calls_named(node, source, b"max_depth").into_iter().any(|n| {
-            let mut p = n.parent();
-            while let Some(x) = p {
-                if x.kind() == "class" {
-                    return x.id() == node.id();
+        if collect_calls_named(node, source, b"max_depth")
+            .into_iter()
+            .any(|n| {
+                let mut p = n.parent();
+                while let Some(x) = p {
+                    if x.kind() == "class" {
+                        return x.id() == node.id();
+                    }
+                    p = x.parent();
                 }
-                p = x.parent();
-            }
-            false
-        }) {
+                false
+            })
+        {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());

@@ -3,8 +3,8 @@
 use tree_sitter::Node;
 
 use super::helpers::{
-    class_body_stmts, field_has_explicit_resolver, field_name, is_field_call, module_body_stmts,
-    nested_class, resolver_method_name, DEPT_INCLUDE,
+    DEPT_INCLUDE, class_body_stmts, field_has_explicit_resolver, field_name, is_field_call,
+    module_body_stmts, nested_class, resolver_method_name,
 };
 use crate::cop::shared::node_text;
 use crate::cop::{Cop, CopConfig};
@@ -42,7 +42,8 @@ impl Cop for FieldDefinitions {
         } else {
             class_body_stmts(node)
         };
-        if config.get_str("EnforcedStyle", "group_definitions") == "define_resolver_after_definition"
+        if config.get_str("EnforcedStyle", "group_definitions")
+            == "define_resolver_after_definition"
         {
             check_resolver_after(self, source, &body, diagnostics);
         } else {
@@ -113,13 +114,14 @@ fn resolver_placement_msg(
         return None;
     }
     let resolver = resolver_method_name(source, stmt);
-    let method_idx = body.iter().position(|n| is_def_named(source, *n, &resolver))?;
+    let method_idx = body
+        .iter()
+        .position(|n| is_def_named(source, *n, &resolver))?;
     if method_idx == i + 1 {
         return None;
     }
     Some(
-        if same_name_field_count(source, body, &field_name(source, stmt).unwrap_or_default()) == 1
-        {
+        if same_name_field_count(source, body, &field_name(source, stmt).unwrap_or_default()) == 1 {
             "Define resolver method after field definition."
         } else {
             "Define resolver method after last field definition sharing resolver method."

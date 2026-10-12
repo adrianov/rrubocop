@@ -42,7 +42,10 @@ fn is_class_ctor_call(source: &SourceFile, call: Node<'_>) -> bool {
     if method == b"define" {
         return is_const_named(source, recv, b"Data");
     }
-    method == b"new" && CLASS_CTOR.iter().any(|&name| is_const_named(source, recv, name))
+    method == b"new"
+        && CLASS_CTOR
+            .iter()
+            .any(|&name| is_const_named(source, recv, name))
 }
 
 fn block_call<'a>(block: Node<'a>) -> Option<Node<'a>> {

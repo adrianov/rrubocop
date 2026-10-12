@@ -67,7 +67,12 @@ fn report(
 ) {
     let meth = node.child_by_field_name("method").unwrap_or(node);
     let (line, col) = source.offset_to_line_col(meth.start_byte());
-    let mut diag = cop.diagnostic(source, line, col, format!("Use `{good}` instead of `{bad}`."));
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        format!("Use `{good}` instead of `{bad}`."),
+    );
     if let Some(corr) = corrections.as_mut() {
         corr.push(Correction {
             start: meth.start_byte(),

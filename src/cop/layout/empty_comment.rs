@@ -12,7 +12,10 @@ use crate::parse::source::SourceFile;
 pub struct EmptyComment;
 
 fn is_empty_comment(text: &[u8]) -> bool {
-    text.starts_with(b"#") && !text[1..].iter().any(|&b| b != b' ' && b != b'\t' && b != b'\r')
+    text.starts_with(b"#")
+        && !text[1..]
+            .iter()
+            .any(|&b| b != b' ' && b != b'\t' && b != b'\r')
 }
 
 fn is_border(text: &[u8]) -> bool {

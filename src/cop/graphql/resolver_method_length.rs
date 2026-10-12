@@ -2,9 +2,7 @@
 
 use tree_sitter::Node;
 
-use super::helpers::{
-    class_body_stmts, enclosing_class, plain_field_definition, DEPT_INCLUDE,
-};
+use super::helpers::{DEPT_INCLUDE, class_body_stmts, enclosing_class, plain_field_definition};
 use crate::cop::shared::node_text;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
@@ -77,7 +75,10 @@ fn resolves_plain_field(source: &SourceFile, class: Node<'_>, name: &str) -> boo
 }
 
 fn method_line_count(node: Node<'_>) -> usize {
-    node.end_position().row.saturating_sub(node.start_position().row) + 1
+    node.end_position()
+        .row
+        .saturating_sub(node.start_position().row)
+        + 1
 }
 
 fn method_body_line_count(source: &SourceFile, node: Node<'_>, count_comments: bool) -> usize {

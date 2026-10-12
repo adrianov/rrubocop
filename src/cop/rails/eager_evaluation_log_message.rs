@@ -20,8 +20,7 @@ fn is_rails_logger(source: &SourceFile, node: Node<'_>) -> bool {
 
 fn is_rails_logger_debug(source: &SourceFile, node: Node<'_>) -> bool {
     call_method_name(source, node) == Some(b"debug")
-        && call_receiver(node)
-            .is_some_and(|r| r.kind() == "call" && is_rails_logger(source, r))
+        && call_receiver(node).is_some_and(|r| r.kind() == "call" && is_rails_logger(source, r))
 }
 
 fn has_interpolation(node: Node<'_>) -> bool {
@@ -61,12 +60,20 @@ fn block_text(arg_src: &str, parenthesized: bool) -> String {
     }
 }
 
-fn replacement(source: &SourceFile, node: Node<'_>, arg: Node<'_>) -> Option<(usize, usize, String)> {
+fn replacement(
+    source: &SourceFile,
+    node: Node<'_>,
+    arg: Node<'_>,
+) -> Option<(usize, usize, String)> {
     let meth = method_node(node)?;
     let start = meth.end_byte();
     let end = node.end_byte();
     let parenthesized = parenthesized_call(source.as_bytes(), start);
-    let range_start = if parenthesized { start } else { (start + 1).min(end) };
+    let range_start = if parenthesized {
+        start
+    } else {
+        (start + 1).min(end)
+    };
     Some((
         range_start,
         end,
@@ -146,7 +153,10 @@ mod tests {
     use super::*;
     use crate::correction::CorrectionSet;
 
-    crate::cop_fixture_tests!(EagerEvaluationLogMessage, "cops/rails/eager_evaluation_log_message");
+    crate::cop_fixture_tests!(
+        EagerEvaluationLogMessage,
+        "cops/rails/eager_evaluation_log_message"
+    );
 
     fn fixed(src: &[u8]) -> String {
         let source = SourceFile::from_bytes("test.rb", src.to_vec());

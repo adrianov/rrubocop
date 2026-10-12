@@ -65,8 +65,12 @@ fn report(
 ) {
     let root_src = String::from_utf8_lossy(node_bytes(source, root));
     let (line, col) = source.offset_to_line_col(node.start_byte());
-    let mut diag =
-        cop.diagnostic(source, line, col, "Use `strip` instead of `lstrip.rstrip`.".to_string());
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        "Use `strip` instead of `lstrip.rstrip`.".to_string(),
+    );
     if let Some(corr) = corrections.as_mut() {
         corr.push(Correction {
             start: node.start_byte(),

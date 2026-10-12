@@ -21,7 +21,13 @@ impl Cop for PredicatePrefix {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["method", "singleton_method", "call", "command", "command_call"]
+        &[
+            "method",
+            "singleton_method",
+            "call",
+            "command",
+            "command_call",
+        ]
     }
 
     fn interested_call_names(&self) -> &'static [&'static [u8]] {

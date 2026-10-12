@@ -184,7 +184,10 @@ pub(crate) fn build_from_str(src: &str) -> FileModel<'_> {
     parser
         .set_language(&tree_sitter_ruby::LANGUAGE.into())
         .expect("ruby grammar");
-    build(src.as_bytes(), parser.parse(src, None).expect("syntax tree"))
+    build(
+        src.as_bytes(),
+        parser.parse(src, None).expect("syntax tree"),
+    )
 }
 
 #[cfg(test)]
@@ -194,8 +197,7 @@ mod tests {
     #[test]
     fn rebind_inside_block_hits_shared_outer_binding() {
         assert_eq!(
-            build_from_str("x = 1\n[1].each { x = 2 }\n")
-                .scopes[0]
+            build_from_str("x = 1\n[1].each { x = 2 }\n").scopes[0]
                 .entries
                 .get("x")
                 .expect("entry")
@@ -207,10 +209,12 @@ mod tests {
 
     #[test]
     fn vcall_never_counts_as_variable_read() {
-        assert!(build_from_str("def m\n  bar\nend\n")
-            .scopes
-            .iter()
-            .all(|s| s.entries.is_empty()));
+        assert!(
+            build_from_str("def m\n  bar\nend\n")
+                .scopes
+                .iter()
+                .all(|s| s.entries.is_empty())
+        );
     }
 
     #[test]

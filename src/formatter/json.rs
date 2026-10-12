@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use serde::Serialize;
 
-use crate::diagnostic::{smart_path, Diagnostic};
+use crate::diagnostic::{Diagnostic, smart_path};
 use crate::formatter::Formatter;
 
 pub struct JsonFormatter;

@@ -120,8 +120,7 @@ fn first_arg_name(source: &SourceFile, node: Node<'_>) -> Option<String> {
 fn strip_literal(b: &[u8]) -> &[u8] {
     let b = b.strip_prefix(b":").unwrap_or(b);
     if b.len() >= 2
-        && ((b[0] == b'\'' && b[b.len() - 1] == b'\'')
-            || (b[0] == b'"' && b[b.len() - 1] == b'"'))
+        && ((b[0] == b'\'' && b[b.len() - 1] == b'\'') || (b[0] == b'"' && b[b.len() - 1] == b'"'))
     {
         &b[1..b.len() - 1]
     } else {

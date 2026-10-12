@@ -76,8 +76,7 @@ fn check_line(
     };
     for kw in ["TODO", "FIXME", "OPTIMIZE", "HACK", "REVIEW", "NOTE"] {
         if let Some(msg) = annotation_msg(body, kw, require_colon) {
-            let (line_n, col) =
-                source.offset_to_line_col(source.line_start(idx + 1).unwrap_or(0));
+            let (line_n, col) = source.offset_to_line_col(source.line_start(idx + 1).unwrap_or(0));
             diagnostics.push(cop.diagnostic(source, line_n, col, msg));
             return;
         }

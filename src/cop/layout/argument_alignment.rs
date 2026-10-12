@@ -12,27 +12,42 @@ use crate::parse::source::SourceFile;
 pub struct ArgumentAlignment;
 
 impl Cop for ArgumentAlignment {
-    fn name(&self) -> &'static str { "Layout/ArgumentAlignment" }
+    fn name(&self) -> &'static str {
+        "Layout/ArgumentAlignment"
+    }
 
     fn redundant_disable_audit(&self) -> bool {
         false
     }
 
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["argument_list"] }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["argument_list"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         if !first_indent::argument_list_opens_with_paren(node) {
             return;
         }
         let style = config.get_str("EnforcedStyle", "with_first_argument");
         align_items::check_align(
-            self, source, node, style, config.get_usize("IndentationWidth", 2),
+            self,
+            source,
+            node,
+            style,
+            config.get_usize("IndentationWidth", 2),
             "Align the arguments of a method call if they span more than one line.",
-            diagnostics, &mut corrections,
+            diagnostics,
+            &mut corrections,
         );
     }
 }
@@ -46,7 +61,9 @@ mod tests {
     fn no_offense_command_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &ArgumentAlignment,
-            include_bytes!("../../../tests/fixtures/cops/layout/argument_alignment/no_offense_command.rb"),
+            include_bytes!(
+                "../../../tests/fixtures/cops/layout/argument_alignment/no_offense_command.rb"
+            ),
         );
     }
 
@@ -54,7 +71,9 @@ mod tests {
     fn no_offense_kwargs_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &ArgumentAlignment,
-            include_bytes!("../../../tests/fixtures/cops/layout/argument_alignment/no_offense_kwargs.rb"),
+            include_bytes!(
+                "../../../tests/fixtures/cops/layout/argument_alignment/no_offense_kwargs.rb"
+            ),
         );
     }
 
@@ -62,7 +81,9 @@ mod tests {
     fn no_offense_trailing_kwargs_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &ArgumentAlignment,
-            include_bytes!("../../../tests/fixtures/cops/layout/argument_alignment/no_offense_trailing_kwargs.rb"),
+            include_bytes!(
+                "../../../tests/fixtures/cops/layout/argument_alignment/no_offense_trailing_kwargs.rb"
+            ),
         );
     }
 }

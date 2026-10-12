@@ -7,6 +7,7 @@ use regex::RegexSet;
 
 use crate::cop::CopRegistry;
 
+use super::ResolvedConfig;
 use super::discover::discover_sub_config_dirs;
 use super::filter::{CopFilter, CopFilterSet};
 use super::globutil::{build_glob_set, build_regex_set, extract_ruby_regexp};
@@ -15,7 +16,6 @@ use super::resolved_state::{
     redundant_constant_base_blocked, resolve_enabled_state, state_to_enabled,
     version_gate_disables,
 };
-use super::ResolvedConfig;
 
 impl ResolvedConfig {
     /// Build pre-compiled cop filters for fast per-file enablement checks.

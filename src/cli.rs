@@ -219,7 +219,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_fail_fast, Args};
+    use super::{Args, normalize_fail_fast};
     use clap::Parser;
     use std::ffi::OsString;
 

@@ -143,11 +143,7 @@ fn slash_regex_body(bytes: &[u8]) -> &[u8] {
     while end > 1 && bytes[end] != b'/' {
         end -= 1;
     }
-    if end > 1 {
-        &bytes[1..end]
-    } else {
-        b""
-    }
+    if end > 1 { &bytes[1..end] } else { b"" }
 }
 
 #[cfg(test)]

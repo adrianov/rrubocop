@@ -148,5 +148,8 @@ impl Cop for PercentLiteralDelimiters {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(PercentLiteralDelimiters, "cops/style/percent_literal_delimiters");
+    crate::cop_fixture_tests!(
+        PercentLiteralDelimiters,
+        "cops/style/percent_literal_delimiters"
+    );
 }

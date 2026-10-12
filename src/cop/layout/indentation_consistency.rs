@@ -56,5 +56,8 @@ impl Cop for IndentationConsistency {
 mod tests {
     use super::*;
 
-    crate::cop_fixture_tests!(IndentationConsistency, "cops/layout/indentation_consistency");
+    crate::cop_fixture_tests!(
+        IndentationConsistency,
+        "cops/layout/indentation_consistency"
+    );
 }

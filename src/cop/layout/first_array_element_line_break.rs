@@ -11,24 +11,38 @@ use crate::parse::source::SourceFile;
 pub struct FirstArrayElementLineBreak;
 
 impl Cop for FirstArrayElementLineBreak {
-    fn name(&self) -> &'static str { "Layout/FirstArrayElementLineBreak" }
+    fn name(&self) -> &'static str {
+        "Layout/FirstArrayElementLineBreak"
+    }
 
     fn redundant_disable_audit(&self) -> bool {
         false
     }
 
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["array"] }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["array"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = config;
         first_break::check_first_break_min(
-            self, source, node, 2,
+            self,
+            source,
+            node,
+            2,
             "Add a line break before the first element of a multi-line array.",
-            diagnostics, &mut corrections,
+            diagnostics,
+            &mut corrections,
         );
     }
 }

@@ -29,7 +29,9 @@ fn is_comment(node: Node<'_>) -> bool {
 /// Last non-comment named child (comments are named in tree-sitter-ruby).
 pub(super) fn last_significant<'a>(body: Node<'a>) -> Option<Node<'a>> {
     let mut cur = body.walk();
-    body.named_children(&mut cur).filter(|n| !is_comment(*n)).last()
+    body.named_children(&mut cur)
+        .filter(|n| !is_comment(*n))
+        .last()
 }
 
 /// Unwrap `then` / `else` / `body_statement` wrappers to the value expression.
@@ -155,4 +157,3 @@ pub(super) fn collect_returns<'a>(body: Node<'a>) -> Vec<Ret<'a>> {
     collect_explicit_returns(body, &mut out);
     out
 }
-

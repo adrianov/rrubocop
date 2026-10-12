@@ -33,7 +33,8 @@ fn defaults_from_cache(
 }
 
 fn defaults_from_embed(working_dir: &Path) -> Option<(String, String)> {
-    let (_ver, yaml) = gem_path::embedded_yaml("rubocop", "config/default.yml", working_dir).ok()?;
+    let (_ver, yaml) =
+        gem_path::embedded_yaml("rubocop", "config/default.yml", working_dir).ok()?;
     Some(("rubocop/config/default.yml".into(), yaml.to_string()))
 }
 

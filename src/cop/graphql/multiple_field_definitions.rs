@@ -3,8 +3,8 @@
 use tree_sitter::Node;
 
 use super::helpers::{
-    class_body_stmts, enclosing_class, field_name, is_field_call, nested_class, CALL_KINDS,
-    DEPT_INCLUDE,
+    CALL_KINDS, DEPT_INCLUDE, class_body_stmts, enclosing_class, field_name, is_field_call,
+    nested_class,
 };
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
@@ -58,20 +58,11 @@ impl Cop for MultipleFieldDefinitions {
     }
 }
 
-fn ungrouped_last_def(
-    source: &SourceFile,
-    class: Node<'_>,
-    node: Node<'_>,
-    name: &str,
-) -> bool {
+fn ungrouped_last_def(source: &SourceFile, class: Node<'_>, node: Node<'_>, name: &str) -> bool {
     is_last_ungrouped(&same_name_defs(source, class, name), node)
 }
 
-fn same_name_defs<'a>(
-    source: &SourceFile,
-    class: Node<'a>,
-    name: &str,
-) -> Vec<(usize, Node<'a>)> {
+fn same_name_defs<'a>(source: &SourceFile, class: Node<'a>, name: &str) -> Vec<(usize, Node<'a>)> {
     class_body_stmts(class)
         .into_iter()
         .enumerate()

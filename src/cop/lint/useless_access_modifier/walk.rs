@@ -5,8 +5,8 @@ use tree_sitter::Node;
 use super::{
     UselessAccessModifier, Vis, apply_modifier, is_modifier, modifier_vis, report_useless,
 };
-use crate::cop::shared::call_method_name;
 use crate::cop::CopConfig;
+use crate::cop::shared::call_method_name;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
@@ -44,12 +44,14 @@ fn is_method_definition(source: &SourceFile, node: Node<'_>, config: &CopConfig)
     ) {
         return true;
     }
-    string_list(config, "MethodCreatingMethods").iter().any(|m| {
-        m != "included"
-            && matches!(node.kind(), "call" | "command" | "command_call")
-            && node.child_by_field_name("receiver").is_none()
-            && call_method_name(source, node) == Some(m.as_bytes())
-    })
+    string_list(config, "MethodCreatingMethods")
+        .iter()
+        .any(|m| {
+            m != "included"
+                && matches!(node.kind(), "call" | "command" | "command_call")
+                && node.child_by_field_name("receiver").is_none()
+                && call_method_name(source, node) == Some(m.as_bytes())
+        })
 }
 
 fn block_of_call(node: Node<'_>) -> Option<Node<'_>> {
@@ -58,10 +60,7 @@ fn block_of_call(node: Node<'_>) -> Option<Node<'_>> {
         .find(|c| matches!(c.kind(), "do_block" | "block"))
 }
 
-fn call_block_name<'a>(
-    source: &'a SourceFile,
-    node: Node<'a>,
-) -> Option<(Node<'a>, &'a [u8])> {
+fn call_block_name<'a>(source: &'a SourceFile, node: Node<'a>) -> Option<(Node<'a>, &'a [u8])> {
     if !matches!(node.kind(), "call" | "command" | "command_call") {
         return None;
     }
@@ -119,9 +118,7 @@ fn check_independent_scope(
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let kids = if matches!(node.kind(), "call" | "command" | "command_call") {
-        block_of_call(node)
-            .map(body_children)
-            .unwrap_or_default()
+        block_of_call(node).map(body_children).unwrap_or_default()
     } else {
         body_children(node)
     };

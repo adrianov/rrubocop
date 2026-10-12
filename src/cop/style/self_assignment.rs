@@ -34,7 +34,10 @@ impl Cop for SelfAssignment {
             source,
             line,
             col,
-            format!("Use self-assignment shorthand `{}=`.", String::from_utf8_lossy(op)),
+            format!(
+                "Use self-assignment shorthand `{}=`.",
+                String::from_utf8_lossy(op)
+            ),
         ));
     }
 }
@@ -42,17 +45,16 @@ impl Cop for SelfAssignment {
 fn self_assign_op<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<&'a [u8]> {
     let left = node.child_by_field_name("left")?;
     // RuboCop only checks lvasgn / ivasgn / cvasgn — not `obj.x = obj.x - 1`.
-    if !matches!(left.kind(), "identifier" | "instance_variable" | "class_variable") {
+    if !matches!(
+        left.kind(),
+        "identifier" | "instance_variable" | "class_variable"
+    ) {
         return None;
     }
     binary_self_op(source, left, node.child_by_field_name("right")?)
 }
 
-fn binary_self_op<'a>(
-    source: &'a SourceFile,
-    left: Node<'_>,
-    right: Node<'_>,
-) -> Option<&'a [u8]> {
+fn binary_self_op<'a>(source: &'a SourceFile, left: Node<'_>, right: Node<'_>) -> Option<&'a [u8]> {
     if right.kind() != "binary" {
         return None;
     }

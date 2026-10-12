@@ -8,9 +8,31 @@ use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub const KEYWORDS: &[&[u8]] = &[
-    b"and", b"or", b"not", b"if", b"unless", b"while", b"until", b"for", b"in", b"do", b"then",
-    b"when", b"else", b"elsif", b"begin", b"rescue", b"ensure", b"end", b"case", b"next", b"break",
-    b"return", b"super", b"yield", b"defined?",
+    b"and",
+    b"or",
+    b"not",
+    b"if",
+    b"unless",
+    b"while",
+    b"until",
+    b"for",
+    b"in",
+    b"do",
+    b"then",
+    b"when",
+    b"else",
+    b"elsif",
+    b"begin",
+    b"rescue",
+    b"ensure",
+    b"end",
+    b"case",
+    b"next",
+    b"break",
+    b"return",
+    b"super",
+    b"yield",
+    b"defined?",
 ];
 
 fn is_kw_kind(k: &str) -> bool {
@@ -128,8 +150,7 @@ fn missing_before(bytes: &[u8], kw_start: usize) -> bool {
     if prev.is_ascii_whitespace() || matches!(prev, b'(' | b'{' | b'[' | b';' | b'!') {
         return false;
     }
-    prev.is_ascii_alphanumeric()
-        || matches!(prev, b'_' | b')' | b']' | b'}' | b'?' | b'!')
+    prev.is_ascii_alphanumeric() || matches!(prev, b'_' | b')' | b']' | b'}' | b'?' | b'!')
 }
 
 fn report_space(

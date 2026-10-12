@@ -40,8 +40,11 @@ impl Cop for Open {
         let Some(msg) = open_offense_msg(source, node) else {
             return;
         };
-        let (line, column) = source
-            .offset_to_line_col(node.child_by_field_name("method").unwrap_or(node).start_byte());
+        let (line, column) = source.offset_to_line_col(
+            node.child_by_field_name("method")
+                .unwrap_or(node)
+                .start_byte(),
+        );
         diagnostics.push(self.diagnostic(source, line, column, msg));
     }
 }
@@ -81,7 +84,8 @@ fn uri_receiver<'a>(source: &'a SourceFile, node: Node<'_>) -> Option<Option<&'a
 
 fn has_block_arg(node: Node<'_>) -> bool {
     let mut cur = node.walk();
-    node.named_children(&mut cur).any(|c| c.kind() == "block_argument")
+    node.named_children(&mut cur)
+        .any(|c| c.kind() == "block_argument")
 }
 
 fn is_safe_arg(source: &SourceFile, node: Node<'_>) -> bool {

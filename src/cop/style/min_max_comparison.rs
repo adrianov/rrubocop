@@ -17,7 +17,6 @@ impl Cop for MinMaxComparison {
         false
     }
 
-
     fn check_node(
         &self,
         source: &SourceFile,

@@ -80,7 +80,10 @@ impl Cop for LiteralAsCondition {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let Some(cond) = node.child_by_field_name("condition").or_else(|| node.child_by_field_name("value")) else {
+        let Some(cond) = node
+            .child_by_field_name("condition")
+            .or_else(|| node.child_by_field_name("value"))
+        else {
             return;
         };
         let cond = unwrap(cond);

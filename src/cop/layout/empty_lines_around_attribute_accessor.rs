@@ -13,7 +13,10 @@ pub struct EmptyLinesAroundAttributeAccessor;
 const DEFAULT_ALLOWED: &[&str] = &["alias_method", "public", "protected", "private"];
 
 fn is_attr(name: &[u8]) -> bool {
-    matches!(name, b"attr_reader" | b"attr_writer" | b"attr_accessor" | b"attr")
+    matches!(
+        name,
+        b"attr_reader" | b"attr_writer" | b"attr_accessor" | b"attr"
+    )
 }
 
 fn allowed_methods(config: &CopConfig) -> Vec<String> {
@@ -60,11 +63,7 @@ fn gap_after(source: &SourceFile, node: Node<'_>) -> Option<usize> {
     (!shared::line_blank(source, gap) && source.line_start(gap).is_some()).then_some(gap)
 }
 
-fn attr_needs_blank(
-    source: &SourceFile,
-    node: Node<'_>,
-    config: &CopConfig,
-) -> Option<usize> {
+fn attr_needs_blank(source: &SourceFile, node: Node<'_>, config: &CopConfig) -> Option<usize> {
     let name = shared::call_method_name(source, node)?;
     if !is_attr(name) || shared::call_receiver(node).is_some() || in_conditional(node) {
         return None;

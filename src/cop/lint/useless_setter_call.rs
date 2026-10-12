@@ -35,7 +35,9 @@ fn created_from_call(source: &SourceFile, body: Node<'_>, var: &[u8], skip: usiz
         if l.kind() != "identifier" || node_bytes(source, l) != var {
             return;
         }
-        if n.child_by_field_name("right").is_some_and(|r| r.kind() == "call") {
+        if n.child_by_field_name("right")
+            .is_some_and(|r| r.kind() == "call")
+        {
             found = true;
         }
     });

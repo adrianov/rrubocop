@@ -17,7 +17,6 @@ impl Cop for Next {
         false
     }
 
-
     fn check_node(
         &self,
         source: &SourceFile,

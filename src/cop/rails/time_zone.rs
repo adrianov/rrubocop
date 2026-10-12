@@ -9,8 +9,8 @@ use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 use detect::{
-    attach_tz_string, build_message, chain_from, has_in_kwarg, method_name, not_danger_chain,
-    offset_provided, selector_off, string_to_time_needs_zone, time_receiver, DANGEROUS,
+    DANGEROUS, attach_tz_string, build_message, chain_from, has_in_kwarg, method_name,
+    not_danger_chain, offset_provided, selector_off, string_to_time_needs_zone, time_receiver,
 };
 
 pub struct TimeZone;

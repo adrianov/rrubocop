@@ -65,12 +65,19 @@ fn report(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (line, col) = source.offset_to_line_col(recv.start_byte());
-    let mut diag =
-        cop.diagnostic(source, line, col, "Use `proc` instead of `Proc.new`.".to_string());
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        "Use `proc` instead of `Proc.new`.".to_string(),
+    );
     if let Some(corr) = corrections.as_mut() {
         corr.push(Correction {
             start: recv.start_byte(),
-            end: node.child_by_field_name("method").unwrap_or(node).end_byte(),
+            end: node
+                .child_by_field_name("method")
+                .unwrap_or(node)
+                .end_byte(),
             replacement: "proc".to_string(),
             cop_name: cop.name(),
             cop_index: 0,

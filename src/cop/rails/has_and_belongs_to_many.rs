@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct HasAndBelongsToMany;
-
 
 impl Cop for HasAndBelongsToMany {
     fn name(&self) -> &'static str {
@@ -21,7 +20,6 @@ impl Cop for HasAndBelongsToMany {
     fn default_include(&self) -> &'static [&'static str] {
         &["**/app/models/**/*.rb"]
     }
-
 
     fn check_node(
         &self,

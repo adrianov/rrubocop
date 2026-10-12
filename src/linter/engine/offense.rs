@@ -1,8 +1,8 @@
 //! Offense finalization (message annotator / source highlight).
 
 use crate::config::ResolvedConfig;
-use crate::cop::registry::CopRegistry;
 use crate::cop::CopConfig;
+use crate::cop::registry::CopRegistry;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 

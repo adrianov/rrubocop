@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct Blank;
-
 
 impl Cop for Blank {
     fn name(&self) -> &'static str {
@@ -17,7 +16,6 @@ impl Cop for Blank {
     fn redundant_disable_audit(&self) -> bool {
         false
     }
-
 
     fn check_node(
         &self,

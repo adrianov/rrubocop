@@ -44,5 +44,8 @@ impl Cop for MultilineMethodCallBraceLayout {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(MultilineMethodCallBraceLayout, "cops/layout/multiline_method_call_brace_layout");
+    crate::cop_fixture_tests!(
+        MultilineMethodCallBraceLayout,
+        "cops/layout/multiline_method_call_brace_layout"
+    );
 }

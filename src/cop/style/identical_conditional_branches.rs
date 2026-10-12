@@ -50,5 +50,8 @@ impl Cop for IdenticalConditionalBranches {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(IdenticalConditionalBranches, "cops/style/identical_conditional_branches");
+    crate::cop_fixture_tests!(
+        IdenticalConditionalBranches,
+        "cops/style/identical_conditional_branches"
+    );
 }

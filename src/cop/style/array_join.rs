@@ -1,10 +1,10 @@
 //! Style/ArrayJoin
-use tree_sitter::Node;
 use crate::cop::shared::node_text;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
+use tree_sitter::Node;
 
 pub struct ArrayJoin;
 
@@ -32,7 +32,16 @@ impl Cop for ArrayJoin {
         let Some((op, left, right)) = detect(node) else {
             return;
         };
-        report(self, source, node, op, left, right, diagnostics, &mut corrections);
+        report(
+            self,
+            source,
+            node,
+            op,
+            left,
+            right,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 

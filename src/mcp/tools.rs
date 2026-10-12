@@ -2,11 +2,11 @@
 
 use std::path::{Path, PathBuf};
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::cli::AutocorrectMode;
-use crate::config::{load_config, load_default_config, CopFilterSet, ResolvedConfig};
-use crate::diagnostic::{smart_path, Diagnostic};
+use crate::config::{CopFilterSet, ResolvedConfig, load_config, load_default_config};
+use crate::diagnostic::{Diagnostic, smart_path};
 
 use super::io::{lint_mut, lint_once, read_file, target_files, write_file};
 use super::offense;
@@ -21,9 +21,11 @@ pub(crate) fn inspect(
     if source.is_none() {
         targets::validate_roots(&targets)?;
     }
-    with_resolved(state, targets.first().map(String::as_str), |cfg, filters| {
-        inspect_resolved(state, cfg, filters, &targets, source)
-    })
+    with_resolved(
+        state,
+        targets.first().map(String::as_str),
+        |cfg, filters| inspect_resolved(state, cfg, filters, &targets, source),
+    )
 }
 
 fn inspect_resolved(
@@ -44,7 +46,10 @@ fn inspect_resolved(
         return Ok(offense::offenses_json(&diags));
     }
     let files = target_files(filters, targets)?;
-    Ok(pack_offenses(&files, &lint_paths(state, cfg, filters, &files)?))
+    Ok(pack_offenses(
+        &files,
+        &lint_paths(state, cfg, filters, &files)?,
+    ))
 }
 
 pub(crate) fn autocorrect(
@@ -61,12 +66,16 @@ pub(crate) fn autocorrect(
     if source.is_none() {
         targets::validate_roots(&targets)?;
     }
-    with_resolved(state, targets.first().map(String::as_str), |cfg, filters| {
-        if let Some(code) = source {
-            return correct_inline(state, cfg, filters, &targets, code, mode);
-        }
-        correct_files(state, cfg, filters, &targets, mode)
-    })
+    with_resolved(
+        state,
+        targets.first().map(String::as_str),
+        |cfg, filters| {
+            if let Some(code) = source {
+                return correct_inline(state, cfg, filters, &targets, code, mode);
+            }
+            correct_files(state, cfg, filters, &targets, mode)
+        },
+    )
 }
 
 fn with_resolved<T>(

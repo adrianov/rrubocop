@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct CreateTableWithTimestamps;
-
 
 impl Cop for CreateTableWithTimestamps {
     fn name(&self) -> &'static str {
@@ -23,9 +22,11 @@ impl Cop for CreateTableWithTimestamps {
     }
 
     fn default_exclude(&self) -> &'static [&'static str] {
-        &["**/db/**/*_create_active_storage_tables.active_storage.rb", "**/db/**/*_create_active_storage_variant_records.active_storage.rb"]
+        &[
+            "**/db/**/*_create_active_storage_tables.active_storage.rb",
+            "**/db/**/*_create_active_storage_variant_records.active_storage.rb",
+        ]
     }
-
 
     fn check_node(
         &self,

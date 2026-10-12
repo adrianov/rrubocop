@@ -11,18 +11,32 @@ use crate::parse::source::SourceFile;
 pub struct BeginEndAlignment;
 
 impl Cop for BeginEndAlignment {
-    fn name(&self) -> &'static str { "Layout/BeginEndAlignment" }
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["begin"] }
+    fn name(&self) -> &'static str {
+        "Layout/BeginEndAlignment"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["begin"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         end_align::check_end(
-            self, source, node, "begin",
+            self,
+            source,
+            node,
+            "begin",
             config.get_str("EnforcedStyleAlignWith", "start_of_line"),
-            diagnostics, &mut corrections,
+            diagnostics,
+            &mut corrections,
         );
     }
 }

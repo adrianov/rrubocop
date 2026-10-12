@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Severity, Diagnostic};
+use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::source::SourceFile;
 
 pub struct NotNullColumn;
-
 
 impl Cop for NotNullColumn {
     fn name(&self) -> &'static str {
@@ -25,7 +24,6 @@ impl Cop for NotNullColumn {
     fn default_include(&self) -> &'static [&'static str] {
         &["db/migrate/**/*.rb"]
     }
-
 
     fn check_node(
         &self,

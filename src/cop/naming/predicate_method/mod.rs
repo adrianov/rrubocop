@@ -11,7 +11,7 @@ use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 use boolean::{boolean_return, is_non_boolean_literal, unknown_call};
-use returns::{collect_returns, normalize_values, Ret};
+use returns::{Ret, collect_returns, normalize_values};
 
 pub struct PredicateMethod;
 

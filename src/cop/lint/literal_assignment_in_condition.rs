@@ -11,7 +11,16 @@ pub struct LiteralAssignmentInCondition;
 fn is_literal(node: Node<'_>) -> bool {
     matches!(
         node.kind(),
-        "integer" | "float" | "string" | "simple_symbol" | "true" | "false" | "nil" | "array" | "hash" | "regex"
+        "integer"
+            | "float"
+            | "string"
+            | "simple_symbol"
+            | "true"
+            | "false"
+            | "nil"
+            | "array"
+            | "hash"
+            | "regex"
     )
 }
 

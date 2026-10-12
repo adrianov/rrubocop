@@ -64,10 +64,7 @@ fn is_shadowed(name: &str, previous: &[String]) -> bool {
         .any(|prev| is_ancestor(name, prev) || prev == name)
 }
 
-fn find_shadow<'a>(
-    source: &SourceFile,
-    rescues: &[Node<'a>],
-) -> Option<Node<'a>> {
+fn find_shadow<'a>(source: &SourceFile, rescues: &[Node<'a>]) -> Option<Node<'a>> {
     let mut previous: Vec<String> = Vec::new();
     for &rescue in rescues {
         let names = exception_names(source, rescue);

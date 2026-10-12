@@ -12,9 +12,7 @@ pub struct EmptyBlock;
 fn body_empty(node: Node<'_>) -> bool {
     if let Some(body) = node.child_by_field_name("body") {
         let mut cur = body.walk();
-        return body
-            .named_children(&mut cur)
-            .all(|c| c.kind() == "comment");
+        return body.named_children(&mut cur).all(|c| c.kind() == "comment");
     }
     let mut cur = node.walk();
     node.named_children(&mut cur)
@@ -132,12 +130,7 @@ impl Cop for EmptyBlock {
             return;
         }
         let (line, col) = source.offset_to_line_col(target.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Empty block detected.".into(),
-        ));
+        diagnostics.push(self.diagnostic(source, line, col, "Empty block detected.".into()));
     }
 }
 

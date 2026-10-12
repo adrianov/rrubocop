@@ -45,7 +45,15 @@ pub(super) fn check_block(
     if end_aligned(&cols, shared::node_col(source, end_kw)) {
         return;
     }
-    emit_offense(cop, source, end_kw, opener_node, &cols, diagnostics, corrections);
+    emit_offense(
+        cop,
+        source,
+        end_kw,
+        opener_node,
+        &cols,
+        diagnostics,
+        corrections,
+    );
 }
 
 fn skip_closer(source: &SourceFile, node: Node<'_>, end_kw: Node<'_>) -> bool {
@@ -111,7 +119,10 @@ fn autocorrect_col(cols: &AlignCols<'_>) -> usize {
     match cols.style {
         "start_of_block" => cols.do_line_col,
         "start_of_line" => cols.expression_col,
-        _ => cols.expression_col.min(cols.do_line_col).min(cols.opener_col),
+        _ => cols
+            .expression_col
+            .min(cols.do_line_col)
+            .min(cols.opener_col),
     }
 }
 
@@ -124,12 +135,19 @@ fn emit_offense(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let open_word = if opener_node.kind() == "do" { "`do`" } else { "`{`" };
+    let open_word = if opener_node.kind() == "do" {
+        "`do`"
+    } else {
+        "`{`"
+    };
     report::fix_indent(
         cop,
         source,
         end_kw.start_byte(),
-        format!("`end` is not aligned with {open_word} beginning at column {}.", cols.opener_col),
+        format!(
+            "`end` is not aligned with {open_word} beginning at column {}.",
+            cols.opener_col
+        ),
         diagnostics,
         corrections,
         shared::line_indent(source, end_kw.start_byte()),

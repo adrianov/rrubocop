@@ -73,7 +73,15 @@ impl Cop for EmptyLiteral {
         let Some(replacement) = replacement_for(recv) else {
             return;
         };
-        Self::report(self, source, node, recv, replacement, diagnostics, &mut corrections);
+        Self::report(
+            self,
+            source,
+            node,
+            recv,
+            replacement,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }
 
@@ -107,4 +115,3 @@ impl EmptyLiteral {
         diagnostics.push(diag);
     }
 }
-

@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 use tree_sitter::Node;
 
 use super::helpers::{
-    argument_name, enclosing_class, field_name, is_argument_call, is_field_call, nested_class,
-    DEPT_INCLUDE,
+    DEPT_INCLUDE, argument_name, enclosing_class, field_name, is_argument_call, is_field_call,
+    nested_class,
 };
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
@@ -74,7 +74,11 @@ fn check_dup_arg(
         return;
     };
     let field_key = parent_field_key(source, node).unwrap_or_else(|| "root".into());
-    if by_field.entry(field_key.clone()).or_default().insert(name.clone()) {
+    if by_field
+        .entry(field_key.clone())
+        .or_default()
+        .insert(name.clone())
+    {
         return;
     }
     push_dup(cop, source, node, &name, &field_key, diagnostics);

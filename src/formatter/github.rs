@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::diagnostic::{smart_path, Diagnostic};
+use crate::diagnostic::{Diagnostic, smart_path};
 use crate::formatter::Formatter;
 
 pub struct GithubFormatter;

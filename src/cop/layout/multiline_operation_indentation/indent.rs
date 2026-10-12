@@ -2,14 +2,14 @@
 
 use tree_sitter::Node;
 
+use crate::cop::CopConfig;
 use crate::cop::layout::indentation_consistency_util as util;
 use crate::cop::shared;
-use crate::cop::CopConfig;
 use crate::parse::source::SourceFile;
 
 use super::context::{
-    argument_in_method_call, assignment_context, assignment_from_ancestors, keyword_context,
-    AssignmentContext,
+    AssignmentContext, argument_in_method_call, assignment_context, assignment_from_ancestors,
+    keyword_context,
 };
 use super::line_scan::KeywordContext;
 
@@ -36,7 +36,8 @@ pub(super) fn not_for_this_cop(node: Node<'_>) -> bool {
 
 fn arg_list_has_paren(n: Node<'_>) -> bool {
     let mut cur = n.walk();
-    n.children(&mut cur).any(|c| !c.is_named() && c.kind() == "(")
+    n.children(&mut cur)
+        .any(|c| !c.is_named() && c.kind() == "(")
 }
 
 fn multiline_rhs_candidate(source: &SourceFile, left: Node<'_>, right: Node<'_>) -> bool {

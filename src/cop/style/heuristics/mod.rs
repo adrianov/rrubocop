@@ -24,8 +24,8 @@ pub use percent::matches_command_literal;
 pub use percent::matches_percent_q_literals;
 
 mod string_literals;
-pub use string_literals::matches_string_literals;
 pub(crate) use string_literals::double_quotes_required;
+pub use string_literals::matches_string_literals;
 
 mod redundant_misc;
 pub use redundant_misc::matches_redundant_capital_w;

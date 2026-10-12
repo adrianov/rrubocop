@@ -36,7 +36,10 @@ fn count_format_args(args: &[Node<'_>]) -> usize {
     if args.is_empty() {
         return 0;
     }
-    if args.iter().all(|a| a.kind() == "pair" || a.kind() == "hash") {
+    if args
+        .iter()
+        .all(|a| a.kind() == "pair" || a.kind() == "hash")
+    {
         return 1;
     }
     args.iter().filter(|a| a.kind() != "pair").count()
@@ -179,5 +182,8 @@ impl Cop for FormatParameterMismatch {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(FormatParameterMismatch, "cops/lint/format_parameter_mismatch");
+    crate::cop_fixture_tests!(
+        FormatParameterMismatch,
+        "cops/lint/format_parameter_mismatch"
+    );
 }

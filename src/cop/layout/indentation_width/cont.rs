@@ -48,8 +48,20 @@ fn ends_with_single_char_op(t: &[u8]) -> bool {
     matches!(
         t.last(),
         Some(
-            b',' | b'\\' | b'(' | b'[' | b'{' | b'+' | b'-' | b'*' | b'/' | b'%' | b'|' | b'^'
-                | b'<' | b'>' | b'.'
+            b',' | b'\\'
+                | b'('
+                | b'['
+                | b'{'
+                | b'+'
+                | b'-'
+                | b'*'
+                | b'/'
+                | b'%'
+                | b'|'
+                | b'^'
+                | b'<'
+                | b'>'
+                | b'.'
         )
     )
 }
@@ -101,7 +113,10 @@ fn trailing_if_kw(t: &[u8]) -> bool {
 
 /// Indent of `.find_each do |x|` / `.map do` when the next line is the body.
 pub(super) fn deeper_dot_block(line: &[u8], next_indent: Option<usize>) -> Option<usize> {
-    let indent = line.iter().take_while(|&&b| b == b' ' || b == b'\t').count();
+    let indent = line
+        .iter()
+        .take_while(|&&b| b == b' ' || b == b'\t')
+        .count();
     let rest = &line[indent..];
     if !(rest.starts_with(b".") || rest.starts_with(b"&.")) {
         return None;

@@ -22,7 +22,11 @@ pub(crate) fn extract_ruby_regexp(s: &str) -> Option<&str> {
     Some(&s[1..end + 1])
 }
 
-fn expand_one_star_star(current: &str, expanded: &mut std::collections::HashSet<String>, pending: &mut Vec<String>) {
+fn expand_one_star_star(
+    current: &str,
+    expanded: &mut std::collections::HashSet<String>,
+    pending: &mut Vec<String>,
+) {
     let mut start = 0;
     while let Some(idx) = current[start..].find("**/") {
         let idx = start + idx;

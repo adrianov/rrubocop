@@ -10,11 +10,7 @@ use crate::parse::source::SourceFile;
 
 /// One line of a pair or `}`, shifted by the same column delta RuboCop applies
 /// to every line of the node.
-fn line_edit(
-    source: &SourceFile,
-    line: usize,
-    delta: isize,
-) -> Option<(usize, usize, String)> {
+fn line_edit(source: &SourceFile, line: usize, delta: isize) -> Option<(usize, usize, String)> {
     let start = source.line_start(line)?;
     let indent = shared::line_indent(source, start);
     let new_indent = (indent as isize + delta).max(0) as usize;

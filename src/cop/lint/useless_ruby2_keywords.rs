@@ -52,7 +52,10 @@ impl Cop for UselessRuby2Keywords {
             return;
         };
         // RuboCop: useless when no **kwargs (hash splat)
-        if method.child_by_field_name("parameters").is_some_and(has_kwrest) {
+        if method
+            .child_by_field_name("parameters")
+            .is_some_and(has_kwrest)
+        {
             return;
         }
         let name = method

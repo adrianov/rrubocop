@@ -9,10 +9,7 @@ use crate::parse::source::SourceFile;
 /// Lint/BigDecimalNew — `BigDecimal.new` is deprecated.
 pub struct BigDecimalNew;
 
-fn is_big_decimal_new<'a>(
-    source: &SourceFile,
-    node: Node<'a>,
-) -> Option<(Node<'a>, Node<'a>)> {
+fn is_big_decimal_new<'a>(source: &SourceFile, node: Node<'a>) -> Option<(Node<'a>, Node<'a>)> {
     if call_method_name(source, node) != Some(b"new") {
         return None;
     }

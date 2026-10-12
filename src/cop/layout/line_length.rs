@@ -117,8 +117,7 @@ fn patterns_match(line: &str, patterns: &[Regex]) -> bool {
 }
 
 fn uri_allows(cfg: &Settings, text: &str) -> bool {
-    cfg.allow_uri
-        && uri_start(text, &cfg.schemes).is_some_and(|at| at < cfg.max)
+    cfg.allow_uri && uri_start(text, &cfg.schemes).is_some_and(|at| at < cfg.max)
 }
 
 /// RuboCop `extend_end_position`: absorb trailing non-space (e.g. `)`).

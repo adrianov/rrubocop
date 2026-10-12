@@ -120,8 +120,8 @@ mod tests {
             "<% a = 1; b = 2 %>\n<%= a %>-<%= b %>\n",
             "<%# a comment %>\nStyle/Foo:\n  Enabled: true\n",
         ] {
-            let native =
-                erb_native::expand_erb_native(raw).unwrap_or_else(|| panic!("native failed: {raw:?}"));
+            let native = erb_native::expand_erb_native(raw)
+                .unwrap_or_else(|| panic!("native failed: {raw:?}"));
             if let Some(ruby) = erb_ruby::ruby_expand(raw) {
                 assert_eq!(native, ruby, "mismatch for {raw:?}");
             }

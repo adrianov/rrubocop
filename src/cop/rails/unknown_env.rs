@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Severity, Diagnostic};
+use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::source::SourceFile;
 
 pub struct UnknownEnv;
-
 
 impl Cop for UnknownEnv {
     fn name(&self) -> &'static str {
@@ -21,7 +20,6 @@ impl Cop for UnknownEnv {
     fn default_severity(&self) -> Severity {
         Severity::Warning
     }
-
 
     fn check_node(
         &self,

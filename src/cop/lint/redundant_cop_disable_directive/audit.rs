@@ -1,9 +1,9 @@
+use super::RedundantCopDisableDirective;
 use super::directives::{
-    collect_directives, cop_highlight, cop_names, disable_marker, redundant_col, DisableDirective,
+    DisableDirective, collect_directives, cop_highlight, cop_names, disable_marker, redundant_col,
 };
 use super::removal::push_removal;
-use super::RedundantCopDisableDirective;
-use crate::cop::{cop_ran_in_lint, Cop, CopConfig};
+use crate::cop::{Cop, CopConfig, cop_ran_in_lint};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -25,9 +25,9 @@ fn offense_in_range(offense: &Diagnostic, range: (usize, usize)) -> bool {
 }
 
 fn directive_needed(cop: &str, range: (usize, usize), offenses: &[Diagnostic]) -> bool {
-    offenses.iter().any(|o| {
-        cop_matches_disabled(&o.cop_name, cop) && offense_in_range(o, range)
-    })
+    offenses
+        .iter()
+        .any(|o| cop_matches_disabled(&o.cop_name, cop) && offense_in_range(o, range))
 }
 
 fn active_for_redundant_audit(c: &dyn Cop) -> bool {
@@ -53,7 +53,9 @@ fn cop_auditable(name: &str, active: &[(&dyn Cop, &CopConfig)]) -> bool {
             c.name().eq_ignore_ascii_case(name) && active_for_redundant_audit(c)
         });
     }
-    any_active_cop(active, |c| active_for_redundant_audit(c) && cop_in_department(c, name))
+    any_active_cop(active, |c| {
+        active_for_redundant_audit(c) && cop_in_department(c, name)
+    })
 }
 
 fn cop_is_redundant(

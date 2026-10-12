@@ -8,12 +8,12 @@ use anyhow::Result;
 use super::discover::load_dir_overrides;
 use super::load_defaults::try_load_rubocop_defaults;
 use super::load_resolve::{
-    apply_disabled_by_default, build_resolved, defaults_only_resolved, load_project_layer,
-    project_enabled_depts, resolve_config_load, resolve_lockfile_meta, resolve_path_base_dir,
-    resolve_start_dir, resolve_target_ruby_version, ConfigLoadPath, ResolvedParts,
+    ConfigLoadPath, ResolvedParts, apply_disabled_by_default, build_resolved,
+    defaults_only_resolved, load_project_layer, project_enabled_depts, resolve_config_load,
+    resolve_lockfile_meta, resolve_path_base_dir, resolve_start_dir, resolve_target_ruby_version,
 };
 use super::merge::merge_layer_into;
-use super::rails_app::{is_rails_app, OMAKASE_DEFAULT_YAML};
+use super::rails_app::{OMAKASE_DEFAULT_YAML, is_rails_app};
 use super::resolved::ResolvedConfig;
 
 fn merge_project_onto_defaults(
@@ -46,7 +46,10 @@ fn config_parent(config_path: &Path) -> PathBuf {
     }
 }
 
-fn dir_overrides_for(explicit: bool, scan_root: &Path) -> Vec<(PathBuf, super::types::ConfigLayer)> {
+fn dir_overrides_for(
+    explicit: bool,
+    scan_root: &Path,
+) -> Vec<(PathBuf, super::types::ConfigLayer)> {
     if explicit {
         Vec::new()
     } else {
@@ -65,7 +68,13 @@ fn assemble_resolved(
     let base_dir = resolve_path_base_dir(&config_path, &config_dir);
     let (mut base, rubocop_known_cops) = try_load_rubocop_defaults(&config_dir, gem_cache);
     let (project_mentioned_cops, project_mentioned_depts, project_enabled_depts) =
-        merge_project_onto_defaults(&config_path, &config_dir, gem_cache, override_yaml, &mut base)?;
+        merge_project_onto_defaults(
+            &config_path,
+            &config_dir,
+            gem_cache,
+            override_yaml,
+            &mut base,
+        )?;
     Ok(build_resolved(ResolvedParts {
         target_ruby_version: resolve_target_ruby_version(&base, &config_dir),
         lock: resolve_lockfile_meta(&base, &base_dir),

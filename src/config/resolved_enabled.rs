@@ -2,12 +2,12 @@
 
 use std::path::Path;
 
+use super::ResolvedConfig;
 use super::resolved_state::{
     effective_exclude, effective_include, global_exclude_hits, lint_constant_resolution_on,
     path_matches_any, redundant_constant_base_blocked, resolve_enabled_state, state_to_enabled,
     version_gate_disables,
 };
-use super::ResolvedConfig;
 
 impl ResolvedConfig {
     /// Check if a cop is enabled for the given file path.

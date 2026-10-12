@@ -18,7 +18,14 @@ pub(super) fn lint_once(
     path: &Path,
     bytes: &[u8],
 ) -> Result<Vec<Diagnostic>, String> {
-    lint_mut(state, cfg, filters, path, &mut bytes.to_vec(), AutocorrectMode::Off)
+    lint_mut(
+        state,
+        cfg,
+        filters,
+        path,
+        &mut bytes.to_vec(),
+        AutocorrectMode::Off,
+    )
 }
 
 pub(super) fn lint_mut(
@@ -43,7 +50,10 @@ pub(super) fn lint_mut(
     .map_err(|e| e.to_string())
 }
 
-pub(super) fn target_files(filters: &CopFilterSet, targets: &[String]) -> Result<Vec<PathBuf>, String> {
+pub(super) fn target_files(
+    filters: &CopFilterSet,
+    targets: &[String],
+) -> Result<Vec<PathBuf>, String> {
     targets::validate_roots(targets)?;
     let mut files = fs::discover_files_filtered(
         &targets.iter().map(PathBuf::from).collect::<Vec<_>>(),

@@ -34,7 +34,10 @@ pub(crate) fn resolve_start_dir(target_dir: Option<&Path>) -> Option<PathBuf> {
     Some(std::fs::canonicalize(&dir).unwrap_or(dir))
 }
 
-pub(crate) fn resolve_config_path(path: Option<&Path>, start_dir: Option<&PathBuf>) -> Option<PathBuf> {
+pub(crate) fn resolve_config_path(
+    path: Option<&Path>,
+    start_dir: Option<&PathBuf>,
+) -> Option<PathBuf> {
     match path {
         Some(p) if p.exists() => Some(p.to_path_buf()),
         Some(_) => None,
@@ -45,10 +48,16 @@ pub(crate) fn resolve_config_path(path: Option<&Path>, start_dir: Option<&PathBu
 pub(crate) enum ConfigLoadPath {
     Empty,
     NoConfig(PathBuf),
-    Resolved { config_path: PathBuf, scan_root: PathBuf },
+    Resolved {
+        config_path: PathBuf,
+        scan_root: PathBuf,
+    },
 }
 
-pub(crate) fn resolve_config_load(path: Option<&Path>, start_dir: Option<PathBuf>) -> ConfigLoadPath {
+pub(crate) fn resolve_config_load(
+    path: Option<&Path>,
+    start_dir: Option<PathBuf>,
+) -> ConfigLoadPath {
     let config_path = resolve_config_path(path, start_dir.as_ref());
     if path.is_some() && config_path.is_none() {
         return ConfigLoadPath::Empty;
@@ -87,9 +96,18 @@ pub(crate) fn load_project_layer(
 ) -> Result<ConfigLayer> {
     let mut visited = HashSet::new();
     if let Some(yaml) = override_yaml {
-        return load_config_recursive_inner(config_path, config_dir, &mut visited, gem_cache, Some(yaml));
+        return load_config_recursive_inner(
+            config_path,
+            config_dir,
+            &mut visited,
+            gem_cache,
+            Some(yaml),
+        );
     }
-    if config_path.file_name().is_some_and(|f| f == ".standard.yml") {
+    if config_path
+        .file_name()
+        .is_some_and(|f| f == ".standard.yml")
+    {
         let synthetic_yaml = convert_standard_yml(config_path)?;
         load_config_recursive_inner(
             config_path,

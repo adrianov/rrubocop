@@ -11,7 +11,7 @@ use regex::Regex;
 use tree_sitter::Node;
 
 use crate::cop::rspec::helpers::{
-    bare_rspec_call, block_body, call_block, first_sym_arg, is_group, RSPEC_INCLUDE,
+    RSPEC_INCLUDE, bare_rspec_call, block_body, call_block, first_sym_arg, is_group,
 };
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
@@ -75,10 +75,7 @@ fn is_allowed(name: &[u8], identifiers: &[String], patterns: &[Regex]) -> bool {
 
 /// Direct `let`/`let!` statements of one spec group whose names end with
 /// an index.
-fn indexed_let_names<'a, 'b>(
-    source: &'a SourceFile,
-    body: Node<'b>,
-) -> Vec<(&'a [u8], Node<'b>)> {
+fn indexed_let_names<'a, 'b>(source: &'a SourceFile, body: Node<'b>) -> Vec<(&'a [u8], Node<'b>)> {
     let mut cur = body.walk();
     body.named_children(&mut cur)
         .filter(|stmt| is_let_call(source, *stmt))
@@ -103,9 +100,7 @@ fn collect_indexed_lets<'a, 'b>(
 }
 
 /// Members grouped by digit-stripped name, ordered by first appearance.
-fn group_by_stripped_name<'a>(
-    indexed: &[(&'a [u8], Node<'a>)],
-) -> Vec<Vec<(&'a [u8], Node<'a>)>> {
+fn group_by_stripped_name<'a>(indexed: &[(&'a [u8], Node<'a>)]) -> Vec<Vec<(&'a [u8], Node<'a>)>> {
     let mut groups: HashMap<Vec<u8>, Vec<(&'a [u8], Node<'a>)>> = HashMap::new();
     for (name, stmt) in indexed {
         groups
@@ -138,7 +133,9 @@ fn report_group(
             source,
             line,
             col,
-            format!("This `let` statement uses `{index}` in its name. Please give it a meaningful name."),
+            format!(
+                "This `let` statement uses `{index}` in its name. Please give it a meaningful name."
+            ),
         ));
     }
 }

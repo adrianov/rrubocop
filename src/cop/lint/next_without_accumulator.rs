@@ -88,10 +88,13 @@ fn next_line_has_value(source: &SourceFile, node: Node<'_>) -> bool {
         return false;
     };
     after_next_has_value(
-        text.get(node.start_byte().saturating_sub(source.line_start(line).unwrap_or(0))..)
-            .unwrap_or(text)
-            .strip_prefix("next")
-            .unwrap_or(""),
+        text.get(
+            node.start_byte()
+                .saturating_sub(source.line_start(line).unwrap_or(0))..,
+        )
+        .unwrap_or(text)
+        .strip_prefix("next")
+        .unwrap_or(""),
     )
 }
 

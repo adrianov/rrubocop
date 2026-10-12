@@ -2,9 +2,9 @@
 
 use tree_sitter::Node;
 
+use crate::cop::Cop;
 use crate::cop::layout::indentation_consistency_util as util;
 use crate::cop::shared;
-use crate::cop::Cop;
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -89,8 +89,7 @@ fn check_normal(
     diagnostics: &mut Vec<Diagnostic>,
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let base_from_mod =
-        util::base_column_for_normal(source, &kids, util::parent_column(source, n));
+    let base_from_mod = util::base_column_for_normal(source, &kids, util::parent_column(source, n));
     let filtered: Vec<_> = kids
         .into_iter()
         .filter(|k| !util::is_bare_access_modifier(source, *k))

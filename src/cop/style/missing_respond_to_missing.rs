@@ -17,7 +17,6 @@ impl Cop for MissingRespondToMissing {
         false
     }
 
-
     fn check_node(
         &self,
         source: &SourceFile,

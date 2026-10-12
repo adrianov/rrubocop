@@ -45,7 +45,9 @@ impl Cop for MultilineIfModifier {
             source,
             line,
             col,
-            format!("Favor a normal {kw}-statement over a modifier clause in a multiline statement."),
+            format!(
+                "Favor a normal {kw}-statement over a modifier clause in a multiline statement."
+            ),
         ));
     }
 }

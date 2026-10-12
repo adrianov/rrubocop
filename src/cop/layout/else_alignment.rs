@@ -191,9 +191,10 @@ mod tests {
     #[test]
     fn variable_style_or_asgn_if_else_no_offense() {
         let mut config = CopConfig::default();
-        config
-            .options
-            .insert("EndAlignmentStyle".into(), serde_yml::Value::String("variable".into()));
+        config.options.insert(
+            "EndAlignmentStyle".into(),
+            serde_yml::Value::String("variable".into()),
+        );
         assert_cop_no_offenses_full_with_config(
             &ElseAlignment,
             b"      @x ||= if cond\n        1\n      else\n        2\n      end\n",
@@ -204,9 +205,10 @@ mod tests {
     #[test]
     fn variable_style_mass_assign_if_else_no_offense() {
         let mut config = CopConfig::default();
-        config
-            .options
-            .insert("EndAlignmentStyle".into(), serde_yml::Value::String("variable".into()));
+        config.options.insert(
+            "EndAlignmentStyle".into(),
+            serde_yml::Value::String("variable".into()),
+        );
         assert_cop_no_offenses_full_with_config(
             &ElseAlignment,
             b"          a, b = if cond\n            [1, 2]\n          else\n            [3, 4]\n          end\n",

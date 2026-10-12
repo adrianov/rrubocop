@@ -50,7 +50,11 @@ impl Cop for ClassDefinitionInTask {
             {
                 return;
             }
-            let kind = if node.kind() == "class" { "class" } else { "module" };
+            let kind = if node.kind() == "class" {
+                "class"
+            } else {
+                "module"
+            };
             let (line, column) = source.offset_to_line_col(node.start_byte());
             diagnostics.push(self.diagnostic(
                 source,
@@ -99,7 +103,10 @@ fn is_task_call(source: &SourceFile, parent: Node<'_>) -> bool {
 
 fn is_task_or_ns_call(source: &SourceFile, call: Node<'_>) -> bool {
     matches!(call.kind(), "call" | "command" | "command_call")
-        && matches!(call_method_name(source, call), Some(b"task") | Some(b"namespace"))
+        && matches!(
+            call_method_name(source, call),
+            Some(b"task") | Some(b"namespace")
+        )
 }
 
 fn has_block(node: Node<'_>) -> bool {

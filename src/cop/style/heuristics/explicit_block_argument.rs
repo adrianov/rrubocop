@@ -2,8 +2,8 @@
 
 use tree_sitter::Node;
 
-use crate::cop::shared::node_bytes;
 use crate::cop::CopConfig;
+use crate::cop::shared::node_bytes;
 use crate::parse::source::SourceFile;
 
 pub fn matches_explicit_block_argument(

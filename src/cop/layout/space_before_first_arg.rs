@@ -29,7 +29,8 @@ fn gap_spaces(bytes: &[u8], method_end: usize, first_start: usize) -> Option<usi
 }
 
 fn line_has_nonspace_at(line: &[u8], col: usize) -> bool {
-    line.get(col).is_some_and(|b| !matches!(b, b' ' | b'\t' | b'\n' | b'\r'))
+    line.get(col)
+        .is_some_and(|b| !matches!(b, b' ' | b'\t' | b'\n' | b'\r'))
 }
 
 fn is_full_line_comment(line: &[u8]) -> bool {
@@ -115,8 +116,7 @@ impl Cop for SpaceBeforeFirstArg {
         diagnostics: &mut Vec<Diagnostic>,
         mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        let Some((start, end)) =
-            offense(source, node, config.get_bool("AllowForAlignment", true))
+        let Some((start, end)) = offense(source, node, config.get_bool("AllowForAlignment", true))
         else {
             return;
         };

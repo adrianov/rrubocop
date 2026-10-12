@@ -30,12 +30,7 @@ impl Cop for HashSyntax {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            hash_syntax_message(config),
-        ));
+        diagnostics.push(self.diagnostic(source, line, col, hash_syntax_message(config)));
     }
 }
 

@@ -7,7 +7,9 @@ use crate::cop::registry::CopRegistry;
 
 pub fn register_all(registry: &mut CopRegistry) {
     registry.register(Box::new(association_style::AssociationStyle));
-    registry.register(Box::new(attribute_defined_statically::AttributeDefinedStatically));
+    registry.register(Box::new(
+        attribute_defined_statically::AttributeDefinedStatically,
+    ));
     registry.register(Box::new(create_list::CreateList));
     registry.register(Box::new(factory_class_name::FactoryClassName));
 }

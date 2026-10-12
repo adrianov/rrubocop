@@ -23,9 +23,17 @@ pub(crate) fn run(
     // Lint/Syntax ignores CodeMap; skip the tree walk (real map built in source phase).
     let code_map = CodeMap::default();
     match active.iter().find(|(c, _, _)| c.name() == "Lint/Syntax") {
-        Some((cop, cfg, idx)) => {
-            registered(source, tree, &code_map, *cop, cfg, *idx, mode, diagnostics, corrections)
-        }
+        Some((cop, cfg, idx)) => registered(
+            source,
+            tree,
+            &code_map,
+            *cop,
+            cfg,
+            *idx,
+            mode,
+            diagnostics,
+            corrections,
+        ),
         None => probe(source, tree, &code_map, config),
     }
 }

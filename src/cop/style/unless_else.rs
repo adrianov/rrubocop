@@ -52,8 +52,7 @@ fn report(
         source,
         line,
         col,
-        "Do not use `unless` with `else`. Rewrite these with the positive case first."
-            .to_string(),
+        "Do not use `unless` with `else`. Rewrite these with the positive case first.".to_string(),
     );
     if let Some(corr) = corrections.as_mut() {
         push_corr(corr, kw_start, kw_end, "if".into(), cop.name());
@@ -78,9 +77,8 @@ fn find_unless_kw<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
         return Some(k);
     }
     let mut c2 = node.walk();
-    node.children(&mut c2).find(|c| {
-        &source.as_bytes()[c.start_byte()..c.end_byte()] == b"unless"
-    })
+    node.children(&mut c2)
+        .find(|c| &source.as_bytes()[c.start_byte()..c.end_byte()] == b"unless")
 }
 
 fn push_body_swap(
@@ -141,7 +139,13 @@ fn swap_ranges(
     push_corr(corr, e.0, e.1, unless_txt, cop);
 }
 
-fn push_corr(corr: &mut Vec<Correction>, start: usize, end: usize, replacement: String, cop: &'static str) {
+fn push_corr(
+    corr: &mut Vec<Correction>,
+    start: usize,
+    end: usize,
+    replacement: String,
+    cop: &'static str,
+) {
     corr.push(Correction {
         start,
         end,

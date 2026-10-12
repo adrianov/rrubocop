@@ -11,9 +11,8 @@ pub(super) fn has_dot(source: &SourceFile, node: Node<'_>) -> bool {
         return t == b"." || t == b"&.";
     }
     let mut cur = node.walk();
-    node.children(&mut cur).any(|c| {
-        !c.is_named() && matches!(shared::node_bytes(source, c), b"." | b"&.")
-    })
+    node.children(&mut cur)
+        .any(|c| !c.is_named() && matches!(shared::node_bytes(source, c), b"." | b"&."))
 }
 
 /// RuboCop `left_hand_side`: walk up dotted call parents so every link in a

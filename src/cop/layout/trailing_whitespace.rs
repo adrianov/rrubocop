@@ -12,13 +12,19 @@ fn trailing_whitespace_start(line: &[u8]) -> Option<usize> {
     let mut found = false;
     while end > 0 {
         if matches!(line[end - 1], b' ' | b'\t') {
-            end -= 1; found = true; continue;
+            end -= 1;
+            found = true;
+            continue;
         }
         if end >= 3 && line[end - 3..end] == [0xE3, 0x80, 0x80] {
-            end -= 3; found = true; continue;
+            end -= 3;
+            found = true;
+            continue;
         }
         if end >= 2 && line[end - 2..end] == [0xC2, 0xA0] {
-            end -= 2; found = true; continue;
+            end -= 2;
+            found = true;
+            continue;
         }
         break;
     }
@@ -30,14 +36,21 @@ fn strip_cr(line: &[u8]) -> &[u8] {
 }
 
 fn before_shift(s: &str, idx: usize) -> bool {
-    if idx == 0 { return false; }
+    if idx == 0 {
+        return false;
+    }
     let before = &s.as_bytes()[..idx];
-    let Some(&b) = before.iter().rev().find(|&&b| b != b' ' && b != b'\t') else { return false; };
+    let Some(&b) = before.iter().rev().find(|&&b| b != b' ' && b != b'\t') else {
+        return false;
+    };
     matches!(b, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_' | b')' | b']' | b'}' | b'@' | b'$')
 }
 
 fn strip_heredoc_prefix(rest: &str) -> &str {
-    rest.strip_prefix('~').or_else(|| rest.strip_prefix('-')).unwrap_or(rest).trim_start()
+    rest.strip_prefix('~')
+        .or_else(|| rest.strip_prefix('-'))
+        .unwrap_or(rest)
+        .trim_start()
 }
 
 fn take_ident(rest: &str) -> String {
@@ -63,7 +76,9 @@ fn parse_heredoc_ident(rest: &str) -> Option<Vec<u8>> {
 fn heredoc_opener(line: &[u8]) -> Option<Vec<u8>> {
     let s = std::str::from_utf8(line).ok()?;
     let idx = s.find("<<")?;
-    if before_shift(s, idx) { return None; }
+    if before_shift(s, idx) {
+        return None;
+    }
     parse_heredoc_ident(&s[idx + 2..])
 }
 
@@ -72,28 +87,38 @@ fn utf8_col(prefix: &[u8]) -> usize {
 }
 
 fn report_trailing(
-    cop: &dyn Cop, source: &SourceFile, line_no: usize, start: usize, stripped: &[u8],
+    cop: &dyn Cop,
+    source: &SourceFile,
+    line_no: usize,
+    start: usize,
+    stripped: &[u8],
     byte_offset: usize,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let mut diag = cop.diagnostic(
-        source, line_no, utf8_col(&stripped[..start]),
+        source,
+        line_no,
+        utf8_col(&stripped[..start]),
         "Trailing whitespace detected.".into(),
     );
     if let Some(corr) = corrections {
         corr.push(Correction {
-            start: byte_offset + start, end: byte_offset + stripped.len(),
-            replacement: String::new(), cop_name: cop.name(), cop_index: 0,
+            start: byte_offset + start,
+            end: byte_offset + stripped.len(),
+            replacement: String::new(),
+            cop_name: cop.name(),
+            cop_index: 0,
         });
         diag.corrected = true;
     }
     diagnostics.push(diag);
 }
 
-fn in_heredoc_skip(
-    stripped: &[u8], allow: bool, terms: &mut Vec<Vec<u8>>,
-) -> bool {
-    let Some(term) = terms.last() else { return false; };
+fn in_heredoc_skip(stripped: &[u8], allow: bool, terms: &mut Vec<Vec<u8>>) -> bool {
+    let Some(term) = terms.last() else {
+        return false;
+    };
     if stripped
         .iter()
         .copied()
@@ -109,32 +134,63 @@ fn in_heredoc_skip(
 }
 
 fn process_line(
-    cop: &dyn Cop, source: &SourceFile, line_no: usize, line: &[u8], allow: bool,
-    terms: &mut Vec<Vec<u8>>, saw_nonblank: &mut bool, byte_offset: usize,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    line_no: usize,
+    line: &[u8],
+    allow: bool,
+    terms: &mut Vec<Vec<u8>>,
+    saw_nonblank: &mut bool,
+    byte_offset: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) -> bool {
     let stripped = strip_cr(line);
-    if in_heredoc_skip(stripped, allow, terms) { return true; }
-    if stripped == b"__END__" && terms.is_empty() && *saw_nonblank { return false; }
-    if !stripped.iter().all(|&b| b == b' ' || b == b'\t') { *saw_nonblank = true; }
-    if let Some(start) = trailing_whitespace_start(stripped) {
-        report_trailing(cop, source, line_no, start, stripped, byte_offset, diagnostics, corrections);
+    if in_heredoc_skip(stripped, allow, terms) {
+        return true;
     }
-    if let Some(term) = heredoc_opener(stripped) { terms.push(term); }
+    if stripped == b"__END__" && terms.is_empty() && *saw_nonblank {
+        return false;
+    }
+    if !stripped.iter().all(|&b| b == b' ' || b == b'\t') {
+        *saw_nonblank = true;
+    }
+    if let Some(start) = trailing_whitespace_start(stripped) {
+        report_trailing(
+            cop,
+            source,
+            line_no,
+            start,
+            stripped,
+            byte_offset,
+            diagnostics,
+            corrections,
+        );
+    }
+    if let Some(term) = heredoc_opener(stripped) {
+        terms.push(term);
+    }
     true
 }
 
 impl Cop for TrailingWhitespace {
-    fn name(&self) -> &'static str { "Layout/TrailingWhitespace" }
-    fn supports_autocorrect(&self) -> bool { true }
+    fn name(&self) -> &'static str {
+        "Layout/TrailingWhitespace"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
 
     fn uses_line_phase(&self) -> bool {
         true
     }
 
     fn check_lines(
-        &self, source: &SourceFile, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let allow = config.get_bool("AllowInHeredoc", false);
         let mut terms = Vec::new();
@@ -142,9 +198,19 @@ impl Cop for TrailingWhitespace {
         let mut byte_offset = 0usize;
         for (i, line) in source.lines().enumerate() {
             if !process_line(
-                self, source, i + 1, line, allow, &mut terms, &mut saw_nonblank, byte_offset,
-                diagnostics, &mut corrections,
-            ) { break; }
+                self,
+                source,
+                i + 1,
+                line,
+                allow,
+                &mut terms,
+                &mut saw_nonblank,
+                byte_offset,
+                diagnostics,
+                &mut corrections,
+            ) {
+                break;
+            }
             byte_offset += line.len() + 1;
         }
     }

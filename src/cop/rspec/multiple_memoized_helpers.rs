@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use tree_sitter::Node;
 
 use crate::cop::rspec::helpers::{
-    bare_rspec_call, block_body, call_block, first_sym_arg, is_example, is_group, RSPEC_INCLUDE,
+    RSPEC_INCLUDE, bare_rspec_call, block_body, call_block, first_sym_arg, is_example, is_group,
 };
 use crate::cop::shared::{call_method_name, call_receiver, method_node, node_bytes};
 use crate::cop::{Cop, CopConfig};
@@ -66,7 +66,12 @@ fn record_helper(source: &SourceFile, node: Node<'_>, method: &[u8], out: &mut H
     }
 }
 
-fn walk_names(source: &SourceFile, node: Node<'_>, allow_subject: bool, out: &mut HashSet<Vec<u8>>) {
+fn walk_names(
+    source: &SourceFile,
+    node: Node<'_>,
+    allow_subject: bool,
+    out: &mut HashSet<Vec<u8>>,
+) {
     if matches!(node.kind(), "call" | "command") {
         let method = call_method_name(source, node);
         if is_rspec_bare(source, node) && call_block(node).is_some() {
@@ -179,5 +184,8 @@ impl Cop for MultipleMemoizedHelpers {
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(MultipleMemoizedHelpers, "cops/rspec/multiple_memoized_helpers");
+    crate::cop_fixture_tests!(
+        MultipleMemoizedHelpers,
+        "cops/rspec/multiple_memoized_helpers"
+    );
 }

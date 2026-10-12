@@ -61,6 +61,10 @@ pub(super) fn inside_method_def(mut node: Node<'_>) -> bool {
 }
 
 pub(super) fn alias_method_value_used(node: Node<'_>) -> bool {
-    node.parent()
-        .is_some_and(|p| matches!(p.kind(), "argument_list" | "assignment" | "operator_assignment"))
+    node.parent().is_some_and(|p| {
+        matches!(
+            p.kind(),
+            "argument_list" | "assignment" | "operator_assignment"
+        )
+    })
 }

@@ -17,9 +17,7 @@ fn find_lbrace<'a>(node: Node<'a>) -> Option<Node<'a>> {
 
 fn find_rbrace<'a>(node: Node<'a>) -> Option<Node<'a>> {
     let mut cur = node.walk();
-    node.children(&mut cur)
-        .filter(|c| c.kind() == "}")
-        .last()
+    node.children(&mut cur).filter(|c| c.kind() == "}").last()
 }
 
 fn ws_before(bytes: &[u8], start: usize) -> usize {
@@ -131,7 +129,10 @@ mod tests {
     use crate::cop::CopConfig;
     use std::collections::HashMap;
 
-    crate::cop_fixture_tests!(SpaceBeforeBlockBraces, "cops/layout/space_before_block_braces");
+    crate::cop_fixture_tests!(
+        SpaceBeforeBlockBraces,
+        "cops/layout/space_before_block_braces"
+    );
 
     #[test]
     fn empty_stabby_lambda_no_space_before_brace() {

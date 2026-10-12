@@ -17,7 +17,10 @@ fn line_indent(line: &[u8]) -> Option<usize> {
     if line.iter().all(|&b| b == b' ' || b == b'\t' || b == b'\r') {
         return None;
     }
-    let indent = line.iter().take_while(|&&b| b == b' ' || b == b'\t').count();
+    let indent = line
+        .iter()
+        .take_while(|&&b| b == b' ' || b == b'\t')
+        .count();
     let rest = &line[indent..];
     if rest.starts_with(b"#")
         || rest.starts_with(b".")
@@ -209,7 +212,10 @@ fn next_code_indent(source: &SourceFile, after: usize) -> Option<usize> {
         if line.iter().all(|&b| matches!(b, b' ' | b'\t' | b'\r')) {
             return None;
         }
-        let indent = line.iter().take_while(|&&b| b == b' ' || b == b'\t').count();
+        let indent = line
+            .iter()
+            .take_while(|&&b| b == b' ' || b == b'\t')
+            .count();
         (!line[indent..].starts_with(b"#")).then_some(indent)
     })
 }
@@ -234,7 +240,16 @@ fn scan_line<'a>(
         return;
     };
     if continue_or_check(
-        cop, source, code_map, width, i, line, indent, state, diagnostics, corrections,
+        cop,
+        source,
+        code_map,
+        width,
+        i,
+        line,
+        indent,
+        state,
+        diagnostics,
+        corrections,
     ) {
         return;
     }
@@ -266,7 +281,16 @@ fn continue_or_check<'a>(
         return true;
     }
     check_unless_after_end(
-        cop, source, code_map, i + 1, indent, prev, width, line, state.prev_line, diagnostics,
+        cop,
+        source,
+        code_map,
+        i + 1,
+        indent,
+        prev,
+        width,
+        line,
+        state.prev_line,
+        diagnostics,
         corrections,
     );
     false

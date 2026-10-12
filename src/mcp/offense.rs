@@ -1,6 +1,6 @@
 //! LSP-shaped offense JSON (matches RuboCop MCP / LSP diagnostics).
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::diagnostic::{Diagnostic, Severity};
 

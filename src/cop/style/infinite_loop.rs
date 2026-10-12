@@ -58,8 +58,12 @@ fn report(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (line, col) = source.offset_to_line_col(node.start_byte());
-    let mut diag =
-        cop.diagnostic(source, line, col, "Use `Kernel#loop` for infinite loops.".to_string());
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        "Use `Kernel#loop` for infinite loops.".to_string(),
+    );
     if matches!(node.kind(), "while" | "until")
         && let Some(corr) = corrections.as_mut()
     {

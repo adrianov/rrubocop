@@ -12,10 +12,14 @@ pub struct TrailingCommaInArrayLiteral;
 
 fn last_non_close<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
     let mut cur = node.walk();
-    node.children(&mut cur).collect::<Vec<_>>().into_iter().rev().find(|c| {
-        let t = node_bytes(source, *c);
-        t != b"]" && t != b")" && c.kind() != "comment"
-    })
+    node.children(&mut cur)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .find(|c| {
+            let t = node_bytes(source, *c);
+            t != b"]" && t != b")" && c.kind() != "comment"
+        })
 }
 
 fn last_item(source: &SourceFile, node: Node<'_>) -> Option<(bool, usize)> {

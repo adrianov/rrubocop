@@ -7,7 +7,7 @@ use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::codemap::CodeMap;
-use crate::parse::source::{utf8_byte_index_to_column, SourceFile};
+use crate::parse::source::{SourceFile, utf8_byte_index_to_column};
 
 pub struct ExtraSpacing;
 

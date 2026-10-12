@@ -51,9 +51,10 @@ fn sibling_before<'a>(parent: Node<'a>, child: Node<'a>) -> Vec<Node<'a>> {
 }
 
 fn preceding_match_pattern(source: &SourceFile, parent: Node<'_>, child: Node<'_>) -> bool {
-    sibling_before(parent, child).iter().rev().any(|k| {
-        k.kind() == "match_pattern" && match_pattern_has_arrow(source, *k)
-    })
+    sibling_before(parent, child)
+        .iter()
+        .rev()
+        .any(|k| k.kind() == "match_pattern" && match_pattern_has_arrow(source, *k))
 }
 
 fn continuation_gap_ok(kids: &[Node<'_>]) -> bool {

@@ -2,7 +2,7 @@
 
 use tree_sitter::Node;
 
-use super::helpers::{field_name, has_kwarg, is_field_call, CALL_KINDS, DEPT_INCLUDE};
+use super::helpers::{CALL_KINDS, DEPT_INCLUDE, field_name, has_kwarg, is_field_call};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
@@ -43,11 +43,6 @@ impl Cop for UnnecessaryFieldCamelize {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Unnecessary field camelize".into(),
-        ));
+        diagnostics.push(self.diagnostic(source, line, col, "Unnecessary field camelize".into()));
     }
 }

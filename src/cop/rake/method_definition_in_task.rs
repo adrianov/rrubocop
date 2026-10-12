@@ -51,13 +51,15 @@ fn walk(
     let next_in_task = in_task || enters_task(source, node);
     if in_task && matches!(node.kind(), "method" | "singleton_method") {
         let (line, column) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(cop.diagnostic(
-            source,
-            line,
-            column,
-            "Do not define a method in rake task, because it will be defined to the top level."
-                .into(),
-        ));
+        diagnostics.push(
+            cop.diagnostic(
+                source,
+                line,
+                column,
+                "Do not define a method in rake task, because it will be defined to the top level."
+                    .into(),
+            ),
+        );
     }
     // Don't flag methods inside classes defined in tasks (class cop covers that)
     if in_task && matches!(node.kind(), "class" | "module" | "singleton_class") {
@@ -71,7 +73,10 @@ fn walk(
 
 fn enters_task(source: &SourceFile, node: Node<'_>) -> bool {
     matches!(node.kind(), "call" | "command" | "command_call")
-        && matches!(call_method_name(source, node), Some(b"task") | Some(b"namespace"))
+        && matches!(
+            call_method_name(source, node),
+            Some(b"task") | Some(b"namespace")
+        )
         && has_block(node)
 }
 

@@ -55,7 +55,12 @@ fn colon_in_pair(bytes: &[u8], key: Node<'_>, value: Node<'_>) -> Option<usize> 
 
 fn gap_colon(bytes: &[u8], from: usize, to: usize) -> Option<usize> {
     (to > from)
-        .then(|| bytes[from..to].iter().rposition(|&b| b == b':').map(|r| from + r))
+        .then(|| {
+            bytes[from..to]
+                .iter()
+                .rposition(|&b| b == b':')
+                .map(|r| from + r)
+        })
         .flatten()
 }
 

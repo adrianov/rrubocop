@@ -74,7 +74,10 @@ pub(crate) fn standard_perf_version_config(ruby_version: f64) -> &'static str {
 
 /// Map a standard-family gem name to its config file path.
 /// Returns None if the gem is not a recognized standard-family gem.
-pub(crate) fn standard_gem_config_path(gem_name: &str, ruby_version: Option<f64>) -> Option<&'static str> {
+pub(crate) fn standard_gem_config_path(
+    gem_name: &str,
+    ruby_version: Option<f64>,
+) -> Option<&'static str> {
     match gem_name {
         "standard" => Some(standard_version_config(ruby_version.unwrap_or(3.4))),
         "standard-performance" => Some(standard_perf_version_config(ruby_version.unwrap_or(3.4))),

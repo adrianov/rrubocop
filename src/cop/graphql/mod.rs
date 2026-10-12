@@ -1,4 +1,3 @@
-pub(crate) mod helpers;
 mod argument_description;
 mod argument_name;
 mod argument_uniqueness;
@@ -11,6 +10,7 @@ mod field_method;
 mod field_name;
 mod field_uniqueness;
 mod graphql_name;
+pub(crate) mod helpers;
 mod legacy_dsl;
 mod max_complexity_schema;
 mod max_depth_schema;

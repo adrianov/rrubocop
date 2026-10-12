@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 use tree_sitter::{Node, Tree};
 
-use crate::cop::shared::{argument_nodes, call_method_name, for_each_descendant, node_bytes, node_text};
+use crate::cop::shared::{
+    argument_nodes, call_method_name, for_each_descendant, node_bytes, node_text,
+};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::{Diagnostic, Severity};
 use crate::parse::codemap::CodeMap;
@@ -92,7 +94,8 @@ fn strip_quotes(bytes: &[u8]) -> &[u8] {
 fn under_conditional(mut node: Node<'_>) -> bool {
     while let Some(parent) = node.parent() {
         match parent.kind() {
-            "if" | "unless" | "case" | "when" | "elsif" | "else" | "if_modifier" | "unless_modifier" => {
+            "if" | "unless" | "case" | "when" | "elsif" | "else" | "if_modifier"
+            | "unless_modifier" => {
                 return true;
             }
             _ => node = parent,

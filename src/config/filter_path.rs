@@ -51,16 +51,12 @@ pub(crate) fn path_included_any_form(set: &CopFilterSet, filter: &CopFilter, pat
 pub(crate) fn path_excluded_cop_forms(set: &CopFilterSet, filter: &CopFilter, path: &Path) -> bool {
     let (rel_path, rel_to_base) = path_forms(set, path);
     filter.is_excluded(path)
-        || any_rel_match(
-            [rel_path, rel_to_base, path.strip_prefix("./").ok()],
-            |p| filter.is_excluded(p),
-        )
+        || any_rel_match([rel_path, rel_to_base, path.strip_prefix("./").ok()], |p| {
+            filter.is_excluded(p)
+        })
 }
 
-fn exclude_rel_forms<'a>(
-    set: &'a CopFilterSet,
-    path: &'a Path,
-) -> [Option<&'a Path>; 4] {
+fn exclude_rel_forms<'a>(set: &'a CopFilterSet, path: &'a Path) -> [Option<&'a Path>; 4] {
     let nearest_dir = set.nearest_config_dir(path);
     [
         nearest_dir.and_then(|cd| path.strip_prefix(cd).ok()),

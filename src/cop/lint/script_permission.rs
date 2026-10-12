@@ -155,24 +155,28 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn no_offense_when_executable() {
-        assert!(run_on_path(&write_script(
-            tempfile::tempdir().unwrap().path(),
-            "lifecycle_events.rb",
-            b"#!/usr/bin/env ruby\nputs 'hello'\n",
-            0o755,
-        ))
-        .is_empty());
+        assert!(
+            run_on_path(&write_script(
+                tempfile::tempdir().unwrap().path(),
+                "lifecycle_events.rb",
+                b"#!/usr/bin/env ruby\nputs 'hello'\n",
+                0o755,
+            ))
+            .is_empty()
+        );
     }
 
     #[test]
     #[cfg(unix)]
     fn no_offense_without_shebang() {
-        assert!(run_on_path(&write_script(
-            tempfile::tempdir().unwrap().path(),
-            "plain.rb",
-            b"puts 'hello'\n",
-            0o644,
-        ))
-        .is_empty());
+        assert!(
+            run_on_path(&write_script(
+                tempfile::tempdir().unwrap().path(),
+                "plain.rb",
+                b"puts 'hello'\n",
+                0o644,
+            ))
+            .is_empty()
+        );
     }
 }

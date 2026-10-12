@@ -80,7 +80,11 @@ impl Cop for ClosingParenthesisIndentation {
         true
     }
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["argument_list", "parenthesized_statements", "method_parameters"]
+        &[
+            "argument_list",
+            "parenthesized_statements",
+            "method_parameters",
+        ]
     }
 
     fn check_node(

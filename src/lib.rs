@@ -19,6 +19,7 @@ use std::process::ExitCode;
 
 use anyhow::Result;
 use cli::Args;
+use cli::AutocorrectMode;
 use config::{
     CopFilterSet, ResolvedConfig, load_config, load_default_config, set_rubocop_version_override,
     validate_rubocop_version,
@@ -26,8 +27,7 @@ use config::{
 use cop::registry::CopRegistry;
 use diagnostic::Diagnostic;
 use formatter::color::Color;
-use formatter::{create_formatter, Formatter, ProgressSink};
-use cli::AutocorrectMode;
+use formatter::{Formatter, ProgressSink, create_formatter};
 use linter::{lint_bytes_autocorrect, run_linter, run_linter_with, should_fail};
 
 pub fn run() -> Result<ExitCode> {
@@ -114,11 +114,7 @@ fn list_target_files(args: &Args, config: &ResolvedConfig) -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-fn lint_paths(
-    args: &Args,
-    config: &ResolvedConfig,
-    registry: &CopRegistry,
-) -> Result<ExitCode> {
+fn lint_paths(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> Result<ExitCode> {
     if args.list_target_files {
         return list_target_files(args, config);
     }

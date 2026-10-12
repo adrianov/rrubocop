@@ -2,7 +2,7 @@
 
 use tree_sitter::Node;
 
-use super::helpers::{is_argument_call, kwarg_value, CALL_KINDS, DEPT_INCLUDE};
+use super::helpers::{CALL_KINDS, DEPT_INCLUDE, is_argument_call, kwarg_value};
 use crate::cop::shared::node_text;
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
@@ -74,7 +74,9 @@ fn style_mismatch_msg(source: &SourceFile, prep: Node<'_>, style: &str) -> Optio
             .trim_matches('"')
             .trim_matches('\'')
             .to_string();
-        Some(format!("Avoid using prepare string, use prepare: :{name} instead."))
+        Some(format!(
+            "Avoid using prepare string, use prepare: :{name} instead."
+        ))
     } else if style == "string" && matches!(kind, "simple_symbol" | "symbol" | "hash_key_symbol") {
         let name = node_text(source, prep).trim_start_matches(':').to_string();
         Some(format!(

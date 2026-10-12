@@ -1,10 +1,10 @@
 //! Style/ColonMethodCall
-use tree_sitter::Node;
 use crate::cop::shared::{call_receiver, node_bytes};
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
+use tree_sitter::Node;
 
 pub struct ColonMethodCall;
 
@@ -33,12 +33,7 @@ impl Cop for ColonMethodCall {
             return;
         };
         let (l, c) = source.offset_to_line_col(op.start_byte());
-        let mut diag = self.diagnostic(
-            source,
-            l,
-            c,
-            "Do not use `::` for method calls.".into(),
-        );
+        let mut diag = self.diagnostic(source, l, c, "Do not use `::` for method calls.".into());
         if let Some(corr) = corrections.as_mut() {
             corr.push(Correction {
                 start: op.start_byte(),
@@ -63,7 +58,8 @@ fn colon_method_op<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> 
 
 fn find_colon_op(node: Node<'_>) -> Option<Node<'_>> {
     let mut cur = node.walk();
-    node.children(&mut cur).find(|ch| !ch.is_named() && ch.kind() == "::")
+    node.children(&mut cur)
+        .find(|ch| !ch.is_named() && ch.kind() == "::")
 }
 
 fn method_is_lowercase(source: &SourceFile, node: Node<'_>) -> bool {

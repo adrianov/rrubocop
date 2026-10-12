@@ -33,15 +33,7 @@ impl Cop for EndAlignment {
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         // `begin`/`end` is Layout/BeginEndAlignment; `do`/`end` is BlockAlignment.
         // RuboCop EndAlignment has no `on_kwbegin`.
-        &[
-            "class",
-            "module",
-            "if",
-            "unless",
-            "while",
-            "until",
-            "case",
-        ]
+        &["class", "module", "if", "unless", "while", "until", "case"]
     }
 
     fn check_node(

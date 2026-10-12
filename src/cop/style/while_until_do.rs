@@ -1,9 +1,9 @@
 //! Style/WhileUntilDo
-use tree_sitter::Node;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
+use tree_sitter::Node;
 
 pub struct WhileUntilDo;
 
@@ -32,12 +32,8 @@ impl Cop for WhileUntilDo {
             return;
         };
         let (l, c) = source.offset_to_line_col(do_node.start_byte());
-        let mut diag = self.diagnostic(
-            source,
-            l,
-            c,
-            "Do not use `do` with `while`/`until`.".into(),
-        );
+        let mut diag =
+            self.diagnostic(source, l, c, "Do not use `do` with `while`/`until`.".into());
         if let Some(corr) = corrections.as_mut() {
             let mut start = do_node.start_byte();
             let bytes = source.as_bytes();

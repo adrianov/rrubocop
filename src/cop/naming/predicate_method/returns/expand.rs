@@ -5,9 +5,7 @@ use tree_sitter::Node;
 use crate::cop::shared::node_bytes;
 use crate::parse::source::SourceFile;
 
-use super::{
-    extract_return_arg, last_significant, push_ret, unwrap_branch_body, Ret,
-};
+use super::{Ret, extract_return_arg, last_significant, push_ret, unwrap_branch_body};
 
 pub(super) fn expand_and_or<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
     let mut cur = node.walk();
@@ -74,9 +72,7 @@ fn when_body<'a>(child: Node<'a>) -> Ret<'a> {
     if let Some(body) = child.child_by_field_name("body") {
         return Ret::Node(body);
     }
-    last_significant(child)
-        .map(Ret::Node)
-        .unwrap_or(Ret::Nil)
+    last_significant(child).map(Ret::Node).unwrap_or(Ret::Nil)
 }
 
 fn expand_case<'a>(out: &mut Vec<Ret<'a>>, node: Node<'a>) {
@@ -123,7 +119,11 @@ fn is_and_or_op(source: &SourceFile, node: Node<'_>) -> bool {
         .any(|c| !c.is_named() && matches!(node_bytes(source, c), b"&&" | b"||"))
 }
 
-pub(super) fn expand_and_or_binary<'a>(source: &SourceFile, node: Node<'a>, out: &mut Vec<Ret<'a>>) {
+pub(super) fn expand_and_or_binary<'a>(
+    source: &SourceFile,
+    node: Node<'a>,
+    out: &mut Vec<Ret<'a>>,
+) {
     if node.kind() != "binary" || !is_and_or_op(source, node) {
         out.push(Ret::Node(node));
         return;

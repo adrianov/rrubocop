@@ -2,8 +2,8 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use crate::diagnostic::Diagnostic;
-use crate::formatter::color::Color;
 use crate::formatter::Formatter;
+use crate::formatter::color::Color;
 
 pub struct QuietFormatter {
     pub color: Color,

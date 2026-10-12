@@ -8,8 +8,7 @@ use crate::parse::source::SourceFile;
 /// Lint/RequireParentheses — predicate/ ternary-ish without parens + boolean arg.
 pub struct RequireParentheses;
 
-const MSG: &str =
-    "Use parentheses in the method call to avoid confusion about precedence.";
+const MSG: &str = "Use parentheses in the method call to avoid confusion about precedence.";
 
 fn is_bool_op(source: &SourceFile, node: Node<'_>) -> bool {
     if node.kind() != "binary" {

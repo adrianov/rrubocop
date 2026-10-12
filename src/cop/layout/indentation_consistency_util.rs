@@ -111,7 +111,9 @@ pub(crate) fn begins_its_line(source: &SourceFile, offset: usize) -> bool {
 }
 
 pub(crate) fn end_line(source: &SourceFile, node: Node<'_>) -> usize {
-    source.offset_to_line_col(node.end_byte().saturating_sub(1)).0
+    source
+        .offset_to_line_col(node.end_byte().saturating_sub(1))
+        .0
 }
 
 pub(crate) fn parent_column(source: &SourceFile, n: Node<'_>) -> Option<usize> {

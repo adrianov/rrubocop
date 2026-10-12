@@ -5,10 +5,10 @@ mod parse;
 mod run;
 
 pub use assert::{
-    assert_cop_no_offenses_full, assert_cop_no_offenses_full_with_config,
-    assert_cop_offenses_full, assert_cop_offenses_full_with_config,
+    assert_cop_no_offenses_full, assert_cop_no_offenses_full_with_config, assert_cop_offenses_full,
+    assert_cop_offenses_full_with_config,
 };
-pub use parse::{parse_fixture, ExpectedOffense, ParsedFixture};
+pub use parse::{ExpectedOffense, ParsedFixture, parse_fixture};
 pub use run::{run_cop_full, run_cop_full_internal, run_cop_full_with_config};
 
 /// `offense.rb` + `no_offense.rb` under `tests/fixtures/<path>/`.

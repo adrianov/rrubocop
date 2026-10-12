@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::cop::CopConfig;
 
-use super::filter::{CopFilterSet};
+use super::filter::CopFilterSet;
 use super::filter_path::{
     exclude_re_matches_forms, exclude_set_matches, filter_excluded_any_form, include_matches_forms,
     path_excluded_cop_forms, path_forms, path_included_any_form,

@@ -77,13 +77,7 @@ impl Cop for EmptyLineAfterHook {
             col,
             format!("Add an empty line after `{name}`."),
         );
-        if push_replace(
-            &mut corrections,
-            insert_at,
-            insert_at,
-            "\n",
-            self.name(),
-        ) {
+        if push_replace(&mut corrections, insert_at, insert_at, "\n", self.name()) {
             diag.corrected = true;
         }
         diagnostics.push(diag);

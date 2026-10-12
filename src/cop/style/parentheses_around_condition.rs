@@ -20,8 +20,14 @@ impl Cop for ParenthesesAroundCondition {
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
         &[
-            "if", "unless", "while", "until",
-            "if_modifier", "unless_modifier", "while_modifier", "until_modifier",
+            "if",
+            "unless",
+            "while",
+            "until",
+            "if_modifier",
+            "unless_modifier",
+            "while_modifier",
+            "until_modifier",
         ]
     }
 
@@ -163,5 +169,8 @@ fn strip_close(
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(ParenthesesAroundCondition, "cops/style/parentheses_around_condition");
+    crate::cop_fixture_tests!(
+        ParenthesesAroundCondition,
+        "cops/style/parentheses_around_condition"
+    );
 }

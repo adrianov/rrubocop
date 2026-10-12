@@ -2,8 +2,8 @@
 
 use crate::cop::{CopConfig, EnabledState};
 
-use super::types::NewCopsPolicy;
 use super::ResolvedConfig;
+use super::types::NewCopsPolicy;
 
 impl ResolvedConfig {
     /// Stable bytes for the result-cache key: config that can change offenses.
@@ -136,7 +136,10 @@ fn hash_pattern_list(h: &mut sha2::Sha256, patterns: &[String]) {
     }
 }
 
-fn hash_option_map(h: &mut sha2::Sha256, options: &std::collections::HashMap<String, serde_yml::Value>) {
+fn hash_option_map(
+    h: &mut sha2::Sha256,
+    options: &std::collections::HashMap<String, serde_yml::Value>,
+) {
     use sha2::Digest;
     let mut keys: Vec<_> = options.keys().cloned().collect();
     keys.sort();

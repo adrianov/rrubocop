@@ -31,7 +31,14 @@ fn check_open(
         space_delim::add_space_after(cop, source, d, open_off, msg, diagnostics, corrections);
     } else {
         space_delim::strip_space_after(
-            cop, source, bytes, d, msg, diagnostics, corrections, correctable,
+            cop,
+            source,
+            bytes,
+            d,
+            msg,
+            diagnostics,
+            corrections,
+            correctable,
         );
     }
 }
@@ -51,7 +58,14 @@ fn check_close(
         space_delim::add_space_before(cop, source, d, d.inner_e, msg, diagnostics, corrections);
     } else {
         space_delim::strip_space_before(
-            cop, source, bytes, d, msg, diagnostics, corrections, correctable,
+            cop,
+            source,
+            bytes,
+            d,
+            msg,
+            diagnostics,
+            corrections,
+            correctable,
         );
     }
 }
@@ -92,15 +106,34 @@ impl Cop for SpaceInsideHashLiteralBraces {
         let want = style != "no_space";
         let mut correctable = true;
         check_open(
-            self, source, bytes, &d, node.start_byte(), want, diagnostics, &mut corrections,
+            self,
+            source,
+            bytes,
+            &d,
+            node.start_byte(),
+            want,
+            diagnostics,
+            &mut corrections,
             &mut correctable,
         );
-        check_close(self, source, bytes, &d, want, diagnostics, &mut corrections, &mut correctable);
+        check_close(
+            self,
+            source,
+            bytes,
+            &d,
+            want,
+            diagnostics,
+            &mut corrections,
+            &mut correctable,
+        );
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(SpaceInsideHashLiteralBraces, "cops/layout/space_inside_hash_literal_braces");
+    crate::cop_fixture_tests!(
+        SpaceInsideHashLiteralBraces,
+        "cops/layout/space_inside_hash_literal_braces"
+    );
 }

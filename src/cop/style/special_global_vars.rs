@@ -11,8 +11,8 @@ use crate::parse::source::SourceFile;
 pub struct SpecialGlobalVars;
 
 const PERL: &[&[u8]] = &[
-    b"$!", b"$@", b"$;", b"$,", b"$.", b"$/", b"$\\", b"$\"", b"$0", b"$*",
-    b"$$", b"$?", b"$&", b"$`", b"$'", b"$+", b"$~", b"$=", b"$:",
+    b"$!", b"$@", b"$;", b"$,", b"$.", b"$/", b"$\\", b"$\"", b"$0", b"$*", b"$$", b"$?", b"$&",
+    b"$`", b"$'", b"$+", b"$~", b"$=", b"$:",
 ];
 
 const ENGLISH: &[(&[u8], &str)] = &[

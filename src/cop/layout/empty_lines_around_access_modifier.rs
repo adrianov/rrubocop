@@ -20,7 +20,10 @@ fn modifier_name<'a>(source: &'a SourceFile, n: Node<'_>) -> Option<&'a [u8]> {
 }
 
 fn is_modifier(name: &[u8]) -> bool {
-    matches!(name, b"private" | b"protected" | b"public" | b"module_function")
+    matches!(
+        name,
+        b"private" | b"protected" | b"public" | b"module_function"
+    )
 }
 
 fn bare_modifier(n: Node<'_>) -> bool {
@@ -102,7 +105,7 @@ fn in_method_body(n: Node<'_>) -> bool {
         match parent.kind() {
             "method" | "singleton_method" => return true,
             "class" | "module" | "singleton_class" | "do_block" | "block" | "program" => {
-                return false
+                return false;
             }
             _ => p = parent.parent(),
         }
@@ -156,10 +159,7 @@ fn blank_needs(style: &str, before_ok: bool, after_ok: bool) -> (bool, bool) {
     )
 }
 
-fn access_modifier_at<'a>(
-    source: &'a SourceFile,
-    n: Node<'a>,
-) -> Option<&'a [u8]> {
+fn access_modifier_at<'a>(source: &'a SourceFile, n: Node<'a>) -> Option<&'a [u8]> {
     if !matches!(n.kind(), "call" | "command" | "identifier") {
         return None;
     }
@@ -185,7 +185,13 @@ fn emit_modifier(
         source,
         diag_line,
         diag_col,
-        modifier_message(name, style, at_body_opening(source, n), before_ok, need_after),
+        modifier_message(
+            name,
+            style,
+            at_body_opening(source, n),
+            before_ok,
+            need_after,
+        ),
     );
     let mut fixed = false;
     if need_before {
@@ -217,7 +223,16 @@ fn check_modifier(
         blank_needs(style, before_ok, shared::line_blank(source, line + 1));
     if need_before || need_after {
         emit_modifier(
-            cop, source, n, name, style, line, before_ok, need_before, need_after, diagnostics,
+            cop,
+            source,
+            n,
+            name,
+            style,
+            line,
+            before_ok,
+            need_before,
+            need_after,
+            diagnostics,
             corrections,
         );
     }

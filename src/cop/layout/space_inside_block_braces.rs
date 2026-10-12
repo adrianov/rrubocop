@@ -64,22 +64,46 @@ fn check_nonempty(
 ) {
     if want {
         space_delim::add_space_after(
-            cop, source, d, d.inner_s, "Space missing inside {.".into(), diagnostics, corrections,
+            cop,
+            source,
+            d,
+            d.inner_s,
+            "Space missing inside {.".into(),
+            diagnostics,
+            corrections,
         );
         // RuboCop: missing space before `}` is only enforced on single-line blocks.
         if single_line {
             space_delim::add_space_before(
-                cop, source, d, d.inner_e, "Space missing inside }.".into(), diagnostics, corrections,
+                cop,
+                source,
+                d,
+                d.inner_e,
+                "Space missing inside }.".into(),
+                diagnostics,
+                corrections,
             );
         }
     } else {
         let mut correctable = true;
         space_delim::strip_space_after(
-            cop, source, bytes, d, "Space detected inside {.".into(), diagnostics, corrections,
+            cop,
+            source,
+            bytes,
+            d,
+            "Space detected inside {.".into(),
+            diagnostics,
+            corrections,
             &mut correctable,
         );
         space_delim::strip_space_before(
-            cop, source, bytes, d, "Space detected inside }.".into(), diagnostics, corrections,
+            cop,
+            source,
+            bytes,
+            d,
+            "Space detected inside }.".into(),
+            diagnostics,
+            corrections,
             &mut correctable,
         );
     }
@@ -119,7 +143,15 @@ impl Cop for SpaceInsideBlockBraces {
             .iter()
             .all(|&b| b == b' ' || b == b'\t')
         {
-            check_empty(self, source, config, lbrace, &d, diagnostics, &mut corrections);
+            check_empty(
+                self,
+                source,
+                config,
+                lbrace,
+                &d,
+                diagnostics,
+                &mut corrections,
+            );
             return;
         }
         check_nonempty(

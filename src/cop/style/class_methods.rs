@@ -43,7 +43,10 @@ fn class_method_offense(source: &SourceFile, node: Node<'_>) -> Option<(usize, S
     if node_bytes(source, object) != class_like.as_slice() {
         return None;
     }
-    Some((object.start_byte(), suggest_self_method(source, node, &class_like)))
+    Some((
+        object.start_byte(),
+        suggest_self_method(source, node, &class_like),
+    ))
 }
 
 fn suggest_self_method(source: &SourceFile, node: Node<'_>, class_like: &[u8]) -> String {

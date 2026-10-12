@@ -28,7 +28,10 @@ impl Cop for IfUnlessModifierOfIfUnless {
         let Some(body) = node.child_by_field_name("body") else {
             return;
         };
-        if !matches!(body.kind(), "if" | "unless" | "if_modifier" | "unless_modifier") {
+        if !matches!(
+            body.kind(),
+            "if" | "unless" | "if_modifier" | "unless_modifier"
+        ) {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());

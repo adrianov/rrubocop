@@ -47,9 +47,8 @@ fn do_line_begins_inside_argument(source: &SourceFile, call: Node<'_>, opener_of
         return false;
     };
     let mut cur = args.walk();
-    args.named_children(&mut cur).any(|arg| {
-        arg.start_byte() <= first_char_off && first_char_off < arg.end_byte()
-    })
+    args.named_children(&mut cur)
+        .any(|arg| arg.start_byte() <= first_char_off && first_char_off < arg.end_byte())
 }
 
 fn method_selector_offset(call: Node<'_>) -> usize {
@@ -59,7 +58,11 @@ fn method_selector_offset(call: Node<'_>) -> usize {
 }
 
 /// When `do`/`{` sits on a multiline argument continuation line, anchor on the call.
-pub(super) fn do_line_anchor_offset(source: &SourceFile, block: Node<'_>, opener: Node<'_>) -> usize {
+pub(super) fn do_line_anchor_offset(
+    source: &SourceFile,
+    block: Node<'_>,
+    opener: Node<'_>,
+) -> usize {
     let Some(call) = block_call_node(block) else {
         return opener.start_byte();
     };
@@ -82,9 +85,7 @@ fn call_chain_root(mut call: Node<'_>) -> Node<'_> {
 
 /// RuboCop block nodes span the full send chain; tree-sitter `do_block` starts at `do`.
 pub(super) fn block_expression_start<'a>(block: Node<'a>) -> Node<'a> {
-    block_call_node(block)
-        .map(call_chain_root)
-        .unwrap_or(block)
+    block_call_node(block).map(call_chain_root).unwrap_or(block)
 }
 
 pub(super) fn block_line_indent(source: &SourceFile, node: Node<'_>) -> usize {
@@ -172,7 +173,8 @@ pub(super) fn expression_start_for_line(source: &SourceFile, block: Node<'_>) ->
         if !same_line(source, start, parent) {
             break;
         }
-        col = shared::node_col(source, parent).min(shared::line_indent(source, parent.start_byte()));
+        col =
+            shared::node_col(source, parent).min(shared::line_indent(source, parent.start_byte()));
         start = parent;
         current = parent;
     }

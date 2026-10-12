@@ -2,7 +2,7 @@
 
 use tree_sitter::Node;
 
-use crate::cop::rspec::helpers::{block_body, RSPEC_INCLUDE};
+use crate::cop::rspec::helpers::{RSPEC_INCLUDE, block_body};
 use crate::cop::shared::{
     argument_nodes, call_method_name, call_receiver, for_each_descendant, method_node, node_bytes,
     push_replace,

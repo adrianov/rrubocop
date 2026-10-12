@@ -114,11 +114,7 @@ fn skip_assignment_lhs(source: &SourceFile, line_start: usize, pos: usize) -> us
     };
     let lhs_end = trim_spaces_left(bytes, line_start, eq_pos);
     let lhs_pos = scan_lhs_start(bytes, line_start, lhs_end);
-    if lhs_pos < lhs_end {
-        lhs_pos
-    } else {
-        pos
-    }
+    if lhs_pos < lhs_end { lhs_pos } else { pos }
 }
 
 fn find_plain_eq(bytes: &[u8], line_start: usize, pos: usize) -> Option<usize> {
@@ -139,7 +135,10 @@ fn is_compound_eq(bytes: &[u8], line_start: usize, eq_pos: usize) -> bool {
     }
     let prev = bytes[eq_pos - 1];
     matches!(prev, b'=' | b'!' | b'<' | b'>')
-        || matches!(prev, b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'|' | b'&' | b'<')
+        || matches!(
+            prev,
+            b'+' | b'-' | b'*' | b'/' | b'%' | b'^' | b'|' | b'&' | b'<'
+        )
 }
 
 fn scan_lhs_start(bytes: &[u8], line_start: usize, mut lhs_pos: usize) -> usize {

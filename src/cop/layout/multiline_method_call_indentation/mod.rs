@@ -16,10 +16,18 @@ use crate::parse::source::SourceFile;
 
 pub struct MultilineMethodCallIndentation;
 
-fn expected_col(source: &SourceFile, node: Node<'_>, recv: Node<'_>, style: &str, width: usize) -> usize {
+fn expected_col(
+    source: &SourceFile,
+    node: Node<'_>,
+    recv: Node<'_>,
+    style: &str,
+    width: usize,
+) -> usize {
     match style {
         "indented_relative_to_receiver" => shared::line_indent(source, recv.start_byte()) + width,
-        "indented" => shared::line_indent(source, chain::chain_root(source, node).start_byte()) + width,
+        "indented" => {
+            shared::line_indent(source, chain::chain_root(source, node).start_byte()) + width
+        }
         "aligned" | _ => aligned_expected(source, node, width),
     }
 }
@@ -50,7 +58,10 @@ fn inside_paren_arg_list(node: Node<'_>) -> bool {
         if n.kind() == "argument_list" {
             return n.child(0).is_some_and(|c| !c.is_named() && c.kind() == "(");
         }
-        if matches!(n.kind(), "program" | "method" | "singleton_method" | "class" | "module") {
+        if matches!(
+            n.kind(),
+            "program" | "method" | "singleton_method" | "class" | "module"
+        ) {
             break;
         }
         p = n.parent();
@@ -143,13 +154,22 @@ impl Cop for MultilineMethodCallIndentation {
 mod tests {
     use super::*;
     use crate::cop::CopConfig;
-    crate::cop_fixture_tests!(MultilineMethodCallIndentation, "cops/layout/multiline_method_call_indentation");
+    crate::cop_fixture_tests!(
+        MultilineMethodCallIndentation,
+        "cops/layout/multiline_method_call_indentation"
+    );
 
     #[test]
     fn indented_rspec_chains() {
         let mut config = CopConfig::default();
-        config.options.insert("EnforcedStyle".into(), serde_yml::Value::String("indented".into()));
-        config.options.insert("IndentationWidth".into(), serde_yml::Value::Number(2.into()));
+        config.options.insert(
+            "EnforcedStyle".into(),
+            serde_yml::Value::String("indented".into()),
+        );
+        config.options.insert(
+            "IndentationWidth".into(),
+            serde_yml::Value::Number(2.into()),
+        );
         crate::testutil::assert_cop_no_offenses_full_with_config(
             &MultilineMethodCallIndentation,
             b"expect { post(:create) }\n  .to change(A, :count).by(1)\n  .and(change(B, :count).by(1))\n",
@@ -161,7 +181,9 @@ mod tests {
     fn no_offense_indented_chain_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &MultilineMethodCallIndentation,
-            include_bytes!("../../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_indented_chain.rb"),
+            include_bytes!(
+                "../../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_indented_chain.rb"
+            ),
         );
     }
 
@@ -169,7 +191,9 @@ mod tests {
     fn no_offense_dot_above_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &MultilineMethodCallIndentation,
-            include_bytes!("../../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_dot_above.rb"),
+            include_bytes!(
+                "../../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_dot_above.rb"
+            ),
         );
     }
 
@@ -177,7 +201,9 @@ mod tests {
     fn no_offense_comment_between_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &MultilineMethodCallIndentation,
-            include_bytes!("../../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_comment_between.rb"),
+            include_bytes!(
+                "../../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_comment_between.rb"
+            ),
         );
     }
 
@@ -185,7 +211,9 @@ mod tests {
     fn no_offense_multiline_args_chain_fixture() {
         crate::testutil::assert_cop_no_offenses_full(
             &MultilineMethodCallIndentation,
-            include_bytes!("../../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_multiline_args_chain.rb"),
+            include_bytes!(
+                "../../../../tests/fixtures/cops/layout/multiline_method_call_indentation/no_offense_multiline_args_chain.rb"
+            ),
         );
     }
 }

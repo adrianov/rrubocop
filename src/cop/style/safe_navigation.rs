@@ -64,7 +64,11 @@ fn modifier_offense<'a>(
     }
 }
 
-fn unless_nil_safe_nav(cop: &SafeNavigation, source: &SourceFile, node: Node<'_>) -> Option<Diagnostic> {
+fn unless_nil_safe_nav(
+    cop: &SafeNavigation,
+    source: &SourceFile,
+    node: Node<'_>,
+) -> Option<Diagnostic> {
     let cond = node.child_by_field_name("condition")?;
     if !is_nil_check(source, cond) {
         return None;
@@ -78,7 +82,11 @@ fn unless_nil_safe_nav(cop: &SafeNavigation, source: &SourceFile, node: Node<'_>
 }
 
 /// `foo.bar if foo` → `foo&.bar` (RuboCop Style/SafeNavigation).
-fn if_modifier_safe_nav(cop: &SafeNavigation, source: &SourceFile, node: Node<'_>) -> Option<Diagnostic> {
+fn if_modifier_safe_nav(
+    cop: &SafeNavigation,
+    source: &SourceFile,
+    node: Node<'_>,
+) -> Option<Diagnostic> {
     let cond = node.child_by_field_name("condition")?;
     if cond.kind() != "identifier" {
         return None;
@@ -178,12 +186,7 @@ fn enclosing_method(node: Node<'_>) -> Option<Node<'_>> {
     None
 }
 
-fn method_reassigns_name(
-    source: &SourceFile,
-    method: Node<'_>,
-    name: &str,
-    before: usize,
-) -> bool {
+fn method_reassigns_name(source: &SourceFile, method: Node<'_>, name: &str, before: usize) -> bool {
     let Some(body) = method.child_by_field_name("body") else {
         return false;
     };

@@ -1,4 +1,3 @@
-pub(crate) mod heuristics;
 mod alias;
 mod and_or;
 mod arguments_forwarding;
@@ -46,6 +45,7 @@ mod frozen_string_literal_comment;
 mod global_std_stream;
 mod global_vars;
 mod hash_syntax;
+pub(crate) mod heuristics;
 mod identical_conditional_branches;
 mod if_inside_else;
 mod if_unless_modifier_of_if_unless;

@@ -18,12 +18,24 @@ fn block_end_line(source: &SourceFile, node: Node<'_>) -> usize {
         .unwrap_or_else(|| shared::node_line(source, node))
 }
 
-fn check_params(cop: &dyn Cop, source: &SourceFile, node: Node<'_>, start_line: usize, diagnostics: &mut Vec<Diagnostic>) {
-    let Some(params) = shared::child_kind(node, "block_parameters") else { return; };
-    if shared::node_line(source, params) == start_line { return; }
+fn check_params(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    start_line: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(params) = shared::child_kind(node, "block_parameters") else {
+        return;
+    };
+    if shared::node_line(source, params) == start_line {
+        return;
+    }
     let (l, c) = source.offset_to_line_col(params.start_byte());
     diagnostics.push(cop.diagnostic(
-        source, l, c,
+        source,
+        l,
+        c,
         "Block argument expression is not on the same line as the block start.".into(),
     ));
 }
@@ -35,32 +47,64 @@ fn first_body<'a>(node: Node<'a>) -> Option<Node<'a>> {
 }
 
 fn check_body(
-    cop: &dyn Cop, source: &SourceFile, node: Node<'_>, start_line: usize,
-    diagnostics: &mut Vec<Diagnostic>, corrections: &mut Option<&mut Vec<Correction>>,
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    start_line: usize,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<&mut Vec<Correction>>,
 ) {
-    let Some(first) = first_body(node) else { return; };
-    if shared::node_line(source, first) != start_line { return; }
+    let Some(first) = first_body(node) else {
+        return;
+    };
+    if shared::node_line(source, first) != start_line {
+        return;
+    }
     report::report_fix(
-        cop, source, first.start_byte(),
+        cop,
+        source,
+        first.start_byte(),
         "Block body expression is on the same line as the block start.".into(),
-        diagnostics, corrections,
-        first.start_byte(), first.start_byte(), "\n".into(),
+        diagnostics,
+        corrections,
+        first.start_byte(),
+        first.start_byte(),
+        "\n".into(),
     );
 }
 
 impl Cop for MultilineBlockLayout {
-    fn name(&self) -> &'static str { "Layout/MultilineBlockLayout" }
-    fn supports_autocorrect(&self) -> bool { true }
-    fn interested_node_kinds(&self) -> &'static [&'static str] { &["do_block", "block"] }
+    fn name(&self) -> &'static str {
+        "Layout/MultilineBlockLayout"
+    }
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+    fn interested_node_kinds(&self) -> &'static [&'static str] {
+        &["do_block", "block"]
+    }
 
     fn check_node(
-        &self, source: &SourceFile, node: Node<'_>, config: &CopConfig,
-        diagnostics: &mut Vec<Diagnostic>, mut corrections: Option<&mut Vec<Correction>>,
+        &self,
+        source: &SourceFile,
+        node: Node<'_>,
+        config: &CopConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
         let _ = config;
         let start_line = shared::node_line(source, node);
-        if start_line == block_end_line(source, node) { return; }
+        if start_line == block_end_line(source, node) {
+            return;
+        }
         check_params(self, source, node, start_line, diagnostics);
-        check_body(self, source, node, start_line, diagnostics, &mut corrections);
+        check_body(
+            self,
+            source,
+            node,
+            start_line,
+            diagnostics,
+            &mut corrections,
+        );
     }
 }

@@ -20,7 +20,8 @@ fn is_triple_eq(source: &SourceFile, node: Node<'_>) -> bool {
         return call_method_name(source, node) == Some(b"===");
     }
     let mut cur = node.walk();
-    node.children(&mut cur).any(|c| node_bytes(source, c) == b"===")
+    node.children(&mut cur)
+        .any(|c| node_bytes(source, c) == b"===")
 }
 
 fn receiver(node: Node<'_>) -> Option<Node<'_>> {
@@ -114,10 +115,6 @@ mod tests {
         config
             .options
             .insert("AllowOnConstant".into(), serde_yml::Value::Bool(true));
-        assert_cop_no_offenses_full_with_config(
-            &CaseEquality,
-            b"x = String === body\n",
-            config,
-        );
+        assert_cop_no_offenses_full_with_config(&CaseEquality, b"x = String === body\n", config);
     }
 }

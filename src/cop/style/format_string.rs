@@ -26,7 +26,8 @@ impl Cop for FormatString {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let Some((msg, at)) = format_offense(source, node, config.get_str("EnforcedStyle", "format"))
+        let Some((msg, at)) =
+            format_offense(source, node, config.get_str("EnforcedStyle", "format"))
         else {
             return;
         };

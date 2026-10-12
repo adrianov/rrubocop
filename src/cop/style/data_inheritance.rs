@@ -30,13 +30,15 @@ impl Cop for DataInheritance {
             return;
         }
         let (line, col) = source.offset_to_line_col(node.start_byte());
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Do not inherit from `Data.define`. Extend from `Data` and call `.define` instead."
-                .to_string(),
-        ));
+        diagnostics.push(
+            self.diagnostic(
+                source,
+                line,
+                col,
+                "Do not inherit from `Data.define`. Extend from `Data` and call `.define` instead."
+                    .to_string(),
+            ),
+        );
     }
 }
 
@@ -53,7 +55,10 @@ fn inherits_data_define(source: &SourceFile, node: Node<'_>) -> bool {
 fn unwrap_superclass(superclass: Node<'_>) -> Node<'_> {
     if superclass.kind() == "superclass" {
         let mut c = superclass.walk();
-        superclass.named_children(&mut c).next().unwrap_or(superclass)
+        superclass
+            .named_children(&mut c)
+            .next()
+            .unwrap_or(superclass)
     } else {
         superclass
     }

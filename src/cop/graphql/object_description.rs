@@ -2,9 +2,7 @@
 
 use tree_sitter::Node;
 
-use super::helpers::{
-    class_body_stmts, description_method_in, module_body_stmts, DEPT_INCLUDE,
-};
+use super::helpers::{DEPT_INCLUDE, class_body_stmts, description_method_in, module_body_stmts};
 use crate::cop::shared::{argument_nodes, call_method_name};
 use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
@@ -50,21 +48,20 @@ impl Cop for ObjectDescription {
             return;
         }
         let (line, col) = source.offset_to_line_col(
-            node.child_by_field_name("name").unwrap_or(node).start_byte(),
+            node.child_by_field_name("name")
+                .unwrap_or(node)
+                .start_byte(),
         );
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Missing type description".into(),
-        ));
+        diagnostics.push(self.diagnostic(source, line, col, "Missing type description".into()));
     }
 }
 
 fn body_to_check<'a>(source: &SourceFile, node: Node<'a>) -> Option<Vec<Node<'a>>> {
     if node.kind() == "module" {
         let kids = module_body_stmts(node);
-        kids.iter().any(|n| is_include_call(source, *n)).then_some(kids)
+        kids.iter()
+            .any(|n| is_include_call(source, *n))
+            .then_some(kids)
     } else {
         Some(class_body_stmts(node))
     }

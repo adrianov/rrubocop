@@ -29,11 +29,7 @@ fn merge_cop_scalars(base: &mut CopConfig, overlay: &CopConfig) {
     }
 }
 
-fn merge_cop_lists(
-    base: &mut CopConfig,
-    overlay: &CopConfig,
-    inherit_mode: Option<&InheritMode>,
-) {
+fn merge_cop_lists(base: &mut CopConfig, overlay: &CopConfig, inherit_mode: Option<&InheritMode>) {
     let should_merge_include = inherit_mode
         .map(|im| im.merge.contains("Include"))
         .unwrap_or(false);

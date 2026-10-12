@@ -1,15 +1,20 @@
 use std::io::Write;
 
 use crate::diagnostic::Diagnostic;
-use crate::formatter::color::Color;
 use crate::formatter::Formatter;
+use crate::formatter::color::Color;
 
 pub struct TextFormatter {
     pub color: Color,
 }
 
 impl Formatter for TextFormatter {
-    fn format_to(&self, diagnostics: &[Diagnostic], files: &[std::path::PathBuf], out: &mut dyn Write) {
+    fn format_to(
+        &self,
+        diagnostics: &[Diagnostic],
+        files: &[std::path::PathBuf],
+        out: &mut dyn Write,
+    ) {
         for d in diagnostics {
             let _ = writeln!(out, "{}", d.render(self.color));
         }
@@ -56,7 +61,10 @@ fn write_with_corrected(
         color.cyan(&corr_text)
     };
     if correctable == 0 {
-        let _ = writeln!(out, "\n{files} inspected, {offenses} detected, {corr} corrected");
+        let _ = writeln!(
+            out,
+            "\n{files} inspected, {offenses} detected, {corr} corrected"
+        );
         return;
     }
     let more = format!("{correctable} {}", noun(correctable, "offense", "offenses"));

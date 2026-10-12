@@ -29,12 +29,10 @@ impl Cop for Eval {
         diagnostics: &mut Vec<Diagnostic>,
         _corrections: Option<&mut Vec<crate::correction::Correction>>,
     ) {
-        let method = node
-            .child_by_field_name("method")
-            .or_else(|| {
-                let mut c = node.walk();
-                node.children(&mut c).find(|n| n.kind() == "identifier")
-            });
+        let method = node.child_by_field_name("method").or_else(|| {
+            let mut c = node.walk();
+            node.children(&mut c).find(|n| n.kind() == "identifier")
+        });
         let Some(method) = method else {
             return;
         };

@@ -4,9 +4,7 @@ use crate::cop::{Cop, CopConfig};
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
-use super::ordered_dependencies_group::{
-    flush_group, line_offsets, try_add_dep, DepEntry,
-};
+use super::ordered_dependencies_group::{DepEntry, flush_group, line_offsets, try_add_dep};
 
 /// ## Corpus investigation (2026-03-03)
 ///
@@ -87,12 +85,28 @@ fn handle_line(
     corrections: &mut Option<&mut Vec<crate::correction::Correction>>,
 ) {
     let Ok(line_str) = std::str::from_utf8(line) else {
-        reset_group(group, diagnostics, source, cop, corrections, bytes, current_method);
+        reset_group(
+            group,
+            diagnostics,
+            source,
+            cop,
+            corrections,
+            bytes,
+            current_method,
+        );
         return;
     };
     let trimmed = line_str.trim();
     if trimmed.is_empty() || (trimmed.starts_with('#') && treat_comments) {
-        reset_group(group, diagnostics, source, cop, corrections, bytes, current_method);
+        reset_group(
+            group,
+            diagnostics,
+            source,
+            cop,
+            corrections,
+            bytes,
+            current_method,
+        );
         return;
     }
     if trimmed.starts_with('#') {
@@ -109,7 +123,15 @@ fn handle_line(
         |g| flush_group(g, diagnostics, source, cop, corrections, bytes),
         consider_punct,
     ) {
-        reset_group(group, diagnostics, source, cop, corrections, bytes, current_method);
+        reset_group(
+            group,
+            diagnostics,
+            source,
+            cop,
+            corrections,
+            bytes,
+            current_method,
+        );
     }
 }
 

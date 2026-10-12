@@ -54,7 +54,16 @@ fn run_file_model_cops(
     }
     let file_model = model::build(source.as_bytes(), tree.clone());
     for (cop, cfg, idx) in model_cops {
-        one_file_model_cop(source, &file_model, *cop, cfg, *idx, mode, diagnostics, corrections);
+        one_file_model_cop(
+            source,
+            &file_model,
+            *cop,
+            cfg,
+            *idx,
+            mode,
+            diagnostics,
+            corrections,
+        );
     }
 }
 
@@ -92,7 +101,17 @@ fn run_plain_source_cops(
     // Build CodeMap once, only when plain source cops need it.
     let code_map = CodeMap::from_tree(tree.root_node(), source.as_bytes());
     for (cop, cfg, idx) in plain {
-        one_plain_source_cop(source, tree, &code_map, *cop, cfg, *idx, mode, diagnostics, corrections);
+        one_plain_source_cop(
+            source,
+            tree,
+            &code_map,
+            *cop,
+            cfg,
+            *idx,
+            mode,
+            diagnostics,
+            corrections,
+        );
     }
 }
 

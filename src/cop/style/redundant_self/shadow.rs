@@ -9,7 +9,10 @@ pub(super) fn name_is_shadowed(source: &SourceFile, node: Node<'_>, method: &[u8
     let bare = method.strip_suffix(b"=").unwrap_or(method);
     let mut p = node.parent();
     while let Some(n) = p {
-        if matches!(n.kind(), "method" | "singleton_method" | "block" | "do_block" | "lambda") {
+        if matches!(
+            n.kind(),
+            "method" | "singleton_method" | "block" | "do_block" | "lambda"
+        ) {
             if params_include(source, n, bare) || lvars_before(source, n, node, bare) {
                 return true;
             }
@@ -61,8 +64,11 @@ fn param_tree_matches(source: &SourceFile, child: Node<'_>, name: &[u8]) -> bool
 fn param_name_match(source: &SourceFile, node: Node<'_>, name: &[u8]) -> bool {
     match node.kind() {
         "identifier" => node_bytes(source, node) == name,
-        "optional_parameter" | "keyword_parameter" | "splat_parameter"
-        | "hash_splat_parameter" | "block_parameter" => param_ident(source, node, name),
+        "optional_parameter"
+        | "keyword_parameter"
+        | "splat_parameter"
+        | "hash_splat_parameter"
+        | "block_parameter" => param_ident(source, node, name),
         _ => false,
     }
 }
@@ -71,7 +77,8 @@ fn param_ident(source: &SourceFile, node: Node<'_>, name: &[u8]) -> bool {
     node.child_by_field_name("name")
         .or_else(|| {
             let mut cur = node.walk();
-            node.named_children(&mut cur).find(|n| n.kind() == "identifier")
+            node.named_children(&mut cur)
+                .find(|n| n.kind() == "identifier")
         })
         .is_some_and(|n| node_bytes(source, n) == name)
 }

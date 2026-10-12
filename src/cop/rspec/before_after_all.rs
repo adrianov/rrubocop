@@ -3,11 +3,10 @@
 use tree_sitter::Node;
 
 use crate::cop::{Cop, CopConfig};
-use crate::diagnostic::{Diagnostic};
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 pub struct BeforeAfterAll;
-
 
 impl Cop for BeforeAfterAll {
     fn name(&self) -> &'static str {
@@ -23,9 +22,12 @@ impl Cop for BeforeAfterAll {
     }
 
     fn default_exclude(&self) -> &'static [&'static str] {
-        &["**/spec/spec_helper.rb", "**/spec/rails_helper.rb", "**/spec/support/**/*.rb"]
+        &[
+            "**/spec/spec_helper.rb",
+            "**/spec/rails_helper.rb",
+            "**/spec/support/**/*.rb",
+        ]
     }
-
 
     fn check_node(
         &self,

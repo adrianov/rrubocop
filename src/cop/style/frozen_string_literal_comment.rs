@@ -38,7 +38,10 @@ fn insert_offset(bytes: &[u8]) -> usize {
     if !bytes.starts_with(b"#!") {
         return 0;
     }
-    bytes.iter().position(|&b| b == b'\n').map_or(0, |nl| nl + 1)
+    bytes
+        .iter()
+        .position(|&b| b == b'\n')
+        .map_or(0, |nl| nl + 1)
 }
 
 impl Cop for FrozenStringLiteralComment {

@@ -82,7 +82,9 @@ impl Cop for BeEql {
     }
 
     fn interested_node_kinds(&self) -> &'static [&'static str] {
-        &["call", "false", "integer", "nil", "symbol", "true", "command"]
+        &[
+            "call", "false", "integer", "nil", "symbol", "true", "command",
+        ]
     }
 
     fn check_node(

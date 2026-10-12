@@ -10,7 +10,11 @@ use crate::parse::source::SourceFile;
 
 pub struct BeNil;
 
-fn be_nil_rewrite(style: &str, source: &SourceFile, node: Node<'_>) -> Option<(&'static str, &'static str)> {
+fn be_nil_rewrite(
+    style: &str,
+    source: &SourceFile,
+    node: Node<'_>,
+) -> Option<(&'static str, &'static str)> {
     let method = call_method_name(source, node)?;
     if style == "be_nil" {
         if method != b"be" {

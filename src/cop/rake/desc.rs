@@ -110,7 +110,8 @@ fn scan_back_for_desc(source: &SourceFile, task: Node<'_>) -> bool {
 }
 
 fn is_desc_call(source: &SourceFile, node: Node<'_>) -> bool {
-    let node = if node.kind() == "call" || node.kind() == "command" || node.kind() == "command_call" {
+    let node = if node.kind() == "call" || node.kind() == "command" || node.kind() == "command_call"
+    {
         node
     } else {
         // unwrap single-child wrappers

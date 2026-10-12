@@ -7,7 +7,7 @@ use crate::parse::source::SourceFile;
 
 use super::edit::{is_zsuper, list_edit, zsuper_args};
 use super::name::{block_param, pass_name};
-use super::{host, COP};
+use super::{COP, host};
 
 pub(super) fn rewrite(
     source: &SourceFile,

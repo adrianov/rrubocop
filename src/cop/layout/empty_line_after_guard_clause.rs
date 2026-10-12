@@ -194,5 +194,8 @@ fn skip_empty_line_after(source: &SourceFile, node: Node<'_>, next: usize) -> bo
 #[cfg(test)]
 mod tests {
     use super::*;
-    crate::cop_fixture_tests!(EmptyLineAfterGuardClause, "cops/layout/empty_line_after_guard_clause");
+    crate::cop_fixture_tests!(
+        EmptyLineAfterGuardClause,
+        "cops/layout/empty_line_after_guard_clause"
+    );
 }

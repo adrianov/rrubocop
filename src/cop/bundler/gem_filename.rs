@@ -30,7 +30,10 @@ impl Cop for GemFilename {
     ) {
         if let Some(msg) = mismatch_msg(
             config.get_str("EnforcedStyle", "Gemfile"),
-            Path::new(source.path_str()).file_name().and_then(|s| s.to_str()).unwrap_or(""),
+            Path::new(source.path_str())
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(""),
             source.path_str(),
         ) {
             diagnostics.push(self.diagnostic(source, 1, 0, msg));

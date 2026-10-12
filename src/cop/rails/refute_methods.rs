@@ -66,19 +66,13 @@ impl Cop for RefuteMethods {
         let Some(method) = call_method_name(source, node) else {
             return;
         };
-        let Some((bad, good)) =
-            style_pair(config.get_str("EnforcedStyle", "assert_not"), method)
+        let Some((bad, good)) = style_pair(config.get_str("EnforcedStyle", "assert_not"), method)
         else {
             return;
         };
         let meth = method_node(node).unwrap_or(node);
         let (line, col) = source.offset_to_line_col(meth.start_byte());
-        let mut diag = self.diagnostic(
-            source,
-            line,
-            col,
-            format!("Prefer `{good}` over `{bad}`."),
-        );
+        let mut diag = self.diagnostic(source, line, col, format!("Prefer `{good}` over `{bad}`."));
         if push_replace(
             &mut corrections,
             meth.start_byte(),

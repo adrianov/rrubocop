@@ -48,8 +48,12 @@ fn report(
     corrections: &mut Option<&mut Vec<Correction>>,
 ) {
     let (line, col) = source.offset_to_line_col(node.start_byte());
-    let mut diag =
-        cop.diagnostic(source, line, col, "Do not quote symbols unnecessarily.".to_string());
+    let mut diag = cop.diagnostic(
+        source,
+        line,
+        col,
+        "Do not quote symbols unnecessarily.".to_string(),
+    );
     if is_word_like_quoted(b) {
         push_unquote(cop, node, b, corrections, &mut diag);
     }

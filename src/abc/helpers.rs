@@ -100,9 +100,7 @@ pub(crate) fn iterating_call(fm: &FileModel, call: Node) -> bool {
     let Some(m) = call.child_by_field_name("method") else {
         return false;
     };
-    {
-        ITERATING.binary_search(&fm.text(m)).is_ok()
-    }
+    ITERATING.binary_search(&fm.text(m)).is_ok()
 }
 
 /// `super` never counts; a `::`-qualified uppercase path is a constant hop.
