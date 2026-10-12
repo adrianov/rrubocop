@@ -65,7 +65,7 @@ Departments grow breadth-first from common RuboCop plugin sets (nitrocop / gem s
 | `Layout/*` | 90 layout cops (alignment, spacing, empty lines, indentation; all with autocorrect) |
 | `Lint/*`, `Style/*`, `Naming/*`, `Security/*` | 69 / 143 / 9 / 4 |
 | `Metrics/*` | `AbcSize`, `BlockNesting`, `ClassLength`, `CollectionLiteralLength`, `ModuleLength`, `ParameterLists` |
-| `Rails/*` | 62 rails cops |
+| `Rails/*` | 63 rails cops |
 | `Performance/*` | 24 performance cops |
 | `RSpec/*` | 104 rspec cops |
 | `RSpecRails/*` | 2 (`HttpStatus`, `InferredSpecType`) |
@@ -73,7 +73,7 @@ Departments grow breadth-first from common RuboCop plugin sets (nitrocop / gem s
 | `Bundler/*`, `Gemspec/*`, `Rake/*` | 4 / 4 / 5 |
 | `GraphQL/*` | 26 rubocop-graphql cops |
 
-Use `rrubocop --list-cops` for the full registered set, and `rrubocop --list-autocorrectable-cops` for cops with `-a`/`-A` support (180 with autocorrect so far; Layout complete; Style/Lint/Rails/RSpec growing).
+Use `rrubocop --list-cops` for the full registered set, and `rrubocop --list-autocorrectable-cops` for cops with `-a`/`-A` support (181 with autocorrect so far; Layout complete; Style/Lint/Rails/RSpec growing).
 
 ## Usage
 

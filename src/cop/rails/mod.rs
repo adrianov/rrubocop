@@ -45,6 +45,7 @@ mod presence;
 mod present;
 mod rake_environment;
 mod read_write_attribute;
+mod redundant_active_record_all_method;
 mod redundant_allow_nil;
 mod redundant_foreign_key;
 mod redundant_receiver_in_with_options;
@@ -113,6 +114,7 @@ pub fn register_all(registry: &mut CopRegistry) {
         present::Present,
         rake_environment::RakeEnvironment,
         read_write_attribute::ReadWriteAttribute,
+        redundant_active_record_all_method::RedundantActiveRecordAllMethod,
         redundant_allow_nil::RedundantAllowNil,
         redundant_foreign_key::RedundantForeignKey,
         redundant_receiver_in_with_options::RedundantReceiverInWithOptions,
