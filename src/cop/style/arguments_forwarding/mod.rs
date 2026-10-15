@@ -1,4 +1,4 @@
-//! Style/ArgumentsForwarding — `...` for forwarded args, or anonymous `&` for a redundant block.
+//! Style/ArgumentsForwarding — `...` for forwarded args, or anonymous `&` / `**`.
 
 use tree_sitter::Node;
 
@@ -13,6 +13,7 @@ pub struct ArgumentsForwarding;
 pub(super) const COP: &str = "Style/ArgumentsForwarding";
 
 mod anon;
+mod kw;
 
 pub(super) fn param_name<'a>(source: &'a SourceFile, node: Node<'a>) -> Option<&'a [u8]> {
     node.child_by_field_name("name")
@@ -189,6 +190,16 @@ impl Cop for ArgumentsForwarding {
             return;
         }
         anon::report(
+            self,
+            source,
+            node,
+            params,
+            config,
+            ruby,
+            diagnostics,
+            &mut corrections,
+        );
+        kw::report(
             self,
             source,
             node,
