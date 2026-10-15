@@ -29,7 +29,7 @@ pub(super) fn report(
         return;
     };
     // Before Ruby 3.4, anonymous forwarding inside a block is left unchanged.
-    if !at_least(ruby, 34.0) && forwards.iter().any(|node| in_block(*node)) {
+    if !at_least(ruby, 3.4) && forwards.iter().any(|node| in_block(*node)) {
         return;
     }
     for node in &forwards {
@@ -45,7 +45,7 @@ fn candidate<'a>(
     config: &CopConfig,
     ruby: f64,
 ) -> Option<(Node<'a>, Vec<Node<'a>>)> {
-    if !(at_least(ruby, 32.0) && config.get_bool("UseAnonymousForwarding", true)) {
+    if !(at_least(ruby, 3.2) && config.get_bool("UseAnonymousForwarding", true)) {
         return None;
     }
     let param = kw_param(params)?;
@@ -57,8 +57,8 @@ fn candidate<'a>(
     (!found.used && !found.forwards.is_empty()).then_some((param, found.forwards))
 }
 
-fn at_least(ruby: f64, tenths: f64) -> bool {
-    (ruby * 10.0).round() >= tenths
+fn at_least(ruby: f64, version: f64) -> bool {
+    (ruby * 10.0).round() >= (version * 10.0).round()
 }
 
 fn redundant(config: &CopConfig, name: &[u8]) -> bool {
