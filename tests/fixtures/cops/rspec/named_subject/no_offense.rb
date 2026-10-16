@@ -40,3 +40,15 @@ RSpec.describe User do
     expect(subject).to eq(1)
   end
 end
+
+describe Worker::DepositCollection do
+  skip("logic moved") do
+    describe "#process_currency" do
+      subject(:call) do
+        worker.send(:process_currency, currency)
+      end
+
+      it { expect { call }.not_to raise_error }
+    end
+  end
+end

@@ -40,3 +40,12 @@ impl Cop for MultilineMethodArgumentLineBreaks {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    crate::cop_fixture_tests!(
+        MultilineMethodArgumentLineBreaks,
+        "cops/layout/multiline_method_argument_line_breaks"
+    );
+}

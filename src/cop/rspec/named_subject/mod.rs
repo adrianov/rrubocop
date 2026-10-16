@@ -88,7 +88,7 @@ fn is_method_name(node: Node<'_>) -> bool {
 }
 
 fn bare_subject_call<'a>(source: &SourceFile, node: Node<'a>) -> Option<Node<'a>> {
-    if bare_method(source, node) != Some(b"subject") {
+    if bare_method(source, node) != Some(b"subject") || !argument_nodes(node).is_empty() {
         return None;
     }
     method_node(node)
