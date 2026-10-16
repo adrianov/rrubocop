@@ -56,3 +56,17 @@ def send_sms
   end
 end
 
+
+class Modifiers
+  def a; end
+
+private
+
+  def b; end
+end
+
+class Inline; def a; end; end
+
+module Single
+  CONST = 1; OTHER = 2
+end
