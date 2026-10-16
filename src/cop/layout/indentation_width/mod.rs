@@ -1,5 +1,6 @@
 //! Layout/IndentationWidth.
 
+mod body;
 mod cont;
 
 use tree_sitter::Tree;
@@ -341,19 +342,22 @@ impl Cop for IndentationWidth {
     fn check_source(
         &self,
         source: &SourceFile,
-        _tree: &Tree,
+        tree: &Tree,
         code_map: &CodeMap,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
-        mut corrections: Option<&mut Vec<Correction>>,
+        corrections: Option<&mut Vec<Correction>>,
     ) {
-        scan_file_indents(
+        let width = config.get_usize("Width", 2);
+        body::check(
             self,
             source,
+            tree.root_node(),
             code_map,
-            config.get_usize("Width", 2),
+            config,
             diagnostics,
-            &mut corrections,
+            corrections,
+            |diags, corr| scan_file_indents(self, source, code_map, width, diags, corr),
         );
     }
 }

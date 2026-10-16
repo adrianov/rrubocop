@@ -2,48 +2,12 @@
 
 use tree_sitter::Node;
 
+use crate::cop::layout::report;
 use crate::cop::shared;
 use crate::cop::{Cop, CopConfig};
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
-
-/// One line of a pair or `}`, shifted by the same column delta RuboCop applies
-/// to every line of the node.
-fn line_edit(source: &SourceFile, line: usize, delta: isize) -> Option<(usize, usize, String)> {
-    let start = source.line_start(line)?;
-    let indent = shared::line_indent(source, start);
-    let new_indent = (indent as isize + delta).max(0) as usize;
-    (new_indent != indent).then(|| (start, start + indent, " ".repeat(new_indent)))
-}
-
-fn push_edits(
-    cop: &dyn Cop,
-    source: &SourceFile,
-    node: Node<'_>,
-    delta: isize,
-    corrections: &mut Vec<Correction>,
-) -> bool {
-    let start_line = shared::node_line(source, node);
-    let end_line = source
-        .offset_to_line_col(node.end_byte().saturating_sub(1))
-        .0;
-    let mut applied = false;
-    for line in start_line..=end_line {
-        let Some((start, end, replacement)) = line_edit(source, line, delta) else {
-            continue;
-        };
-        corrections.push(Correction {
-            start,
-            end,
-            replacement,
-            cop_name: cop.name(),
-            cop_index: 0,
-        });
-        applied = true;
-    }
-    applied
-}
 
 pub(super) fn report_at(
     cop: &dyn Cop,
@@ -61,7 +25,14 @@ pub(super) fn report_at(
     let (line, col) = source.offset_to_line_col(node.start_byte());
     let mut diag = cop.diagnostic(source, line, col, message);
     if let Some(corr) = corrections
-        && push_edits(cop, source, node, expected as isize - actual as isize, corr)
+        && report::shift_lines(
+            cop,
+            source,
+            node,
+            expected as isize - actual as isize,
+            |_| false,
+            corr,
+        )
     {
         diag.corrected = true;
     }

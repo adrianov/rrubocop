@@ -1,9 +1,48 @@
 //! Shared diagnostic + correction helpers for layout cops.
 
+use tree_sitter::Node;
+
 use crate::cop::Cop;
+use crate::cop::shared;
 use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
+
+/// RuboCop `AlignmentCorrector`: shift every line of `node` by `delta` columns,
+/// except blank lines and lines where `skip(line_start)` holds (string / heredoc interiors).
+pub fn shift_lines(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    node: Node<'_>,
+    delta: isize,
+    skip: impl Fn(usize) -> bool,
+    corrections: &mut Vec<Correction>,
+) -> bool {
+    let end_line = source
+        .offset_to_line_col(node.end_byte().saturating_sub(1))
+        .0;
+    let mut applied = false;
+    for line in shared::node_line(source, node)..=end_line {
+        let Some(start) = source.line_start(line) else {
+            continue;
+        };
+        let indent = shared::line_indent(source, start);
+        let new_indent = (indent as isize + delta).max(0) as usize;
+        let blank = matches!(source.as_bytes().get(start + indent), None | Some(b'\n' | b'\r'));
+        if new_indent == indent || blank || skip(start) {
+            continue;
+        }
+        corrections.push(Correction {
+            start,
+            end: start + indent,
+            replacement: " ".repeat(new_indent),
+            cop_name: cop.name(),
+            cop_index: 0,
+        });
+        applied = true;
+    }
+    applied
+}
 
 pub fn report_fix(
     cop: &dyn Cop,
