@@ -1,4 +1,5 @@
 pub mod color;
+pub mod emacs;
 pub mod files;
 pub mod github;
 pub mod json;
@@ -111,7 +112,8 @@ pub fn create_formatter(format: &str, color: Color, safe: bool) -> Box<dyn Forma
         "github" => Box::new(github::GithubFormatter),
         "quiet" => Box::new(quiet::QuietFormatter { color }),
         "files" => Box::new(files::FilesFormatter),
-        "emacs" | "simple" | "text" => Box::new(text::TextFormatter {
+        "emacs" => Box::new(emacs::EmacsFormatter),
+        "simple" | "text" => Box::new(text::TextFormatter {
             color,
             safe_autocorrect: safe,
         }),
