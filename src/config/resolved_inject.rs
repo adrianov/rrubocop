@@ -317,7 +317,7 @@ pub(crate) fn inject_space_after_comma(cfg: &ResolvedConfig, name: &str, config:
 }
 
 pub(crate) fn inject_missing_else(cfg: &ResolvedConfig, name: &str, config: &mut CopConfig) {
-    if name != "Style/MissingElse" {
+    if !matches!(name, "Style/MissingElse" | "Rails/Present") {
         return;
     }
     inject_bool(
