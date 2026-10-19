@@ -14,7 +14,7 @@ pub mod model;
 pub mod parse;
 pub mod testutil;
 
-use std::io::Read;
+use std::io::{Read, Write};
 use std::process::ExitCode;
 
 use anyhow::Result;
@@ -159,7 +159,23 @@ fn lint_stdin(args: &Args, config: &ResolvedConfig, registry: &CopRegistry) -> R
     let mut buf = Vec::new();
     std::io::stdin().read_to_end(&mut buf)?;
     let diags = lint_stdin_source(args, config, registry, path, &mut buf)?;
-    Ok(print_results(args, &diags, std::slice::from_ref(path)))
+    let code = print_results(args, &diags, std::slice::from_ref(path));
+    print_corrected_stdin(args, &buf)?;
+    Ok(code)
+}
+
+/// RuboCop `maybe_print_corrected_source`: stdin autocorrect never touches the
+/// file; the fixed source follows a `=` rule on stdout (not for integration formats).
+fn print_corrected_stdin(args: &Args, bytes: &[u8]) -> Result<()> {
+    if args.autocorrect_mode() == AutocorrectMode::Off
+        || ["json", "junit", "html", "markdown"].contains(&args.format.as_str())
+    {
+        return Ok(());
+    }
+    let mut out = std::io::stdout().lock();
+    writeln!(out, "{}", "=".repeat(20))?;
+    out.write_all(bytes)?;
+    Ok(())
 }
 
 fn lint_stdin_source(
@@ -169,22 +185,15 @@ fn lint_stdin_source(
     path: &std::path::Path,
     bytes: &mut Vec<u8>,
 ) -> Result<Vec<Diagnostic>> {
-    let filters = CopFilterSet::build(config, registry);
-    let only = (!args.only.is_empty()).then(|| args.only.clone());
-    let mode = args.autocorrect_mode();
-    let diags = lint_bytes_autocorrect(
+    lint_bytes_autocorrect(
         path,
         bytes,
         config,
         registry,
-        &filters,
-        only.as_deref(),
+        &CopFilterSet::build(config, registry),
+        (!args.only.is_empty()).then_some(args.only.as_slice()),
         &args.except,
-        mode,
+        args.autocorrect_mode(),
         args.ignore_disable_comments,
-    )?;
-    if mode != AutocorrectMode::Off && path.is_file() {
-        std::fs::write(path, bytes)?;
-    }
-    Ok(diags)
+    )
 }
