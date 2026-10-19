@@ -42,6 +42,21 @@ pub fn run_cop_full_internal(
     diagnostics
 }
 
+/// Source after one autocorrect pass of a node-phase cop.
+pub fn autocorrect_nodes(cop: &dyn Cop, source_bytes: &[u8], config: CopConfig) -> String {
+    let source = SourceFile::from_bytes("test.rb", source_bytes.to_vec());
+    let tree = parse::parse_ruby(&source).expect("parse fixture");
+    let mut corrections = Vec::new();
+    BatchedWalker::new(vec![cop], vec![&config]).walk(
+        &source,
+        tree.root_node(),
+        &mut Vec::new(),
+        Some(&mut corrections),
+    );
+    String::from_utf8(crate::correction::CorrectionSet::from_vec(corrections).apply(source_bytes))
+        .expect("utf8")
+}
+
 fn run_model_or_source(
     cop: &dyn Cop,
     source: &SourceFile,

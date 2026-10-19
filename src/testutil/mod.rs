@@ -9,7 +9,7 @@ pub use assert::{
     assert_cop_offenses_full_with_config,
 };
 pub use parse::{ExpectedOffense, ParsedFixture, parse_fixture};
-pub use run::{run_cop_full, run_cop_full_internal, run_cop_full_with_config};
+pub use run::{autocorrect_nodes, run_cop_full, run_cop_full_internal, run_cop_full_with_config};
 
 /// `offense.rb` + `no_offense.rb` under `tests/fixtures/<path>/`.
 /// Paths are rooted at `CARGO_MANIFEST_DIR` so nested `mod.rs` trees work.

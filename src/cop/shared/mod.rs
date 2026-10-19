@@ -8,13 +8,17 @@ pub use bare_args::replace_arg;
 pub use block_pass::{EXCLUDED_BLOCK_PARENTS, METHOD_STOPS, NESTED_SCOPES, Passes, ScanOpts, scan};
 
 pub use node_util::{
-    child_kind, end_keyword, last_child_kind, line_blank, line_indent, named_kids, node_bytes,
-    node_col, node_line, node_text,
+    child_kind, end_keyword, field_text, last_child_kind, line_blank, line_indent, named_kids,
+    node_bytes, node_col, node_line, node_text,
 };
+
+use std::ops::Range;
 
 use tree_sitter::Node;
 
+use crate::cop::Cop;
 use crate::correction::Correction;
+use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
 /// Method/name field of a call-like node.
@@ -42,6 +46,54 @@ pub fn push_replace(
         cop_index: 0,
     });
     true
+}
+
+/// `(start, end, replacement)` byte edit.
+pub type Edit = (usize, usize, String);
+
+/// Push one offense's non-overlapping edits as a single replacement,
+/// so an overlap drops all of them (RuboCop applies a cop's edits atomically).
+pub fn push_edits(
+    corrections: &mut Option<&mut Vec<Correction>>,
+    source: &SourceFile,
+    mut edits: Vec<Edit>,
+    cop_name: &'static str,
+) -> bool {
+    edits.sort_by_key(|e| e.0);
+    let (Some(&(start, ..)), Some(&(_, end, _))) = (edits.first(), edits.last()) else {
+        return false;
+    };
+    let mut text = source.as_bytes()[start..end].to_vec();
+    for (s, e, replacement) in edits.into_iter().rev() {
+        text.splice(s - start..e - start, replacement.into_bytes());
+    }
+    push_replace(
+        corrections,
+        start,
+        end,
+        String::from_utf8_lossy(&text),
+        cop_name,
+    )
+}
+
+/// Offense spanning byte `range`, RuboCop clang style: located at its start and
+/// underlined to its first line end; a multi-line range shows its first line plus ` ...`.
+pub fn span_diagnostic(
+    cop: &dyn Cop,
+    source: &SourceFile,
+    range: Range<usize>,
+    message: String,
+) -> Diagnostic {
+    let (line, col) = source.offset_to_line_col(range.start);
+    let mut diag = cop.diagnostic(source, line, col, message);
+    let text = String::from_utf8_lossy(&source.as_bytes()[range]);
+    diag.highlight_length = text.lines().next().map_or(1, |l| l.chars().count());
+    if text.contains('\n')
+        && let Some(line) = source.line_text(line)
+    {
+        diag.source_line = format!("{line} ...");
+    }
+    diag
 }
 
 /// True if `name` is SCREAMING_SNAKE_CASE (RuboCop Naming/ConstantName).

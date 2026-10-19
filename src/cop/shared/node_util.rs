@@ -14,6 +14,13 @@ pub fn node_text(source: &SourceFile, node: Node<'_>) -> String {
     String::from_utf8_lossy(node_bytes(source, node)).into_owned()
 }
 
+/// UTF-8 text of `node`'s `field` child, or `""`.
+pub fn field_text<'a>(source: &'a SourceFile, node: Node<'_>, field: &str) -> &'a str {
+    node.child_by_field_name(field)
+        .and_then(|n| n.utf8_text(source.as_bytes()).ok())
+        .unwrap_or("")
+}
+
 /// Column of node start (0-based display column via SourceFile).
 pub fn node_col(source: &SourceFile, node: Node<'_>) -> usize {
     source.offset_to_line_col(node.start_byte()).1
