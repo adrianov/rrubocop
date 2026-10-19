@@ -15,27 +15,39 @@ pub struct CorrectionSet {
     corrections: Vec<Correction>,
     /// Other cops that emitted the same edit and were dropped as duplicates.
     aliases: Vec<Vec<&'static str>>,
+    /// Cops with an edit dropped for overlapping an accepted one.
+    conflicted: Vec<&'static str>,
 }
 
 impl CorrectionSet {
     pub fn from_vec(mut raw: Vec<Correction>) -> Self {
         raw.sort_by(|a, b| a.start.cmp(&b.start).then(a.cop_index.cmp(&b.cop_index)));
-        let mut accepted: Vec<Correction> = Vec::with_capacity(raw.len());
-        let mut aliases = Vec::with_capacity(raw.len());
+        let mut set = Self {
+            corrections: Vec::with_capacity(raw.len()),
+            aliases: Vec::with_capacity(raw.len()),
+            conflicted: Vec::new(),
+        };
         for c in raw {
-            if note_same(&accepted, &mut aliases, &c) {
-                continue;
-            }
-            if accepted.last().is_some_and(|last| c.start < last.end) {
-                continue;
-            }
-            accepted.push(c);
-            aliases.push(Vec::new());
+            set.add(c);
         }
-        Self {
-            corrections: accepted,
-            aliases,
+        set
+    }
+
+    /// Accept `c`, merge it into an identical edit, or drop it on overlap.
+    fn add(&mut self, c: Correction) {
+        if note_same(&self.corrections, &mut self.aliases, &c) {
+            return;
         }
+        if self
+            .corrections
+            .last()
+            .is_some_and(|last| c.start < last.end)
+        {
+            self.conflicted.push(c.cop_name);
+            return;
+        }
+        self.corrections.push(c);
+        self.aliases.push(Vec::new());
     }
 
     pub fn accepted(&self) -> &[Correction] {
@@ -66,13 +78,17 @@ impl CorrectionSet {
         self.corrections.len()
     }
 
-    fn credits(&self, cop: &str, off: usize) -> bool {
+    /// An accepted edit of `cop` overlaps `span`, or — when none of `cop`'s
+    /// edits conflicted — any accepted edit of `cop` (edits may lie outside the
+    /// highlighted first line of a multi-line offense).
+    fn credits(&self, cop: &str, span: (usize, usize)) -> bool {
+        let clean = !self.conflicted.contains(&cop);
         self.corrections
             .iter()
             .zip(&self.aliases)
             .any(|(edit, names)| {
-                correction_covers(edit, off)
-                    && (edit.cop_name == cop || names.iter().any(|n| *n == cop))
+                (clean || correction_covers(edit, span))
+                    && (edit.cop_name == cop || names.contains(&cop))
             })
     }
 }
@@ -94,7 +110,9 @@ pub fn reconcile_corrected(
             d.corrected = false;
             continue;
         };
-        if !set.credits(&d.cop_name, off) {
+        // The edit may sit anywhere in the highlight (`&.` inside a whole `if`).
+        let last = off + d.highlight_length.saturating_sub(1);
+        if !set.credits(&d.cop_name, (off, last)) {
             d.corrected = false;
         }
     }
@@ -114,8 +132,8 @@ fn note_same(accepted: &[Correction], aliases: &mut [Vec<&'static str>], c: &Cor
     true
 }
 
-fn correction_covers(c: &Correction, off: usize) -> bool {
-    off >= c.start && off <= c.end.max(c.start)
+fn correction_covers(c: &Correction, (first, last): (usize, usize)) -> bool {
+    c.start <= last && first <= c.end.max(c.start)
 }
 
 #[cfg(test)]
@@ -177,5 +195,26 @@ mod tests {
         let mut diags = vec![diag("Layout/TrailingWhitespace", 4)];
         reconcile_corrected(&mut diags, &source, &set);
         assert!(!diags[0].corrected);
+    }
+
+    #[test]
+    fn credits_edits_away_from_the_offense_start() {
+        let cop = "Rails/SafeNavigationWithBlank";
+        let source = SourceFile::from_bytes(Path::new("a.rb"), b"x if foo&.blank?\n".to_vec());
+        let mut diags = vec![diag(cop, 0)];
+        reconcile_corrected(
+            &mut diags,
+            &source,
+            &CorrectionSet::from_vec(vec![edit(8, 10, ".", cop)]),
+        );
+        assert!(diags[0].corrected);
+        // After a conflict only an edit inside the highlight counts.
+        let conflict = CorrectionSet::from_vec(vec![edit(8, 10, ".", cop), edit(9, 12, "", cop)]);
+        reconcile_corrected(&mut diags, &source, &conflict);
+        assert!(!diags[0].corrected);
+        diags[0].corrected = true;
+        diags[0].highlight_length = 16;
+        reconcile_corrected(&mut diags, &source, &conflict);
+        assert!(diags[0].corrected);
     }
 }

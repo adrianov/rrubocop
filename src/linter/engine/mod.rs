@@ -159,8 +159,8 @@ fn apply_directives(
     corrections: &mut Option<Vec<Correction>>,
 ) {
     let pre_filter = diagnostics.clone();
-    filter_directives(source, ignore_disable, diagnostics);
     if !ignore_disable {
+        filter_directives(source, diagnostics, corrections);
         run_redundant_disable_audit(
             source,
             config,
@@ -220,12 +220,17 @@ fn run_phases(
     );
 }
 
-fn filter_directives(source: &SourceFile, ignore_disable: bool, diagnostics: &mut Vec<Diagnostic>) {
-    if ignore_disable {
-        return;
-    }
+/// Drops disabled offenses and the edits of disabled cops (located by the edit's first line).
+fn filter_directives(
+    source: &SourceFile,
+    diagnostics: &mut Vec<Diagnostic>,
+    corrections: &mut Option<Vec<Correction>>,
+) {
     let dirs = directives::parse(&String::from_utf8_lossy(source.as_bytes()));
     diagnostics.retain(|d| !dirs.suppresses(&d.cop_name, d.location.line));
+    if let Some(corrections) = corrections {
+        corrections.retain(|c| !dirs.suppresses(c.cop_name, source.offset_to_line_col(c.start).0));
+    }
 }
 
 fn select_active<'a>(

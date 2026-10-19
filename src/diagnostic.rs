@@ -73,8 +73,16 @@ fn default_highlight_len() -> usize {
 }
 
 impl Diagnostic {
-    pub fn sort_key(&self) -> (&str, usize, usize) {
-        (&self.path, self.location.line, self.location.column)
+    /// RuboCop `Offense#<=>` order: line, column, cop name, message.
+    pub fn sort_key(&self) -> (&str, usize, usize, &str, &str) {
+        let loc = &self.location;
+        (
+            &self.path,
+            loc.line,
+            loc.column,
+            &self.cop_name,
+            &self.message,
+        )
     }
 
     /// Clang/progress offense block (header + source + caret), RuboCop-compatible.

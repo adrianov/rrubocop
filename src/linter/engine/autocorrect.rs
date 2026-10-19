@@ -92,16 +92,18 @@ pub(crate) fn lint_bytes_autocorrect(
         mode,
         ignore_disable,
     };
-    if mode == AutocorrectMode::Off {
-        return Ok(ctx.lint_bytes(bytes)?.diagnostics);
-    }
-    run_autocorrect_loop(&ctx, bytes)
+    let mut diags = if mode == AutocorrectMode::Off {
+        ctx.lint_bytes(bytes)?.diagnostics
+    } else {
+        run_autocorrect_loop(&ctx, bytes)?
+    };
+    diags.sort_by(|a, b| a.sort_key().cmp(&b.sort_key()));
+    Ok(diags)
 }
 
 fn run_autocorrect_loop(ctx: &LintCtx<'_>, bytes: &mut Vec<u8>) -> Result<Vec<Diagnostic>> {
     let mut corrected = collect_corrected_passes(ctx, bytes, &mut HashSet::new())?;
     corrected.append(&mut final_pass(ctx, bytes)?);
-    corrected.sort_by(|a, b| a.sort_key().cmp(&b.sort_key()));
     Ok(corrected)
 }
 
