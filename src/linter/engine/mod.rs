@@ -1,6 +1,7 @@
 //! Per-file cop execution (line / source / AST phases).
 
 mod autocorrect;
+mod disabled;
 mod node_phase;
 mod offense;
 mod source_phase;
@@ -15,7 +16,6 @@ use crate::cop::{Cop, CopConfig};
 use crate::correction::{Correction, CorrectionSet};
 use crate::diagnostic::Diagnostic;
 use crate::parse;
-use crate::parse::directives;
 use crate::parse::source::SourceFile;
 
 type ActiveCop<'a> = syntax_gate::ActiveCop<'a>;
@@ -160,7 +160,7 @@ fn apply_directives(
 ) {
     let pre_filter = diagnostics.clone();
     if !ignore_disable {
-        filter_directives(source, diagnostics, corrections);
+        disabled::filter_directives(source, diagnostics, corrections);
         run_redundant_disable_audit(
             source,
             config,
@@ -218,19 +218,6 @@ fn run_phases(
         diagnostics,
         corrections,
     );
-}
-
-/// Drops disabled offenses and the edits of disabled cops (located by the edit's first line).
-fn filter_directives(
-    source: &SourceFile,
-    diagnostics: &mut Vec<Diagnostic>,
-    corrections: &mut Option<Vec<Correction>>,
-) {
-    let dirs = directives::parse(&String::from_utf8_lossy(source.as_bytes()));
-    diagnostics.retain(|d| !dirs.suppresses(&d.cop_name, d.location.line));
-    if let Some(corrections) = corrections {
-        corrections.retain(|c| !dirs.suppresses(c.cop_name, source.offset_to_line_col(c.start).0));
-    }
 }
 
 fn select_active<'a>(

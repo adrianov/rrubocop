@@ -15,8 +15,8 @@ pub struct CorrectionSet {
     corrections: Vec<Correction>,
     /// Other cops that emitted the same edit and were dropped as duplicates.
     aliases: Vec<Vec<&'static str>>,
-    /// Cops with an edit dropped for overlapping an accepted one.
-    conflicted: Vec<&'static str>,
+    /// Edits dropped for overlapping an accepted one.
+    conflicted: Vec<Correction>,
 }
 
 impl CorrectionSet {
@@ -43,7 +43,7 @@ impl CorrectionSet {
             .last()
             .is_some_and(|last| c.start < last.end)
         {
-            self.conflicted.push(c.cop_name);
+            self.conflicted.push(c);
             return;
         }
         self.corrections.push(c);
@@ -78,18 +78,32 @@ impl CorrectionSet {
         self.corrections.len()
     }
 
-    /// An accepted edit of `cop` overlaps `span`, or — when none of `cop`'s
-    /// edits conflicted — any accepted edit of `cop` (edits may lie outside the
-    /// highlighted first line of a multi-line offense).
+    /// Any accepted edit of `cop` when none of its edits conflicted; otherwise one
+    /// overlapping `span`, or else the offense owns the nearest `cop` edit not
+    /// before it (edits may lie past the highlighted first line of a multi-line
+    /// offense), which must be accepted.
     fn credits(&self, cop: &str, span: (usize, usize)) -> bool {
-        let clean = !self.conflicted.contains(&cop);
-        self.corrections
-            .iter()
-            .zip(&self.aliases)
-            .any(|(edit, names)| {
-                (clean || correction_covers(edit, span))
-                    && (edit.cop_name == cop || names.contains(&cop))
-            })
+        let (own, dropped) = self.edits_of(cop);
+        if dropped.is_empty() || own.iter().any(|e| correction_covers(e, span)) {
+            return !own.is_empty();
+        }
+        nearest_is_accepted(&own, &dropped, span.0)
+    }
+
+    /// Accepted edits of `cop` (identical-edit aliases included) and its dropped ones.
+    fn edits_of(&self, cop: &str) -> (Vec<&Correction>, Vec<&Correction>) {
+        (
+            self.corrections
+                .iter()
+                .zip(&self.aliases)
+                .filter(|(edit, names)| edit.cop_name == cop || names.contains(&cop))
+                .map(|(edit, _)| edit)
+                .collect(),
+            self.conflicted
+                .iter()
+                .filter(|c| c.cop_name == cop)
+                .collect(),
+        )
     }
 }
 
@@ -130,6 +144,18 @@ fn note_same(accepted: &[Correction], aliases: &mut [Vec<&'static str>], c: &Cor
         aliases[i].push(name);
     }
     true
+}
+
+/// The first edit not ending before `from` is in `accepted`, not `dropped`.
+fn nearest_is_accepted(accepted: &[&Correction], dropped: &[&Correction], from: usize) -> bool {
+    let first = |edits: &[&Correction]| {
+        edits
+            .iter()
+            .filter(|c| c.end.max(c.start) >= from)
+            .map(|c| c.start)
+            .min()
+    };
+    first(accepted).is_some_and(|ok| first(dropped).is_none_or(|bad| ok < bad))
 }
 
 fn correction_covers(c: &Correction, (first, last): (usize, usize)) -> bool {
@@ -208,13 +234,29 @@ mod tests {
             &CorrectionSet::from_vec(vec![edit(8, 10, ".", cop)]),
         );
         assert!(diags[0].corrected);
-        // After a conflict only an edit inside the highlight counts.
-        let conflict = CorrectionSet::from_vec(vec![edit(8, 10, ".", cop), edit(9, 12, "", cop)]);
+    }
+
+    #[test]
+    fn after_a_conflict_the_nearest_edit_decides() {
+        let cop = "Rails/SafeNavigationWithBlank";
+        let source = SourceFile::from_bytes(Path::new("a.rb"), b"x if foo&.blank?\n".to_vec());
+        let mut diags = vec![diag(cop, 0)];
+        // The offense owns the nearest edit of its cop: dropped here.
+        let conflict = CorrectionSet::from_vec(vec![
+            edit(7, 9, "", "Other/Cop"),
+            edit(8, 10, ".", cop),
+            edit(12, 14, "", cop),
+        ]);
         reconcile_corrected(&mut diags, &source, &conflict);
         assert!(!diags[0].corrected);
+        // An accepted edit inside the highlight still counts.
         diags[0].corrected = true;
         diags[0].highlight_length = 16;
         reconcile_corrected(&mut diags, &source, &conflict);
         assert!(diags[0].corrected);
+        // A later offense of the same cop owns the accepted edit after the dropped one.
+        let mut later = vec![diag(cop, 11)];
+        reconcile_corrected(&mut later, &source, &conflict);
+        assert!(later[0].corrected);
     }
 }

@@ -122,7 +122,8 @@ mod tests {
 
     #[test]
     fn autocorrect_matches_rubocop() {
-        let src = b"foo unless !a && (b.any? || c != d)\nunless e.include? f\n  g\nend\nh unless not i\n";
+        let src =
+            b"foo unless !a && (b.any? || c != d)\nunless e.include? f\n  g\nend\nh unless not i\n";
         assert_eq!(
             crate::testutil::autocorrect_nodes(
                 &InvertibleUnlessCondition,

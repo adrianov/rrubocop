@@ -55,6 +55,23 @@ fn autocorrect_skips_disabled_lines() {
 }
 
 #[test]
+fn autocorrect_skips_multiline_offense_disabled_on_first_line() {
+    let disabled = "foo( # rubocop:disable Rails/SafeNavigationWithBlank\n  1\n) if x&.blank?\n";
+
+    let out = run_stdin(
+        tempfile::tempdir().unwrap().path(),
+        &format!("{disabled}bar(\n  2\n) if y&.blank?\n"),
+        &["-A", "--only", "Rails/SafeNavigationWithBlank"],
+    );
+
+    assert!(out.contains("1 offense corrected"), "{out}");
+    assert!(
+        out.ends_with(&format!("\n{disabled}bar(\n  2\n) if y.blank?\n")),
+        "{out}"
+    );
+}
+
+#[test]
 fn stdin_offenses_sorted_by_column() {
     let out = run_stdin(
         tempfile::tempdir().unwrap().path(),
