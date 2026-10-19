@@ -4,48 +4,64 @@
 //! condition is invertible when it is a method call whose method appears in
 //! the cop's merged `InverseMethods` config (rubocop default.yml plus plugin
 //! and project layers), a `!`/`not` negation, or an `and`/`or` chain whose
-//! both sides are invertible.
+//! both sides are invertible. The rewrite itself lives in [`invert`].
 
-use std::collections::HashSet;
+mod invert;
+
+use std::collections::HashMap;
 
 use tree_sitter::Node;
 
 use crate::cop::CopConfig;
+use crate::cop::shared::{Edit, child_kind, field_text, node_text};
 use crate::parse::source::SourceFile;
 
-pub fn matches_invertible_unless_condition(
+type Inverses<'a> = HashMap<&'a str, &'a str>;
+
+/// For an invertible `unless`: its condition source, RuboCop's
+/// `preferred_condition`, and the autocorrect edits (keyword included).
+pub fn invert_unless(
     source: &SourceFile,
     node: Node<'_>,
     config: &CopConfig,
-) -> bool {
-    let Some(condition) = node.child_by_field_name("condition") else {
-        return false;
-    };
-    is_invertible(condition, source, &inverse_methods(config))
+) -> Option<(String, String, Vec<Edit>)> {
+    let condition = node.child_by_field_name("condition")?;
+    let inverses = inverse_methods(config);
+    if !is_invertible(condition, source, &inverses) {
+        return None;
+    }
+    let keyword = child_kind(node, "unless")?;
+    let mut edits = vec![(keyword.start_byte(), keyword.end_byte(), "if".to_string())];
+    Some((
+        node_text(source, condition),
+        invert::invert(condition, source, &inverses, &mut edits),
+        edits,
+    ))
 }
 
-/// Keys of the cop's merged `InverseMethods` mapping, normalized without the
-/// YAML `:` sigil (`:include?` → `include?`).
-fn inverse_methods(config: &CopConfig) -> HashSet<&str> {
+/// The cop's merged `InverseMethods` mapping without the YAML `:` sigil
+/// (`:include?: :exclude?` → `include?` → `exclude?`).
+fn inverse_methods(config: &CopConfig) -> Inverses<'_> {
+    fn bare(v: &serde_yml::Value) -> Option<&str> {
+        v.as_str().map(|s| s.trim_start_matches(':'))
+    }
     config
         .options
         .get("InverseMethods")
         .and_then(serde_yml::Value::as_mapping)
         .map(|map| {
-            map.keys()
-                .filter_map(serde_yml::Value::as_str)
-                .map(|key| key.trim_start_matches(':'))
+            map.iter()
+                .filter_map(|(k, v)| Some((bare(k)?, bare(v)?)))
                 .collect()
         })
         .unwrap_or_default()
 }
 
-fn is_invertible(node: Node<'_>, source: &SourceFile, inverses: &HashSet<&str>) -> bool {
+fn is_invertible(node: Node<'_>, source: &SourceFile, inverses: &Inverses<'_>) -> bool {
     match node.kind() {
         // RuboCop unwraps parenthesized (`begin`) conditions to the first child.
-        "begin" | "parenthesized_statements" => node
-            .children(&mut node.walk())
-            .find(|child| child.is_named())
+        "parenthesized_statements" => node
+            .named_child(0)
             .is_some_and(|first| is_invertible(first, source, inverses)),
         "call" => invertible_call(node, source, inverses),
         "unary" => matches!(operator(node, source), "!" | "not"),
@@ -54,7 +70,7 @@ fn is_invertible(node: Node<'_>, source: &SourceFile, inverses: &HashSet<&str>) 
     }
 }
 
-fn invertible_binary(node: Node<'_>, source: &SourceFile, inverses: &HashSet<&str>) -> bool {
+fn invertible_binary(node: Node<'_>, source: &SourceFile, inverses: &Inverses<'_>) -> bool {
     match operator(node, source) {
         "&&" | "and" | "||" | "or" => {
             node.child_by_field_name("left")
@@ -63,11 +79,11 @@ fn invertible_binary(node: Node<'_>, source: &SourceFile, inverses: &HashSet<&st
                     .child_by_field_name("right")
                     .is_some_and(|r| is_invertible(r, source, inverses))
         }
-        op => !inheritance_check(node, source) && inverses.contains(op),
+        op => !inheritance_check(node, source) && inverses.contains_key(op),
     }
 }
 
-fn invertible_call(node: Node<'_>, source: &SourceFile, inverses: &HashSet<&str>) -> bool {
+fn invertible_call(node: Node<'_>, source: &SourceFile, inverses: &Inverses<'_>) -> bool {
     // `x.any? { }` is a :block node in RuboCop's AST — not a plain send.
     if node.child_by_field_name("block").is_some() {
         return false;
@@ -79,7 +95,7 @@ fn invertible_call(node: Node<'_>, source: &SourceFile, inverses: &HashSet<&str>
     match node.child_by_field_name("method") {
         Some(method) => match text(method, source) {
             "!" | "not" => true,
-            name => inverses.contains(name),
+            name => inverses.contains_key(name),
         },
         None => false,
     }
@@ -113,9 +129,7 @@ fn short_constant_name<'a>(node: Node<'_>, source: &'a SourceFile) -> Option<&'a
 }
 
 fn operator<'a>(node: Node<'_>, source: &'a SourceFile) -> &'a str {
-    node.child_by_field_name("operator")
-        .map(|op| text(op, source))
-        .unwrap_or("")
+    field_text(source, node, "operator")
 }
 
 fn text<'a>(node: Node<'_>, source: &'a SourceFile) -> &'a str {

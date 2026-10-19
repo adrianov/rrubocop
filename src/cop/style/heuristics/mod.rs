@@ -16,7 +16,7 @@ pub use control::matches_stabby_lambda_parentheses;
 pub use control::matches_ternary_parentheses;
 
 mod invertible_unless_condition;
-pub use invertible_unless_condition::matches_invertible_unless_condition;
+pub use invertible_unless_condition::invert_unless;
 
 mod percent;
 pub use percent::matches_bare_percent_literals;

@@ -1,9 +1,12 @@
-//! Style/InvertibleUnlessCondition — breadth-first tree-sitter port.
+//! Style/InvertibleUnlessCondition — `unless x.any?` → `if x.none?`; the
+//! offense spans the whole `unless` node (modifier form starts at its body).
 
 use tree_sitter::Node;
 
-use crate::cop::style::heuristics::matches_invertible_unless_condition;
+use crate::cop::shared::{push_edits, span_diagnostic};
+use crate::cop::style::heuristics::invert_unless;
 use crate::cop::{Cop, CopConfig};
+use crate::correction::Correction;
 use crate::diagnostic::Diagnostic;
 use crate::parse::source::SourceFile;
 
@@ -14,7 +17,11 @@ impl Cop for InvertibleUnlessCondition {
         "Style/InvertibleUnlessCondition"
     }
 
-    fn redundant_disable_audit(&self) -> bool {
+    fn supports_autocorrect(&self) -> bool {
+        true
+    }
+
+    fn safe_autocorrect(&self) -> bool {
         false
     }
 
@@ -28,28 +35,16 @@ impl Cop for InvertibleUnlessCondition {
         node: Node<'_>,
         config: &CopConfig,
         diagnostics: &mut Vec<Diagnostic>,
-        _corrections: Option<&mut Vec<crate::correction::Correction>>,
+        mut corrections: Option<&mut Vec<Correction>>,
     ) {
-        if !matches_invertible_unless_condition(source, node, config) {
+        let Some((current, preferred, edits)) = invert_unless(source, node, config) else {
             return;
-        }
-        let (line, col) =
-            source.offset_to_line_col(unless_keyword_start(node).unwrap_or(node.start_byte()));
-        diagnostics.push(self.diagnostic(
-            source,
-            line,
-            col,
-            "Style/InvertibleUnlessCondition offense.".to_string(),
-        ));
+        };
+        let msg = format!("Prefer `if {preferred}` over `unless {current}`.");
+        let mut diag = span_diagnostic(self, source, node.byte_range(), msg);
+        diag.corrected = push_edits(&mut corrections, source, edits, self.name());
+        diagnostics.push(diag);
     }
-}
-
-/// The `unless` keyword's byte offset. Modifier nodes start at the whole
-/// statement (`foo unless x`), so the offense must anchor to the token itself.
-fn unless_keyword_start(node: Node<'_>) -> Option<usize> {
-    node.children(&mut node.walk())
-        .find(|child| child.kind() == "unless" && !child.is_named())
-        .map(|keyword| keyword.start_byte())
 }
 
 #[cfg(test)]
@@ -126,10 +121,24 @@ mod tests {
     }
 
     #[test]
+    fn autocorrect_matches_rubocop() {
+        let src = b"foo unless !a && (b.any? || c != d)\nunless e.include? f\n  g\nend\nh unless not i\n";
+        assert_eq!(
+            crate::testutil::autocorrect_nodes(
+                &InvertibleUnlessCondition,
+                src,
+                config_with_inverse_methods(&merged_inverse_methods_yaml()),
+            ),
+            // RuboCop removes only the `not` selector, leaving a double space.
+            "foo if a || (b.none? && c == d)\nif e.exclude? f\n  g\nend\nh if  i\n"
+        );
+    }
+
+    #[test]
     fn project_defined_inverse_methods_apply() {
         let source = concat!(
             "foo unless x.writable?\n",
-            "    ^^^^^ Style/InvertibleUnlessCondition: Style/InvertibleUnlessCondition offense.\n",
+            "^^^^^^^^^^^^^^^^^^^^^^ Style/InvertibleUnlessCondition: Prefer `if x.readonly?` over `unless x.writable?`.\n",
         );
         crate::testutil::assert_cop_offenses_full_with_config(
             &InvertibleUnlessCondition,
