@@ -1,3 +1,4 @@
+mod big_decimal_with_numeric_argument;
 mod bind_call;
 mod caller;
 mod compare_with_block;
@@ -27,6 +28,7 @@ use crate::cop::registry::CopRegistry;
 
 pub fn register_all(registry: &mut CopRegistry) {
     crate::register_cops!(registry;
+        big_decimal_with_numeric_argument::BigDecimalWithNumericArgument,
         bind_call::BindCall,
         caller::Caller,
         compare_with_block::CompareWithBlock,
