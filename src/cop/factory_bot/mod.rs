@@ -1,6 +1,7 @@
 mod association_style;
 mod attribute_defined_statically;
 mod create_list;
+mod excessive_create_list;
 mod factory_class_name;
 
 use crate::cop::registry::CopRegistry;
@@ -11,5 +12,6 @@ pub fn register_all(registry: &mut CopRegistry) {
         attribute_defined_statically::AttributeDefinedStatically,
     ));
     registry.register(Box::new(create_list::CreateList));
+    registry.register(Box::new(excessive_create_list::ExcessiveCreateList));
     registry.register(Box::new(factory_class_name::FactoryClassName));
 }
