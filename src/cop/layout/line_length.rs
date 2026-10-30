@@ -38,19 +38,12 @@ fn string_list(config: &CopConfig, key: &str) -> Vec<String> {
     }
 }
 
-fn allow_heredoc(config: &CopConfig) -> bool {
-    !matches!(
-        config.options.get("AllowHeredoc"),
-        Some(serde_yml::Value::Bool(false))
-    )
-}
-
 fn load_settings(config: &CopConfig, tree: &Tree) -> Settings {
     let mut schemes = string_list(config, "URISchemes");
     if schemes.is_empty() {
         schemes = vec!["http".into(), "https".into()];
     }
-    let allow_hdoc = allow_heredoc(config);
+    let allow_hdoc = config.get_bool("AllowHeredoc", true);
     Settings {
         max: config.get_usize("Max", 120),
         allow_hdoc,
@@ -70,20 +63,14 @@ fn load_settings(config: &CopConfig, tree: &Tree) -> Settings {
     }
 }
 
-fn display_len(line: &[u8]) -> usize {
-    String::from_utf8_lossy(line).chars().count()
-}
-
-fn strip_directive(line: &[u8]) -> &[u8] {
-    let s = std::str::from_utf8(line).unwrap_or("");
-    let mut end = s
-        .find("# rubocop:")
-        .or_else(|| s.find("#rubocop:"))
-        .unwrap_or(s.len());
-    while end > 0 && matches!(line[end - 1], b' ' | b'\t') {
-        end -= 1;
+/// RuboCop `check_directive_line`: code before a `# rubocop:` directive, trailing
+/// space trimmed. Such lines are measured without the directive and get no exemptions.
+fn before_directive<'a>(cfg: &Settings, text: &'a str) -> Option<&'a str> {
+    if !cfg.ignore_directives {
+        return None;
     }
-    &line[..end]
+    let at = text.find("# rubocop:").or_else(|| text.find("#rubocop:"))?;
+    Some(text[..at].trim_end())
 }
 
 fn uri_start(line: &str, schemes: &[String]) -> Option<usize> {
@@ -112,19 +99,25 @@ fn in_heredoc(ranges: &[(usize, usize)], line: usize) -> bool {
     ranges.iter().any(|&(a, b)| (a..=b).contains(&line))
 }
 
-fn patterns_match(line: &str, patterns: &[Regex]) -> bool {
-    patterns.iter().any(|re| re.is_match(line))
+/// Character column of byte offset `at` (RuboCop compares columns, not bytes).
+fn char_col(text: &str, at: usize) -> usize {
+    text[..at].chars().count()
 }
 
 fn uri_allows(cfg: &Settings, text: &str) -> bool {
-    cfg.allow_uri && uri_start(text, &cfg.schemes).is_some_and(|at| at < cfg.max)
+    cfg.allow_uri && uri_start(text, &cfg.schemes).is_some_and(|at| char_col(text, at) < cfg.max)
 }
 
-/// RuboCop `extend_end_position`: absorb trailing non-space (e.g. `)`).
+/// RuboCop `extend_end_position`: a line with `{` that ends in `}` (YARD
+/// `{<uri> <title>}`) extends to EOL; otherwise absorb trailing non-space (e.g. `)`).
 fn extend_end(line: &str, end: usize) -> usize {
-    end + line
-        .get(end..)
-        .unwrap_or("")
+    if line
+        .strip_suffix('}')
+        .is_some_and(|head| head.contains('{'))
+    {
+        return line.len();
+    }
+    end + line[end..]
         .char_indices()
         .take_while(|(_, c)| !c.is_whitespace())
         .last()
@@ -140,7 +133,13 @@ fn qualified_allows(cfg: &Settings, text: &str) -> bool {
     let Some(m) = QUALIFIED_NAME_RE.find_iter(text).last() else {
         return false;
     };
-    m.start() < cfg.max && extend_end(text, m.end()) == text.len()
+    char_col(text, m.start()) < cfg.max && extend_end(text, m.end()) == text.len()
+}
+
+/// AllowedPatterns, or (unless a directive is on the line) a URI / qualified-name tail.
+fn allowed_long(cfg: &Settings, text: &str, directive: bool) -> bool {
+    cfg.patterns.iter().any(|re| re.is_match(text))
+        || (!directive && (uri_allows(cfg, text) || qualified_allows(cfg, text)))
 }
 
 fn check_line(
@@ -157,18 +156,10 @@ fn check_line(
     {
         return;
     }
-    let line = if cfg.ignore_directives {
-        strip_directive(raw)
-    } else {
-        raw
-    };
-    let text = String::from_utf8_lossy(line);
-    let len = display_len(line);
-    if patterns_match(&text, &cfg.patterns)
-        || len <= cfg.max
-        || uri_allows(cfg, &text)
-        || qualified_allows(cfg, &text)
-    {
+    let text = String::from_utf8_lossy(raw);
+    let code = before_directive(cfg, &text);
+    let len = code.unwrap_or(&text).chars().count();
+    if len <= cfg.max || allowed_long(cfg, &text, code.is_some()) {
         return;
     }
     diagnostics.push(cop.diagnostic(
@@ -199,6 +190,7 @@ impl Cop for LineLength {
     ) {
         let cfg = load_settings(config, tree);
         for (idx, raw) in source.lines().enumerate() {
+            let raw = raw.strip_suffix(b"\r").unwrap_or(raw);
             check_line(self, source, &cfg, idx, raw, diagnostics);
         }
     }
@@ -208,4 +200,10 @@ impl Cop for LineLength {
 mod tests {
     use super::*;
     crate::cop_fixture_tests!(LineLength, "cops/layout/line_length");
+
+    #[test]
+    fn crlf_not_counted() {
+        let line = format!("x = '{}'\r\n", "a".repeat(114));
+        crate::testutil::assert_cop_no_offenses_full(&LineLength, line.as_bytes());
+    }
 }
