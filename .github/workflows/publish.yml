@@ -43,7 +43,15 @@ jobs:
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --locked
+        run: |
+          set +e
+          out=$(cargo publish --locked 2>&1)
+          code=$?
+          set -e
+          printf '%s\n' "$out"
+          if [ "$code" -ne 0 ]; then
+            echo "$out" | grep -q 'already exists on crates.io' || exit "$code"
+          fi
 
   # Build on Jammy so the binary's glibc requirement stays at 2.35 (not Noble's
   # newer symbols), which keeps Ubuntu 22.04+ and current Debian installable.
@@ -74,41 +82,38 @@ jobs:
           name: rrubocop-deb
           path: target/debian/*.deb
 
-  # Both Apple targets on macos-15 (arm64 host can link x86_64-apple-darwin).
-  # GitHub retired the macos-14 image on 2026-11-02.
+  # One Intel runner builds both Apple binaries. Arm64 hosted runners are
+  # often cancelled after 15 minutes with no runner assigned.
   tarball:
-    runs-on: macos-15
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - aarch64-apple-darwin
-          - x86_64-apple-darwin
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
-      - name: Build release binary
-        run: cargo build --release --locked --target ${{ matrix.target }}
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Build release binaries
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
       - name: Pack .tar.gz
         run: |
           set -euo pipefail
           ref="${{ inputs.tag || github.ref_name }}"
           version="${ref#v}"
-          stage="rrubocop-${version}-${{ matrix.target }}"
-          mkdir -p "$stage"
-          cp "target/${{ matrix.target }}/release/rrubocop" "$stage/rrubocop"
-          cp man/rrubocop.1 "$stage/rrubocop.1"
-          tar -czf "${stage}.tar.gz" "$stage"
           mkdir -p dist
-          mv "${stage}.tar.gz" dist/
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            stage="rrubocop-${version}-${target}"
+            mkdir -p "$stage"
+            cp "target/${target}/release/rrubocop" "$stage/rrubocop"
+            cp man/rrubocop.1 "$stage/rrubocop.1"
+            tar -czf "dist/${stage}.tar.gz" "$stage"
+          done
       - name: Upload .tar.gz artifact
         uses: actions/upload-artifact@v5
         with:
-          name: rrubocop-tarball-${{ matrix.target }}
+          name: rrubocop-tarball
           path: dist/*.tar.gz
 
   github-release:
@@ -208,4 +213,12 @@ jobs:
       - name: Authenticate to MCP Registry
         run: ./mcp-publisher login github-oidc
       - name: Publish server.json
-        run: ./mcp-publisher publish
+        run: |
+          set +e
+          out=$(./mcp-publisher publish 2>&1)
+          code=$?
+          set -e
+          printf '%s\n' "$out"
+          if [ "$code" -ne 0 ]; then
+            echo "$out" | grep -q 'already exists' || exit "$code"
+          fi
