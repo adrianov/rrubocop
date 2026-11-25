@@ -74,9 +74,10 @@ jobs:
           name: rrubocop-deb
           path: target/debian/*.deb
 
-  # Both Apple targets on macos-14 (arm64 host can link x86_64-apple-darwin).
+  # Both Apple targets on macos-15 (arm64 host can link x86_64-apple-darwin).
+  # GitHub retired the macos-14 image on 2026-11-02.
   tarball:
-    runs-on: macos-14
+    runs-on: macos-15
     strategy:
       fail-fast: false
       matrix:
