@@ -50,3 +50,10 @@ expect(described_class.call(products: Product.actual,
                                                  count: 1
                                                })
                                                ^ Layout/FirstHashElementIndentation: Indent the right brace the same as the first position after the preceding left parenthesis.
+
+stub_request(:get, /x/)
+  .to_return(status: 200, body: {
+      FreeChoiceLimit: 3
+      ^^^^^^^^^^^^^^^ Layout/FirstHashElementIndentation: Use 2 spaces for indentation in a hash, relative to the start of the line where the left curly brace is.
+    }.to_json)
+    ^ Layout/FirstHashElementIndentation: Indent the right brace the same as the start of the line where the left brace is.

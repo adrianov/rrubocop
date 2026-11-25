@@ -69,3 +69,8 @@ expect(result).to eq({
                        ],
                        count: 2
                      })
+
+stub_request(:get, /x/)
+  .to_return(status: 200, body: {
+    FreeChoiceLimit: 3, PaidChoiceLimit: 0
+  }.to_json)

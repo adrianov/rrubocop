@@ -48,6 +48,10 @@ fn method_call_args(source: &SourceFile, args: Node<'_>) -> bool {
         .is_none_or(|m| shared::node_bytes(source, m) != b"super")
 }
 
+fn is_send(node: Node<'_>) -> bool {
+    matches!(node.kind(), "call" | "command" | "command_call")
+}
+
 fn paren_on_line(source: &SourceFile, node: Node<'_>, line: usize) -> Option<usize> {
     if node.kind() != "argument_list" || !method_call_args(source, node) {
         return None;
@@ -59,6 +63,8 @@ fn paren_on_line(source: &SourceFile, node: Node<'_>, line: usize) -> Option<usi
     (shared::node_line(source, paren) == line).then_some(shared::node_col(source, paren))
 }
 
+/// RuboCop only pairs a hash with `(` via `each_argument_node`, which does not
+/// descend into sends — so `{}.to_json` keeps line-start indent, not after-paren.
 pub(super) fn paren_col(source: &SourceFile, hash: Node<'_>, config: &CopConfig) -> Option<usize> {
     if config.get_bool("FixedArgumentIndentation", false) {
         return None;
@@ -66,6 +72,9 @@ pub(super) fn paren_col(source: &SourceFile, hash: Node<'_>, config: &CopConfig)
     let brace_line = shared::node_line(source, hash);
     let mut cur = hash.parent();
     while let Some(node) = cur {
+        if is_send(node) {
+            return None;
+        }
         if let Some(col) = paren_on_line(source, node, brace_line) {
             return Some(col);
         }
